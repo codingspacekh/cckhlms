@@ -2,6 +2,7 @@
 # Backups (NFR-04): encrypted dump → remote (a local folder stands in for R2) → restore into an empty
 # database gives identical data; retention keeps 14 daily + 8 weekly; files can't be read without the key.
 set -eu
+# Wait on TCP (-h 127.0.0.1): the image's first-run init server listens only on a socket, then restarts.
 cd "$(dirname "$0")/../.."
 NET=cckhlms-backup-test
 # Inside the project (not /tmp): Colima on macOS only shares the home folder with Docker.
@@ -16,7 +17,7 @@ docker network create "$NET" >/dev/null
 for db in bt-src bt-dst; do
   docker run -d --name "$db" --network "$NET" -e POSTGRES_USER=lms -e POSTGRES_PASSWORD=pw -e POSTGRES_DB=lms postgres:18.6-alpine3.24 >/dev/null
 done
-for db in bt-src bt-dst; do until docker exec "$db" pg_isready -U lms -d lms >/dev/null 2>&1; do sleep 1; done; done
+for db in bt-src bt-dst; do until docker exec "$db" pg_isready -h 127.0.0.1 -U lms -d lms >/dev/null 2>&1; do sleep 1; done; done
 
 docker exec bt-src psql -q -U lms -d lms -c "
   create table student (id serial primary key, name text not null, note text);

@@ -2,6 +2,7 @@
 # The production app image starts against an empty PostgreSQL, runs migrations, creates the first
 # admin and reports its version on /api/health (docs/05 M1).
 set -eu
+# Wait on TCP (-h 127.0.0.1): the image's first-run init server listens only on a socket, then restarts.
 cd "$(dirname "$0")/../.."
 SHA=${GIT_SHA:-test-$(date +%s)}
 NET=cckhlms-image-test
@@ -12,7 +13,7 @@ cleanup
 docker build -q --build-arg GIT_SHA="$SHA" -t "cckhlms-app:$SHA" . >/dev/null
 docker network create "$NET" >/dev/null
 docker run -d --name it-db --network "$NET" -e POSTGRES_USER=lms -e POSTGRES_PASSWORD=pw -e POSTGRES_DB=lms postgres:18.6-alpine3.24 >/dev/null
-until docker exec it-db pg_isready -U lms -d lms >/dev/null 2>&1; do sleep 1; done
+until docker exec it-db pg_isready -h 127.0.0.1 -U lms -d lms >/dev/null 2>&1; do sleep 1; done
 docker run -d --name it-app --network "$NET" \
   -e DATABASE_URL=postgres://lms:pw@it-db:5432/lms -e BETTER_AUTH_URL=https://lms.example.test \
   -e BETTER_AUTH_SECRET=image-test-secret-0123456789abcdefghij -e PREVIEW_ORIGIN=https://preview.example.test \
