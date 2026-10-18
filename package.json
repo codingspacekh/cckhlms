@@ -24,7 +24,7 @@
     "test:coverage": "vitest run --project unit --project component --coverage",
     "test:int": "vitest run --project integration",
     "test:e2e": "playwright test",
-    "test:int:coverage": "vitest run --project integration --coverage --coverage.include=src/server/** --coverage.include=src/db/** --coverage.include=src/modules/**/service.ts --coverage.include=src/modules/**/rules.ts --coverage.exclude=src/server/policy.ts --coverage.exclude=src/server/guard.ts --coverage.exclude=src/db/schema.ts --coverage.thresholds.lines=85 --coverage.thresholds.branches=75 --coverage.thresholds.functions=85"
+    "test:int:coverage": "vitest run --project integration --coverage --coverage.include=src/server/** --coverage.include=src/db/** --coverage.include=src/modules/** --coverage.exclude=src/modules/**/*actions.ts --coverage.exclude=src/server/policy.ts --coverage.exclude=src/server/guard.ts --coverage.exclude=src/server/action-result.ts --coverage.exclude=src/db/schema.ts --coverage.thresholds.lines=85 --coverage.thresholds.branches=75 --coverage.thresholds.functions=85"
   },
   "dependencies": {
     "better-auth": "1.7.7",

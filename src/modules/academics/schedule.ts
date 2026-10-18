@@ -108,3 +108,13 @@ export const formatDay = (date: string) => {
 };
 // 'Sat 22 Jan 2028'
 export const formatDate = (date: string) => `${WD[toUtcMidnight(date).getUTCDay()]} ${formatDay(date)}`;
+
+// Today's date in the club's time zone (BR-19), e.g. the default join date for an enrolment.
+export function todayIn(tz: string, now: Date = new Date()): string {
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat('en-US', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' })
+      .formatToParts(now)
+      .map((x) => [x.type, x.value]),
+  );
+  return `${p.year}-${p.month}-${p.day}`;
+}

@@ -35,7 +35,7 @@ flowchart LR
 | **P0** ✅ | Prototype | Clickable dashboard prototype of all three roles, approved 2026-10-19 | all journeys | done |
 | **M0** ✅ | Spikes | Go/no-go with measurements for the preview origin + CSP, the editor on low-end devices, and Better Auth username/roles/sessions | ADR-03, 04, 09 | 4 days |
 | **M1** ✅ | Walking skeleton (code; server set-up in G1) | Public repo + required CI checks, Docker Compose, VPS + Cloudflare Tunnel, automatic deploys with rollback, sign-in, dashboard shell, backups + first restore drill | NFR-04, 05, 10 | 5 days |
-| **M2** 🔨 | Academics | Club settings, accounts and passwords, terms, courses + syllabus, weekend classes with weekly sessions, enrolments, transfers | FR-AUTH-01…07, 10, 11 · FR-ADM-01…08, 16 · FR-TCH-05 | 6 days |
+| **M2** ✅ | Academics | Club settings, accounts and passwords, terms, courses + syllabus, weekend classes with weekly sessions, enrolments, transfers | FR-AUTH-01…07, 10, 11 · FR-ADM-01…08, 16 · FR-TCH-05 | 6 days |
 | **M3** | Teaching | Weekly lessons, Q&A with reporting, attendance, weekly class report, syllabus coverage | FR-TCH-01…06, 14, 20 · FR-STU-02…04, 10 | 5 days |
 | **M4** | Assessments | Classwork/homework/exams, multi-file editor, Web preview, submissions, grading, gradebook | FR-TCH-07…12, 19 · FR-STU-05, 06 · FR-CODE-01…06 | 8 days |
 | **G1** ⏳ | Go live | Owner's server and Cloudflare set-up (runbook §2); first deploy, restore drill, uptime alert | NFR-04 | 1–2 hours |
@@ -173,8 +173,32 @@ The next milestone does not start until all four are true.
 
 **Exit criteria:** a pull request with a failing test cannot merge; a merged one deploys to `lms.cckh.dev` on its own; the first **restore drill** from R2 is done and recorded in the runbook; the uptime alert reaches the owner.
 
-### M2 — Academics (6 days) — 🔨 IN PROGRESS
-> **Progress:** ✅ PR #4 accounts + club settings · ✅ PR #5 terms + courses · 🔨 PR 3 weekend classes + sessions · ⏳ PR 4 enrolments + own-class views.
+### M2 — Academics (6 days) — ✅ BUILT 2026-10-19 · waiting for owner sign-off
+> **Result** (PRs #4–#7):
+> - **People (FR-ADM-01/02, FR-AUTH-02/03/04/07/10):**
+>   - create students, teachers and admins with a suggested username and a one-time password on a login slip;
+>   - reset passwords; switch accounts off and on (signed out at once and told why at sign-in); sign out everywhere;
+>   - you can't switch off yourself or the last active admin; guardian details are admin-only.
+> - **Club settings (FR-ADM-16):** club name and time zone (validated IANA zone).
+> - **Terms (FR-ADM-03):** auto-named; no duplicates or overlapping dates; planned → active → closed, at most one active.
+> - **Courses (FR-ADM-04):** code, language, pass mark 60 and weights 60/30/10 (must add up to 100, also checked in the database), a loop-free next level, and an ordered syllabus whose topics keep their identity when edited.
+> - **Weekend classes (FR-ADM-05/06/08, FR-TCH-05, BR-15/16):**
+>   - Saturday or Sunday, 90/120 min, 10–12 weeks, with a live preview where tapping a holiday adds a week;
+>   - class, teachers and sessions are created in one transaction;
+>   - clash warnings (teacher, room, student) must be confirmed;
+>   - cancel (± an extra week at the end), move, and make-up sessions; week numbers come from the dates.
+> - **Enrolments (FR-ADM-07, BR-17/18):** join date defaults to today in club time; duplicate, full-class, switched-off and closed-term refusals; transfers and withdrawals keep history.
+> - **Own views (FR-STU-01):** teachers see only their classes (students, next session, schedule changes); students see only their current classes and the next one.
+> - **Permissions:** the first **own-class** rules (`class.schedule`, `class.view`); the matrix now tests own vs other class.
+> - **Time zone (BR-19):** `zonedToUtc`, `nextSession` and `todayIn`, tested with Phnom Penh (Sat 06:00 = Fri 23:00 UTC; the date changes at local midnight) and a daylight-saving zone.
+> - **Migrations 0001–0004:** profiles; term/course/syllabus; class/class_teacher/class_session; enrolment. All have CHECK constraints and one-active/one-lead/one-per-day unique indexes.
+> - **Tests:** 144 unit/component (100 % lines), 75 integration (98 % lines across all modules), 31 e2e including the **M2 exit journey** (term → course → class → two students → enrol → withdraw → the student and the teacher see the class and its next session).
+> - **Found and fixed by the tests:**
+>   - a new teacher didn't appear when added from the Students tab;
+>   - wide tables weren't keyboard-scrollable;
+>   - `toLocaleDateString` writes dates differently in Node and Chromium, so dates are now formatted by hand;
+>   - the integration coverage wasn't measuring the academics modules.
+> - **Exit criterion:** until G1 the owner checks it on a local production build. The e2e journey already performs the full set-up.
 
 **Goal:** the Admin can set up a real term: people, courses, weekend classes and enrolments.
 

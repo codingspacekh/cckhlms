@@ -265,3 +265,32 @@ export const classSession = pgTable(
     check('class_session_status_known', sql`${t.status} in ('scheduled', 'cancelled')`),
   ],
 );
+
+// A student's membership in a class (FR-ADM-07). Attendance, work and reports hang off this, so data stays
+// right when a student is in several classes or repeats a course. Ended enrolments are kept as history.
+export const enrolment = pgTable(
+  'enrolment',
+  {
+    id: text('id').primaryKey(),
+    classId: text('class_id')
+      .notNull()
+      .references(() => klass.id, { onDelete: 'restrict' }),
+    studentId: text('student_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'restrict' }),
+    status: text('status').notNull().default('active'),
+    enrolledOn: date('enrolled_on').notNull(),
+    endedOn: date('ended_on'),
+    transferredFromId: text('transferred_from_id').references((): AnyPgColumn => enrolment.id, { onDelete: 'set null' }),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [
+    index('enrolment_class_idx').on(t.classId),
+    index('enrolment_student_idx').on(t.studentId),
+    uniqueIndex('enrolment_one_active')
+      .on(t.classId, t.studentId)
+      .where(sql`${t.status} = 'active'`),
+    check('enrolment_status_known', sql`${t.status} in ('active', 'withdrawn', 'completed')`),
+    check('enrolment_end_after_start', sql`${t.endedOn} is null or ${t.endedOn} >= ${t.enrolledOn}`),
+  ],
+);

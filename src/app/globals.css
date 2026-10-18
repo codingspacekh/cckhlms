@@ -794,3 +794,25 @@ label.check {
   font-size: 0.88rem;
   color: var(--ink-2);
 }
+.next {
+  border-left: 4px solid var(--accent);
+}
+h2.big {
+  font-size: 1.25rem;
+}
+.plain {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.list > li {
+  padding-block: 12px;
+  border-top: 1px solid var(--line);
+}
+.list > li:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+article h3 {
+  font-size: 1rem;
+}
