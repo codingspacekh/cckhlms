@@ -1,0 +1,88 @@
+// FR-AUTH-01/05/10, ADR-10: sign-in, role areas, 403 for the wrong role, sign-out.
+import { expect, test } from '@playwright/test';
+import { stateFile, USERS } from './global-setup';
+import { expectAccessible, watchProblems } from './helpers';
+
+test.describe('signed out', () => {
+  test('the sign-in page passes an accessibility check', async ({ page }) => {
+    await page.goto('/login');
+    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+    await expectAccessible(page);
+  });
+
+  test('a visitor who is not signed in is sent to the sign-in page', async ({ page }) => {
+    await page.goto('/admin');
+    await expect(page).toHaveURL(/\/login/);
+  });
+
+  test('a wrong password shows a clear message', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByLabel('Username').fill('sophea');
+    await page.getByLabel('Password').fill('not-the-password');
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    // Next.js adds its own (empty) route announcer with role=alert, so look inside the form.
+    await expect(page.locator('form').getByRole('alert')).toHaveText('Wrong username or password.');
+    await expect(page).toHaveURL(/\/login/);
+  });
+
+  test('Admin signs in with a username and lands on the dashboard', async ({ page }) => {
+    const problems = await watchProblems(page);
+    await page.goto('/login');
+    await page.getByLabel('Username').fill(USERS.admin.username);
+    await page.getByLabel('Password').fill(USERS.admin.password);
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page).toHaveURL(/\/admin$/);
+    await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+    expect(await problems.cspViolations()).toEqual([]);
+    expect(problems.consoleErrors).toEqual([]);
+  });
+});
+
+for (const [who, home] of [
+  ['admin', '/admin'],
+  ['teacher', '/teacher'],
+  ['student', '/student'],
+] as const) {
+  test.describe(`${who}`, () => {
+    test.use({ storageState: stateFile(who) });
+    test(`goes to ${home} from the home page, and the page passes an accessibility check`, async ({ page }) => {
+      await page.goto('/');
+      await expect(page).toHaveURL(new RegExp(`${home}$`));
+      await expect(page.getByRole('navigation', { name: 'Sections' })).toBeVisible();
+      await expect(page.locator('.me').getByText(USERS[who].name)).toBeVisible();
+      await expectAccessible(page);
+    });
+  });
+}
+
+test.describe('wrong role', () => {
+  test.use({ storageState: stateFile('student') });
+  test('a student who opens an admin page gets "not allowed" (403)', async ({ page }) => {
+    const res = await page.goto('/admin');
+    expect(res?.status()).toBe(403);
+    await expect(page.getByRole('heading', { name: "You don't have access to this page" })).toBeVisible();
+  });
+});
+
+test.describe('admin dashboard', () => {
+  test.use({ storageState: stateFile('admin') });
+  test('shows real numbers from the database', async ({ page }) => {
+    await page.goto('/admin');
+    const tile = (label: string) => page.locator('.tile', { has: page.getByText(label, { exact: true }) });
+    await expect(tile('Admins').locator('.v')).toHaveText('1');
+    await expect(tile('Teachers').locator('.v')).toHaveText('1');
+    await expect(tile('Students').locator('.v')).toHaveText('1');
+    await expect(tile('Club time zone').locator('.v')).toHaveText('Asia/Phnom_Penh');
+  });
+});
+
+test.describe('sign out', () => {
+  test.use({ storageState: stateFile('signout') });
+  test('ends the session', async ({ page }) => {
+    await page.goto('/teacher');
+    await page.getByRole('button', { name: 'Sign out' }).click();
+    await expect(page).toHaveURL(/\/login/);
+    await page.goto('/teacher');
+    await expect(page).toHaveURL(/\/login/);
+  });
+});

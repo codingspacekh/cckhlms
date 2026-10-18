@@ -1,0 +1,10 @@
+node_modules
+.next
+coverage
+test-results
+playwright-report
+drizzle
+spikes
+prototype
+package-lock.json
+*.md

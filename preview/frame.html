@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en" data-lms="__LMS_ORIGIN__">
+  <head>
+    <meta charset="utf-8" />
+    <title>Preview</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+      }
+      iframe {
+        border: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        background: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Student code runs in this nested frame with no origin of its own (sandbox without allow-same-origin). -->
+    <iframe id="student" title="Your page" sandbox="allow-scripts allow-modals"></iframe>
+    <script type="module" src="/frame.js"></script>
+  </body>
+</html>
