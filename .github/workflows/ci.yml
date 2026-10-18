@@ -88,8 +88,8 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Shell scripts (shellcheck)
-        run: shellcheck infra/server/*.sh infra/backup/*.sh infra/tests/*.sh
+      - name: Shell scripts (shellcheck, pinned; the runner's own copy is older)
+        run: docker run --rm -v "$PWD":/mnt -w /mnt koalaman/shellcheck:v0.11.0 infra/server/provision.sh infra/server/deploy.sh infra/backup/backup.sh infra/backup/restore.sh infra/backup/entrypoint.sh infra/tests/app-image.sh infra/tests/backup-restore.sh infra/tests/compose-config.sh
       - name: Production compose file
         run: sh infra/tests/compose-config.sh
       - name: Backup → restore round trip
