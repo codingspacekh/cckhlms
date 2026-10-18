@@ -174,7 +174,7 @@ The next milestone does not start until all four are true.
 **Exit criteria:** a pull request with a failing test cannot merge; a merged one deploys to `lms.cckh.dev` on its own; the first **restore drill** from R2 is done and recorded in the runbook; the uptime alert reaches the owner.
 
 ### M2 — Academics (6 days) — 🔨 IN PROGRESS
-> **Progress:** 🔨 PR 1 accounts + club settings · ⏳ PR 2 terms + courses · ⏳ PR 3 weekend classes + sessions · ⏳ PR 4 enrolments + own-class views.
+> **Progress:** ✅ PR #4 accounts + club settings · 🔨 PR 2 terms + courses · ⏳ PR 3 weekend classes + sessions · ⏳ PR 4 enrolments + own-class views.
 
 **Goal:** the Admin can set up a real term: people, courses, weekend classes and enrolments.
 

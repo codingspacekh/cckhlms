@@ -2,6 +2,7 @@
 import { useRouter } from 'next/navigation';
 import { useActionState, useState, useTransition } from 'react';
 import { Pill } from '@/components/ui/Pill';
+import { TableScroll } from '@/components/ui/TableScroll';
 import {
   createAccountAction,
   resetPasswordAction,
@@ -48,7 +49,7 @@ export function PeopleManager({ people, role, selfId }: { people: Person[]; role
             {status.text}
           </p>
         )}
-        <div className="tw">
+        <TableScroll label="Accounts table">
           <table>
             <thead>
               <tr>
@@ -112,7 +113,7 @@ export function PeopleManager({ people, role, selfId }: { people: Person[]; role
               ))}
             </tbody>
           </table>
-        </div>
+        </TableScroll>
       </section>
 
       <div className="stack gap16">
