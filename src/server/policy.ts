@@ -27,6 +27,8 @@ export const ACTIONS = {
   'courses.manage': hasRole('admin'),
   'classes.manage': hasRole('admin'),
   'class.schedule': either(hasRole('admin'), teachesClass),
+  'class.view': either(hasRole('admin'), teachesClass),
+  'enrolments.manage': hasRole('admin'),
 } satisfies Record<string, Rule>;
 
 export type Action = keyof typeof ACTIONS;

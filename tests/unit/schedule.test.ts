@@ -9,6 +9,7 @@ import {
   numberWeeks,
   overlaps,
   scheduleLabel,
+  todayIn,
   weekdayOf,
   zonedToUtc,
 } from '@/modules/academics/schedule';
@@ -100,5 +101,12 @@ describe('formatDate', () => {
   it('writes dates the same way everywhere', () => {
     expect(formatDate('2028-01-22')).toBe('Sat 22 Jan 2028');
     expect(formatDay('2027-12-05')).toBe('5 Dec 2027');
+  });
+});
+
+describe('todayIn (BR-19)', () => {
+  it('changes date at midnight in club time, not at midnight UTC', () => {
+    expect(todayIn('Asia/Phnom_Penh', new Date('2027-01-08T16:59:00Z'))).toBe('2027-01-08'); // 23:59 in Phnom Penh
+    expect(todayIn('Asia/Phnom_Penh', new Date('2027-01-08T17:00:00Z'))).toBe('2027-01-09'); // 00:00 next day
   });
 });

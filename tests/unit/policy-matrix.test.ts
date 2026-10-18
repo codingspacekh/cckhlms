@@ -19,6 +19,8 @@ const MATRIX: Record<Action, Record<Role, Rule>> = {
   'courses.manage': { admin: true, teacher: false, student: false },
   'classes.manage': { admin: true, teacher: false, student: false },
   'class.schedule': { admin: true, teacher: 'own', student: false },
+  'class.view': { admin: true, teacher: 'own', student: false },
+  'enrolments.manage': { admin: true, teacher: false, student: false },
 };
 
 const actor = (role: string): Actor => ({ userId: 'u1', username: 'x', name: 'X', role, sessionId: 's1' });

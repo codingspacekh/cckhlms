@@ -2,10 +2,14 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { getClass } from '@/modules/academics/classes';
-import { scheduleLabel } from '@/modules/academics/schedule';
+import { getClass, listClasses } from '@/modules/academics/classes';
+import { listRoster } from '@/modules/academics/enrolments';
+import { scheduleLabel, todayIn } from '@/modules/academics/schedule';
+import { getClubSettings } from '@/modules/club/service';
+import { listPeople } from '@/modules/identity/service';
 import { ValidationError } from '@/server/errors';
 import { requireActor } from '@/server/guard';
+import { RosterManager } from './RosterManager';
 import { SessionsManager } from './SessionsManager';
 
 export const metadata: Metadata = { title: 'Class' };
@@ -15,6 +19,13 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
   const { id } = await params;
   const c = await getClass(actor, id).catch((e) => (e instanceof ValidationError ? null : Promise.reject(e)));
   if (!c) notFound();
+  const [roster, students, termClasses, settings] = await Promise.all([
+    listRoster(actor, id),
+    listPeople(actor, 'student'),
+    listClasses(actor, { termId: c.termId }),
+    getClubSettings(),
+  ]);
+  const inClass = new Set(roster.filter((r) => r.status === 'active').map((r) => r.studentId));
   const lead = c.teachers.find((t) => t.role === 'lead');
   const assistants = c.teachers.filter((t) => t.role === 'assistant');
   return (
@@ -50,6 +61,14 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
           </div>
         )}
       </section>
+      <RosterManager
+        classId={c.id}
+        roster={roster}
+        candidates={students.filter((p) => p.active && !inClass.has(p.id)).map((p) => ({ id: p.id, name: p.name }))}
+        otherClasses={termClasses.filter((k) => k.id !== c.id).map((k) => ({ id: k.id, name: k.name }))}
+        today={todayIn(settings.timeZone)}
+      />
+      <h2>Sessions</h2>
       <SessionsManager classId={c.id} weeks={c.weeks} defaultStart={c.startTime} defaultMinutes={c.minutes} sessions={c.sessions} />
     </>
   );
