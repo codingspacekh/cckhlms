@@ -19,7 +19,8 @@ flowchart LR
   M1 --> M2["M2<br/>Academics<br/>accounts · classes · sessions"]
   M2 --> M3["M3<br/>Teaching<br/>lessons · Q&A · attendance"]
   M3 --> M4["M4<br/>Assessments<br/>editor · submissions · gradebook"]
-  M4 --> R1(["R1 · Pilot<br/>one real class"])
+  M4 --> G1(["G1 · Go live<br/>server set-up"])
+  G1 --> R1(["R1 · Pilot<br/>one real class"])
   R1 --> M5["M5<br/>Reports & statistics"]
   M5 --> M6["M6<br/>Term operations<br/>certificates · promotion"]
   M6 --> M7["M7<br/>Hardening"]
@@ -33,10 +34,11 @@ flowchart LR
 |---|---|---|---|---|
 | **P0** ✅ | Prototype | Clickable dashboard prototype of all three roles, approved 2026-10-19 | all journeys | done |
 | **M0** ✅ | Spikes | Go/no-go with measurements for the preview origin + CSP, the editor on low-end devices, and Better Auth username/roles/sessions | ADR-03, 04, 09 | 4 days |
-| **M1** 🔨 | Walking skeleton | Public repo + required CI checks, Docker Compose, VPS + Cloudflare Tunnel, automatic deploys with rollback, sign-in, dashboard shell, backups + first restore drill | NFR-04, 05, 10 | 5 days |
+| **M1** ✅ | Walking skeleton (code; server set-up in G1) | Public repo + required CI checks, Docker Compose, VPS + Cloudflare Tunnel, automatic deploys with rollback, sign-in, dashboard shell, backups + first restore drill | NFR-04, 05, 10 | 5 days |
 | **M2** | Academics | Club settings, accounts and passwords, terms, courses + syllabus, weekend classes with weekly sessions, enrolments, transfers | FR-AUTH-01…07, 10, 11 · FR-ADM-01…08, 16 · FR-TCH-05 | 6 days |
 | **M3** | Teaching | Weekly lessons, Q&A with reporting, attendance, weekly class report, syllabus coverage | FR-TCH-01…06, 14, 20 · FR-STU-02…04, 10 | 5 days |
 | **M4** | Assessments | Classwork/homework/exams, multi-file editor, Web preview, submissions, grading, gradebook | FR-TCH-07…12, 19 · FR-STU-05, 06 · FR-CODE-01…06 | 8 days |
+| **G1** ⏳ | Go live | Owner's server and Cloudflare set-up (runbook §2); first deploy, restore drill, uptime alert | NFR-04 | 1–2 hours |
 | — | **R1: Pilot** | One real class uses the LMS on production for at least 4 weeks | | |
 | **M5** | Reports & statistics | 60/30/10 overall score, end-term exam, term reports with pass/fail, charts for all three roles, admin dashboard | FR-TCH-15…18 · FR-ADM-09, 10 · FR-STU-07 | 6 days |
 | **M6** | Term operations | Certificates + `/verify`, promotion wizard, login slips, CSV import, notifications, audit log, playground | FR-ADM-11…14 · FR-AUTH-08, 09 · FR-STU-08, 09 · FR-SYS-01, 02 · FR-CODE-07 | 6 days |
@@ -83,7 +85,7 @@ Features start **outside-in**: a Playwright acceptance test for the user journey
 ### 3.5 Milestone gate (the "pass before moving on" rule)
 A milestone is **done** only when:
 1. every test listed under **Tests first** exists, was red first, and is now green in CI on `main`;
-2. every **Exit criterion** is met and checked on **production** (`lms.cckh.dev`) from M1 onward;
+2. every **Exit criterion** is met and checked on **production** (`lms.cckh.dev`) from G1 onward. Before G1, it's checked on a local production build and in CI;
 3. the nightly backup still restores (checked by the restore test);
 4. the owner signs off, and a **Result** block is added under the milestone, as in codingspacekh.
 
@@ -130,8 +132,25 @@ The next milestone does not start until all four are true.
 
 **Exit criteria:** ADRs `docs/adr/0001-preview-origin.md`, `0002-editor.md` and `0003-auth.md` each record **go** or the fallback, with measurements. If Better Auth can't do per-role session lengths cleanly, the ADR records the wrapper design (or an alternative library) before M1.
 
-### M1 — Walking skeleton (5 days) — 🔨 IN PROGRESS
-> **Progress:** ✅ PR #1 app skeleton + CI (merged) · 🔨 PR 2 production infrastructure · ⏳ owner setup (Hetzner, Cloudflare, secrets; `docs/runbook.md` §2) · ⏳ first deploy + restore drill.
+### M1 — Walking skeleton (5 days) — ✅ CODE DONE 2026-10-19 · server set-up deferred to **G1**
+> **Result** (PRs #1, #2):
+> - **Repo:** public repo `codingspacekh/cckhlms`. `main` is protected: PRs only, squash merges, **5 required checks** (format · lint · types · unit + coverage · audit; integration on PostgreSQL 18; e2e with Playwright + axe on desktop and phone; gitleaks; infrastructure), enforced for admins too.
+> - **App:**
+>   - Next.js 16 with a strict per-request CSP.
+>   - Better Auth sign-in with usernames, the LMS-origin hook and per-role sessions.
+>   - Drizzle baseline migration (auth tables, `club_settings` with `Asia/Phnom_Penh`, `audit_log`). Migrations run at start-up; if start-up fails, the app exits.
+>   - Policy module with the role × action matrix test; sign-in redirect and real 403 pages; dashboard shell from P0.
+> - **Infrastructure:**
+>   - App and preview images; `compose.prod.yaml` with cloudflared, no published ports and an internal-only database.
+>   - age-encrypted backups to R2: nightly + weekend runs, 14 daily + 8 weekly.
+>   - `provision.sh`; Deploy workflow with health check, automatic rollback and weekday-only releases; `docs/runbook.md`.
+> - **Tests:** 46 unit/component, 26 integration, 14 e2e, plus infrastructure checks. The app image boots and migrates in Docker, and a backup restores with identical checksums.
+> - **Found and fixed by the tests:**
+>   - muted text below WCAG contrast;
+>   - the app starting against a missing database;
+>   - a PostgreSQL init-restart race;
+>   - an outdated shellcheck on the CI runner.
+> - **Deviation (owner's decision, 2026-10-19):** the paid account set-up (Hetzner, Cloudflare domain/Tunnel/R2, monitors) is **deferred**. Exit criteria 2–4 (automatic deploy to `lms.cckh.dev`, first restore drill from R2, uptime alert) move to **G1: Go live**, which must be done before R1. Exit criterion 1 (a failing PR can't merge) is met.
 
 **Goal:** every later change runs through a working TDD pipeline and lands on the real server.
 
@@ -209,6 +228,14 @@ The next milestone does not start until all four are true.
 - Playwright: teacher sets Java homework → student edits a multi-file project, fixes the package warning, submits → teacher opens it, downloads the zip, grades it → student sees score and feedback. Web homework: the preview runs the student's script and the console shows `console.log`; the **isolation tests from Spike A run here against the real hostnames**.
 
 **Exit criteria:** on production, one homework cycle runs end to end for Python, Java and Web, and the gradebook takes a class's paper-quiz scores in under 2 minutes.
+
+### G1 — Go live (owner set-up, ≈ 1–2 hours) — ⏳ deferred, required before R1
+- Do `docs/runbook.md` §2: domain, Hetzner server + `provision.sh`, Cloudflare Tunnel, rate-limit rule, R2 + age keys, healthchecks.io, GitHub `production` secrets, `DEPLOY_ENABLED`.
+- **Exit criteria** (the ones carried over from M1):
+  1. a merged PR deploys to `lms.cckh.dev` on its own;
+  2. the first **restore drill** from R2 is done and logged (runbook §6);
+  3. the uptime alert reaches the owner.
+- Until G1, the milestone gate (§3.5, point 2) is checked on a **local production build** and in CI, instead of on production.
 
 ### R1 — Pilot (one real class, ≥ 4 weeks)
 - One class (e.g. Python Level 1, Term 1 · 2027) uses the LMS on production for at least 4 weekly sessions, with real accounts.
