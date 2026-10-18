@@ -18,3 +18,14 @@ Learning management system for the CCKH weekend coding club: lessons, attendance
 
 ## Way of working
 Test-driven: every change starts with a failing test, references a requirement ID, and lands through a pull request whose checks must pass.
+
+## Run it locally
+Needs Node 24 and Docker.
+```bash
+npm install
+cp .env.example .env        # local-only values
+npm run db:up               # PostgreSQL in Docker (port 54329)
+npm run seed:dev            # demo people, terms, courses and classes; every password is demo-password-1
+npm run dev                 # http://lms.localhost:3000  (admin · sophea · bopha.l …)
+```
+Tests: `npm test` (unit + component), `npm run test:int` (PostgreSQL), `npm run build && npm run test:e2e` (browser).

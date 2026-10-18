@@ -15,7 +15,7 @@
     "db:up": "docker compose up -d --wait db",
     "db:down": "docker compose down",
     "db:generate": "drizzle-kit generate",
-    "seed:dev": "node --env-file-if-exists=.env scripts/seed-dev.ts",
+    "seed:dev": "tsx --env-file=.env scripts/seed-dev.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
@@ -58,6 +58,7 @@
     "jsdom": "27.4.0",
     "prettier": "3.9.9",
     "tailwindcss": "4.3.3",
+    "tsx": "4.23.15",
     "typescript": "5.9.3",
     "typescript-eslint": "8.71.0",
     "vitest": "4.1.11"
