@@ -2,7 +2,7 @@
 
 Learning management system for the CCKH weekend coding club: lessons, attendance, homework with an in-browser code editor, grading, reports and certificates for admins, teachers and students.
 
-**Live:** `https://lms.cckh.dev` (from M1) · **Status:** M1, walking skeleton
+**Live:** `https://lms.cckh.dev` (after G1, the server set-up) · **Status:** M1 code done; next M2
 
 ## Documents
 | | |
