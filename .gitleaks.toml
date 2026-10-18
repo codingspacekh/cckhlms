@@ -1,0 +1,19 @@
+# Secret scanning for this public repo (NFR-05). Real secrets live only on the server and in GitHub secrets.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Obviously fake, local-only test and example values"
+paths = [
+  '''(^|/)node_modules/''',
+  '''(^|/)\.next/''',
+  '''(^|/)coverage/''',
+  '''(^|/)test-results/''',
+  '''(^|/)spikes/m0/\.env$''',
+  '''(^|/)\.env\.example$''',
+  '''(^|/)playwright\.config\.ts$''',
+  '''(^|/)vitest\.config\.mts$''',
+  '''(^|/)tests/''',
+  '''(^|/)spikes/m0/tests/''',
+  '''(^|/)spikes/m0/vitest\.config\.mts$''',
+]

@@ -1,0 +1,16 @@
+# Local development: PostgreSQL only. Production services are in infra/compose.prod.yaml (M1 PR 2).
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: lms
+      POSTGRES_PASSWORD: lms-dev-only
+      POSTGRES_DB: lms
+    ports: ['54329:5432']
+    volumes: [pgdata:/var/lib/postgresql]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U lms -d lms']
+      interval: 2s
+      retries: 30
+volumes:
+  pgdata:
