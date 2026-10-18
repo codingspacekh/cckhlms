@@ -1,0 +1,46 @@
+{
+  "name": "cckhlms-m0-spikes",
+  "private": true,
+  "version": "0.0.0",
+  "description": "M0 throwaway spikes: preview origin + CSP, editor, auth (docs/05-milestones.md)",
+  "type": "module",
+  "scripts": {
+    "build": "next build",
+    "start": "next start -p 3101",
+    "preview": "node preview/server.mjs",
+    "db:up": "docker run -d --rm --name cckhlms-m0-db -e POSTGRES_USER=lms -e POSTGRES_PASSWORD=lms-spike-only -e POSTGRES_DB=lms_spike -p 54329:5432 postgres:18-alpine && node scripts/wait-db.mjs",
+    "db:down": "docker stop cckhlms-m0-db",
+    "typecheck": "tsc --noEmit",
+    "test:unit": "vitest run --project unit",
+    "test:int": "vitest run --project integration",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@codemirror/lang-css": "6.3.1",
+    "@codemirror/lang-html": "6.4.12",
+    "@codemirror/lang-java": "6.0.2",
+    "@codemirror/lang-javascript": "6.2.5",
+    "@codemirror/lang-python": "6.2.1",
+    "@codemirror/state": "6.7.6",
+    "@codemirror/view": "6.43.13",
+    "better-auth": "1.7.7",
+    "codemirror": "6.0.2",
+    "drizzle-orm": "0.45.3",
+    "fflate": "0.8.3",
+    "next": "16.3.8",
+    "pg": "8.23.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.63.0",
+    "@types/node": "24.19.1",
+    "@types/pg": "8.23.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "jszip": "3.10.2",
+    "typescript": "5.9.3",
+    "vitest": "4.1.11"
+  }
+}

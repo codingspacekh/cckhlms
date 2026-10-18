@@ -1,0 +1,23 @@
+Build a Learning Management System for My Coding Club
+
+Here are some of the requirements and features
+1. Admin
+- Create User Account (Student: registered in one/more courses, Teacher :assigned for the courses)
+- Create Class (Course, schedule time, duration)
+- Check students report (attendance, performance, score, homework, improvement)
+- Generate student certificate
+- Update/Promote the class every term
+
+2. Teacher
+- Create lesson note/review for the week
+- Create a classwork (giving feedback, score…)
+- Create assignment/ homework (Instruction, compiler (embedded text editor), feedback, score, due date)
+- Write/Update Report (lesson cover in syllabus, attendance, performance, comment, support line need?)
+- Check student statistics/performance (graphical view)
+- create/mark final exam result, write report whether pass or fail, overall comment etc.
+
+3. Student
+- view the lesson note/review and ask the question
+- Reply to other’s question
+- Submit classwork/homework
+- View his/her own statistics

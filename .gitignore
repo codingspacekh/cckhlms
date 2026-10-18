@@ -1,0 +1,16 @@
+node_modules/
+.next/
+out/
+coverage/
+test-results/
+playwright-report/
+next-env.d.ts
+*.tsbuildinfo
+.DS_Store
+# real secrets never go in git (public repo); only *.example files are committed
+.env
+.env.*
+!.env.example
+!spikes/m0/.env
+infra/secrets/
+backups/

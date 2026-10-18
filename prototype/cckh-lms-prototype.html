@@ -1,0 +1,949 @@
+<title>CCKH LMS Prototype</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: classic dashboard — fixed light sidebar (role switch + nav), slim top bar, content of white cards on a cool neutral plane. One sans everywhere; data is the only loud thing. */
+:root{
+  --page:#F5F6F8; --surface:#FFFFFF; --surface-2:#F2F4F7; --line:#E4E7EC; --line-2:#D5DAE1;
+  --ink:#101828; --ink-2:#475467; --muted:#8B94A3;
+  --accent:#1C5CAB; --accent-2:#184F95; --accent-soft:#EAF1FB; --accent-ink:#FFFFFF;
+  --s1:#2a78d6; --s1-wash:rgba(42,120,214,.10); --s2:#eb6834;
+  --grid:#EDF0F3; --axis:#CDD3DB;
+  --good:#0ca30c; --good-text:#056B05; --good-soft:#E7F5E7;
+  --warn:#fab219; --warn-text:#875800; --warn-soft:#FEF4DC;
+  --bad:#d03b3b; --bad-text:#A72A2A; --bad-soft:#FCE9E9;
+  --py:#2a78d6; --java:#eb6834; --web:#6250d6;
+  --f:"Geist",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"Geist Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:12px; --r-sm:8px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --page:#0B0F16; --surface:#141A24; --surface-2:#1A2230; --line:#232C3A; --line-2:#2E3849;
+  --ink:#E8ECF3; --ink-2:#AEB7C6; --muted:#7F8A9C;
+  --accent:#5598E7; --accent-2:#6DA7EC; --accent-soft:#17263D; --accent-ink:#06121F;
+  --s1:#3987e5; --s1-wash:rgba(57,135,229,.16); --s2:#d95926;
+  --grid:#1E2633; --axis:#344055;
+  --good:#0ca30c; --good-text:#5BCB5B; --good-soft:#12301A;
+  --warn:#fab219; --warn-text:#F2C04F; --warn-soft:#33280F;
+  --bad:#d03b3b; --bad-text:#F28484; --bad-soft:#3A1717;
+  --py:#3987e5; --java:#d95926; --web:#9085e9; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --page:#0B0F16; --surface:#141A24; --surface-2:#1A2230; --line:#232C3A; --line-2:#2E3849;
+  --ink:#E8ECF3; --ink-2:#AEB7C6; --muted:#7F8A9C;
+  --accent:#5598E7; --accent-2:#6DA7EC; --accent-soft:#17263D; --accent-ink:#06121F;
+  --s1:#3987e5; --s1-wash:rgba(57,135,229,.16); --s2:#d95926;
+  --grid:#1E2633; --axis:#344055;
+  --good:#0ca30c; --good-text:#5BCB5B; --good-soft:#12301A;
+  --warn:#fab219; --warn-text:#F2C04F; --warn-soft:#33280F;
+  --bad:#d03b3b; --bad-text:#F28484; --bad-soft:#3A1717;
+  --py:#3987e5; --java:#d95926; --web:#9085e9; color-scheme:dark }
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--page);color:var(--ink);font:14.5px/1.55 var(--f);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+h1,h2,h3{margin:0;line-height:1.25;text-wrap:balance;font-weight:600}
+h1{font-size:1.5rem;letter-spacing:-.015em}
+h2{font-size:1rem}
+h3{font-size:.95rem}
+p{margin:0}
+code,.mono{font-family:var(--f-mono);font-size:.88em}
+.tnum{font-variant-numeric:tabular-nums}
+svg.i{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---- shell ---- */
+.app{display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100%}
+.side{position:sticky;top:env(safe-area-inset-top,0px);height:calc(100dvh - env(safe-area-inset-top,0px));background:var(--surface);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;gap:18px;padding:18px 14px;padding-left:max(14px,env(safe-area-inset-left,0px));overflow:auto}
+.brand{display:flex;align-items:center;gap:10px;padding:2px 6px}
+.logo{width:30px;height:30px;border-radius:8px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font:600 .78rem var(--f-mono)}
+.brand b{font-weight:600;font-size:1rem}.brand small{display:block;color:var(--muted);font-size:.75rem;line-height:1.2}
+.rolebox{display:flex;flex-direction:column;gap:4px;padding:0 6px}
+.rolebox label{font-size:.72rem;color:var(--muted);font-weight:500}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav .sec{font-size:.72rem;color:var(--muted);font-weight:500;padding:8px 10px 4px}
+.nav button{display:flex;align-items:center;gap:10px;border:0;background:transparent;padding:8px 10px;border-radius:var(--r-sm);cursor:pointer;color:var(--ink-2);font-weight:500;text-align:left}
+.nav button:hover{background:var(--surface-2);color:var(--ink)}
+.nav button[aria-current="page"]{background:var(--accent-soft);color:var(--accent)}
+.nav .badge{margin-left:auto;font-size:.72rem;background:var(--surface-2);color:var(--ink-2);border-radius:999px;padding:0 7px;font-variant-numeric:tabular-nums}
+.side .foot{margin-top:auto;display:flex;flex-direction:column;gap:10px}
+.proto{font-size:.75rem;color:var(--muted);border:1px dashed var(--line-2);border-radius:var(--r-sm);padding:8px 10px;line-height:1.45}
+.me{display:flex;align-items:center;gap:10px;padding:8px 6px;border-top:1px solid var(--line)}
+.av{width:32px;height:32px;border-radius:50%;background:var(--surface-2);color:var(--ink-2);display:grid;place-items:center;font-weight:600;font-size:.8rem;flex:none}
+.me .n{font-weight:600;font-size:.88rem;line-height:1.2}.me .r{font-size:.75rem;color:var(--muted)}
+.me .btn{margin-left:auto}
+.wrap{min-width:0;display:flex;flex-direction:column}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:color-mix(in srgb,var(--page) 88%,transparent);backdrop-filter:blur(8px);
+  display:flex;align-items:center;gap:12px;padding-block:12px;padding-left:28px;padding-right:max(28px,env(safe-area-inset-right,0px));border-bottom:1px solid var(--line)}
+.crumb{font-size:.85rem;color:var(--muted)}.crumb strong{color:var(--ink);font-weight:500}
+.top .r{margin-left:auto;display:flex;align-items:center;gap:10px}
+.iconbtn{position:relative;width:36px;height:36px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;cursor:pointer;color:var(--ink-2)}
+.iconbtn .dot{position:absolute;top:6px;right:7px;width:8px;height:8px;border-radius:50%;background:var(--bad);border:2px solid var(--surface)}
+main{padding-block:24px 48px;padding-left:28px;padding-right:max(28px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:20px;max-width:1320px;width:100%}
+@media (max-width:900px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .side{position:static;height:auto;flex-direction:column;gap:12px;border-right:0;border-bottom:1px solid var(--line);padding:12px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px))}
+  .side .head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+  .rolebox{padding:0;flex-direction:row;align-items:center;gap:8px}
+  .nav{flex-direction:row;overflow-x:auto;gap:4px;padding-bottom:2px}
+  .nav .sec,.side .foot{display:none}
+  .nav button{white-space:nowrap;border:1px solid var(--line)}
+  .top{position:static;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  main{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-top:18px}
+}
+@media (min-width:901px){.side .head{display:contents}}
+
+/* ---- page header ---- */
+.phead{display:flex;align-items:flex-end;justify-content:space-between;gap:12px 20px;flex-wrap:wrap}
+.phead .eyebrow{font-size:.82rem;color:var(--muted);margin-bottom:4px}
+.req{font-family:var(--f-mono);font-size:.7rem;color:var(--muted)}
+
+/* ---- cards & grids ---- */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;min-width:0}
+.card.flush{padding:0;overflow:hidden}
+.chead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px}
+.chead p{font-size:.82rem;color:var(--muted);margin-top:2px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.g21{grid-template-columns:minmax(0,2fr) minmax(0,1fr)}
+.g12{grid-template-columns:minmax(0,1fr) minmax(0,2fr)}
+@media (max-width:1100px){.g4{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(2,minmax(0,1fr))}.g21,.g12{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:640px){.g2,.g3,.g4{grid-template-columns:minmax(0,1fr)}}
+.stack{display:flex;flex-direction:column;gap:12px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.spread{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.muted{color:var(--muted)}.ink2{color:var(--ink-2)}.small{font-size:.85rem}.xs{font-size:.78rem}
+.list > *{padding-block:12px;border-top:1px solid var(--line)}.list > *:first-child{border-top:0;padding-top:0}.list > *:last-child{padding-bottom:0}
+
+/* stat tile */
+.tile{display:flex;flex-direction:column;gap:6px}
+.tile .k{font-size:.82rem;color:var(--ink-2);font-weight:500}
+.tile .v{font-size:1.9rem;font-weight:600;letter-spacing:-.02em;line-height:1.1}
+.tile .v small{font-size:.85rem;font-weight:500;color:var(--muted);letter-spacing:0}
+.tile .s{font-size:.8rem;color:var(--muted)}
+.tile .spark{height:28px;margin-top:2px}
+
+/* pills */
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:.75rem;font-weight:500;border-radius:999px;padding:2px 9px;background:var(--surface-2);color:var(--ink-2);white-space:nowrap;line-height:1.5}
+.pill.good{background:var(--good-soft);color:var(--good-text)}
+.pill.warn{background:var(--warn-soft);color:var(--warn-text)}
+.pill.bad{background:var(--bad-soft);color:var(--bad-text)}
+.pill.info{background:var(--accent-soft);color:var(--accent)}
+.pill svg{width:12px;height:12px;stroke-width:2.4}
+.lang{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;color:var(--ink-2);white-space:nowrap}
+.lang::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--c)}
+
+/* buttons & forms */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line-2);background:var(--surface);padding:7px 12px;border-radius:var(--r-sm);cursor:pointer;font-weight:500;font-size:.88rem;white-space:nowrap;color:var(--ink)}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{background:var(--accent-2);border-color:var(--accent-2)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--ink-2)}
+.btn.ghost:hover{background:var(--surface-2)}
+.btn.danger{color:var(--bad-text)}
+.btn.sm{padding:4px 9px;font-size:.8rem}
+label.f,div.f{display:flex;flex-direction:column;gap:6px;font-size:.82rem;color:var(--ink-2);font-weight:500;min-width:0}
+input[type=text],input[type=date],input[type=time],input[type=number],input[type=password],select,textarea{
+  background:var(--surface);border:1px solid var(--line-2);border-radius:var(--r-sm);padding:8px 10px;color:var(--ink);width:100%;min-width:0;font-weight:400}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+textarea{resize:vertical}
+.seg{display:inline-flex;background:var(--surface-2);border-radius:var(--r-sm);padding:3px;gap:2px;max-width:100%;overflow-x:auto}
+.seg button{border:0;background:transparent;padding:5px 11px;cursor:pointer;font-weight:500;font-size:.82rem;color:var(--ink-2);border-radius:6px;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgb(16 24 40 / .10),0 0 0 1px var(--line)}
+.seg.att button[aria-pressed="true"][data-v="P"]{color:var(--good-text)}
+.seg.att button[aria-pressed="true"][data-v="L"]{color:var(--warn-text)}
+.seg.att button[aria-pressed="true"][data-v="A"]{color:var(--bad-text)}
+.note{display:flex;gap:10px;align-items:flex-start;background:var(--accent-soft);color:var(--ink);padding:12px 14px;border-radius:var(--r-sm);font-size:.88rem}
+.note svg{color:var(--accent);margin-top:2px}
+.note.warn{background:var(--warn-soft)}.note.warn svg{color:var(--warn-text)}
+.note.bad{background:var(--bad-soft)}.note.bad svg{color:var(--bad-text)}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs button{border:0;background:transparent;padding:10px 12px;cursor:pointer;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tabs button:hover{color:var(--ink)}
+
+/* tables */
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{padding:11px 16px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{font-size:.75rem;color:var(--muted);font-weight:500;white-space:nowrap;background:var(--surface)}
+tbody tr:last-child td{border-bottom:0}
+tbody tr.click{cursor:pointer}tbody tr.click:hover td,tbody tr.click:focus-visible td{background:var(--surface-2)}
+tr.click:focus-visible{outline:none}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+td .sub{display:block;font-size:.78rem;color:var(--muted)}
+.gb th.a{min-width:104px;vertical-align:bottom;white-space:normal;line-height:1.3}
+.gb th.a .t{display:block;color:var(--ink);font-size:.8rem;font-weight:500}
+.gb td{padding:6px 10px}
+.gb input{width:62px;text-align:right;padding:5px 7px;font-variant-numeric:tabular-nums}
+.gb td.na,.gb td.future{color:var(--muted);text-align:center;font-size:.78rem;white-space:nowrap}
+.gb .sticky{position:sticky;left:0;background:var(--surface);z-index:1;white-space:nowrap}
+
+/* charts */
+.chart{position:relative}
+svg.c{width:100%;height:auto;display:block;overflow:visible}
+svg.c .gl{stroke:var(--grid);stroke-width:1}
+svg.c .ax{stroke:var(--axis);stroke-width:1}
+svg.c text{fill:var(--muted);font:11px var(--f);font-variant-numeric:tabular-nums}
+svg.c text.v{fill:var(--ink-2);font-weight:500}
+svg.c .bar{fill:var(--s1)}
+svg.c .hb:hover .bar,svg.c .hb:focus .bar{fill:var(--accent-2)}
+svg.c .hb,svg.c .hx{outline:none}
+svg.c .ref{stroke:var(--ink-2);stroke-width:1;opacity:.55}
+svg.c text.reflbl{fill:var(--ink-2);font-weight:500}
+svg.c .ln{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+svg.c .dot{stroke:var(--surface);stroke-width:2}
+svg.c .xh{stroke:var(--axis);stroke-width:1;opacity:0}
+svg.c .hx:hover .xh,svg.c .hx:focus .xh{opacity:1}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.8rem;color:var(--ink-2);margin-bottom:8px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:14px;height:2px;border-radius:2px;background:var(--c)}
+.hbars{display:flex;flex-direction:column;gap:12px}
+.hbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center}
+.hbar .l{font-size:.85rem;color:var(--ink);min-width:0;overflow-wrap:anywhere}
+.hbar .val{font-size:.85rem;font-weight:500;font-variant-numeric:tabular-nums;color:var(--ink)}
+.hbar .track{grid-column:1 / -1;position:relative;height:8px;border-radius:4px;background:var(--surface-2)}
+.hbar .fill{position:absolute;inset:0 auto 0 0;border-radius:4px;background:var(--s1)}
+.hbar .tick{position:absolute;top:-4px;bottom:-4px;width:1.5px;background:var(--ink-2);opacity:.6}
+.meter{position:relative;height:6px;border-radius:3px;background:var(--surface-2)}
+.meter > i{position:absolute;inset:0 auto 0 0;border-radius:3px;background:var(--s1)}
+.meter > i.warn{background:var(--warn)}.meter > i.bad{background:var(--bad)}
+.meter > b{position:absolute;top:-3px;bottom:-3px;width:1.5px;background:var(--ink-2);opacity:.6}
+.viewtoggle{font-size:.78rem}
+.ctable table{font-size:.82rem}.ctable th,.ctable td{padding:7px 10px}
+#tip{position:fixed;z-index:40;pointer-events:none;background:var(--surface);border:1px solid var(--line-2);border-radius:var(--r-sm);box-shadow:0 8px 24px rgb(16 24 40 / .14);padding:8px 10px;font-size:.8rem;min-width:130px}
+#tip .t{color:var(--muted);margin-bottom:4px}
+#tip .rw{display:flex;align-items:center;gap:10px;justify-content:space-between}
+#tip .rw b{font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+#tip .rw span{display:inline-flex;align-items:center;gap:6px;color:var(--ink-2)}
+#tip .rw i{width:12px;height:2px;border-radius:2px;background:var(--c)}
+
+/* weeks strip */
+.wkstrip{display:flex;gap:6px;flex-wrap:wrap}
+.wkstrip span{width:30px;height:30px;border-radius:6px;display:grid;place-items:center;font-size:.75rem;font-weight:500;background:var(--surface-2);color:var(--muted);font-variant-numeric:tabular-nums}
+.wkstrip span.done{background:var(--accent-soft);color:var(--accent)}
+.wkstrip span.now{background:var(--accent);color:var(--accent-ink)}
+.wkstrip span.x{background:transparent;border:1px dashed var(--line-2)}
+
+/* editor */
+.ide{display:grid;grid-template-columns:210px minmax(0,1fr);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--surface);min-height:380px}
+@media (max-width:700px){.ide{grid-template-columns:minmax(0,1fr)}}
+.tree{background:var(--surface-2);border-right:1px solid var(--line);padding:10px 8px;display:flex;flex-direction:column;gap:1px;min-width:0}
+.tree .dir{color:var(--muted);font-family:var(--f-mono);font-size:.72rem;padding:8px 8px 3px;word-break:break-all}
+.tree button{border:0;background:transparent;text-align:left;padding:5px 8px;border-radius:6px;cursor:pointer;font-family:var(--f-mono);font-size:.78rem;display:flex;justify-content:space-between;gap:6px;color:var(--ink-2)}
+.tree button:hover{background:var(--surface)}
+.tree button[aria-current="true"]{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
+.tree .wm{color:var(--warn-text);font-weight:600}
+.code{display:grid;grid-template-columns:auto minmax(0,1fr);font-family:var(--f-mono);font-size:.82rem;line-height:1.65;min-height:340px}
+.gutter{padding:12px 10px;text-align:right;color:var(--muted);border-right:1px solid var(--line);user-select:none;white-space:pre;overflow:hidden;font-variant-numeric:tabular-nums}
+.code textarea{border:0;border-radius:0;padding:12px 14px;font:inherit;line-height:inherit;white-space:pre;overflow:auto;resize:none;background:var(--surface);min-height:340px;tab-size:4}
+.code textarea:focus{box-shadow:inset 0 0 0 2px var(--accent-soft)}
+.code pre{margin:0;padding:12px 14px;white-space:pre;overflow:auto}
+.preview{display:grid;grid-template-rows:auto minmax(240px,1fr) auto;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--surface)}
+.preview .bar{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);font-size:.78rem;color:var(--muted);flex-wrap:wrap}
+.preview iframe{width:100%;height:100%;min-height:260px;border:0;background:#fff}
+.console{font-family:var(--f-mono);font-size:.75rem;max-height:120px;min-height:44px;overflow:auto;border-top:1px solid var(--line);padding:8px 12px;background:var(--surface-2)}
+.console div{padding:1px 0}.console .e{color:var(--bad-text)}.console .w{color:var(--warn-text)}
+
+/* lesson body & Q&A */
+.md h2{margin:18px 0 8px;font-size:1.05rem}.md h3{margin:14px 0 6px}.md p{margin:8px 0;max-width:68ch}.md ul{margin:8px 0;padding-left:22px}
+.md pre{background:var(--surface-2);border-radius:var(--r-sm);padding:12px 14px;overflow:auto;font-family:var(--f-mono);font-size:.82rem;margin:8px 0}
+.md code{background:var(--surface-2);padding:1px 5px;border-radius:4px}.md pre code{background:none;padding:0}
+.q{border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;background:var(--surface);display:flex;flex-direction:column;gap:10px}
+.q.review{border-style:dashed}
+.reply{margin-left:14px;padding-left:12px;border-left:2px solid var(--line);display:flex;flex-direction:column;gap:2px}
+.reply.accepted{border-left-color:var(--good)}
+.meta{font-size:.78rem;color:var(--muted)}.meta strong{color:var(--ink);font-weight:500}
+
+/* misc */
+.slip{border:1.5px dashed var(--line-2);border-radius:var(--r-sm);padding:14px;font-family:var(--f-mono);font-size:.85rem;display:flex;flex-direction:column;gap:2px}
+.slip b{font-family:var(--f);font-weight:600}
+.cert{aspect-ratio:1.414/1;max-width:100%;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);display:grid;place-items:center;text-align:center;padding:24px;position:relative;box-shadow:inset 0 0 0 10px var(--surface-2)}
+.cert .ph-design{position:absolute;top:18px;left:18px;font-size:.7rem;color:var(--muted);border:1px dashed var(--line-2);padding:2px 8px;border-radius:999px}
+.signin{max-width:400px;margin:48px auto;width:100%}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--page);padding:10px 16px;border-radius:var(--r-sm);font-weight:500;z-index:50;max-width:calc(100% - 32px);box-shadow:0 8px 24px rgb(0 0 0 / .2)}
+@media (prefers-reduced-motion:no-preference){.btn,.nav button,tbody tr.click td{transition:background-color .12s}}
+</style>
+
+<div class="app">
+  <aside class="side">
+    <div class="head">
+      <div class="brand"><div class="logo">ck</div><div><b>CCKH LMS</b><small>Coding club · prototype</small></div></div>
+      <div class="rolebox"><label for="roleSel">Viewing as</label><select id="roleSel"><option value="admin">Admin</option><option value="teacher">Teacher · Sophea Chan</option><option value="student">Student · Bopha Lim</option></select></div>
+    </div>
+    <nav class="nav" id="nav" aria-label="Sections"></nav>
+    <div class="foot">
+      <div class="proto">Example data, nothing is saved. Prototype date: <strong>Sun 18 Oct 2026</strong>.</div>
+      <div class="me"><div class="av" id="meAv">AD</div><div><div class="n" id="meName">Admin</div><div class="r" id="meRole">Club admin</div></div><button class="btn ghost sm" data-go="signin" title="Sign out" aria-label="Sign out"><svg class="i" viewBox="0 0 24 24"><path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 17l5-5-5-5M15 12H3"/></svg></button></div>
+    </div>
+  </aside>
+  <div class="wrap">
+    <header class="top">
+      <div class="crumb" id="crumb"></div>
+      <div class="r"><span class="small muted">Sun 18 Oct 2026</span>
+        <button class="iconbtn" data-act="toast" data-msg="Notifications: 1 new question, 3 homework submissions to mark." aria-label="Notifications"><svg class="i" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span class="dot"></span></button></div>
+    </header>
+    <main id="main"></main>
+  </div>
+</div>
+<div id="tip" hidden></div>
+<div id="toast" role="status" hidden></div>
+
+<script>
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const D=(y,m,d)=>new Date(Date.UTC(y,m-1,d));
+const addDays=(d,n)=>new Date(d.getTime()+n*864e5);
+const iso=d=>d.toISOString().slice(0,10);
+const fmt=(d,o={weekday:'short',day:'numeric',month:'short'})=>d.toLocaleDateString('en-GB',{...o,timeZone:'UTC'});
+const TODAY=D(2026,10,18); // prototype clock: Sunday 18 Oct 2026, 10:42 (club time zone Asia/Phnom_Penh)
+const PASS=60, LATE_PENALTY=0.10, W={exam:60,classwork:30,homework:10};
+function endTime(t,m){const[h,mm]=t.split(':').map(Number);const x=h*60+mm+m;return String(Math.floor(x/60)%24).padStart(2,'0')+':'+String(x%60).padStart(2,'0')}
+let toastT;function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,3200)}
+const WORDS=['tiger','mango','river','lotus','rocket','pixel','comet','panda','cloud','koala','orbit','maple','sunny','delta'];
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const newPassword=()=>`${pick(WORDS)}-${pick(WORDS)}-${10+Math.floor(Math.random()*90)}`;
+const ICON={
+ home:'<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+ classes:'<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>',
+ plus:'<path d="M12 5v14M5 12h14"/>',
+ users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4-6"/>',
+ report:'<path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>',
+ promote:'<path d="M7 17 17 7M9 7h8v8"/>',
+ award:'<circle cx="12" cy="9" r="6"/><path d="m8.5 14-1.5 7 5-3 5 3-1.5-7"/>',
+ calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+ grid:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/>',
+ check:'<path d="M4 12.5 9 17.5 20 6.5"/>',
+ chart:'<path d="M3 20h18M6 16v-5M11 16V6M16 16v-8M20 16v-3"/>',
+ clipboard:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 11h6M9 15h4"/>',
+ book:'<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H20v15H5.5A1.5 1.5 0 0 0 4 19.5z"/><path d="M4 19.5A1.5 1.5 0 0 0 5.5 21H20"/>',
+ code:'<path d="m8 7-5 5 5 5M16 7l5 5-5 5"/>',
+ trend:'<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+ info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
+ alert:'<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17v.5"/>',
+ x:'<path d="M6 6l12 12M18 6 6 18"/>',
+ down:'<path d="M12 4v12M6 11l6 6 6-6M5 20h14"/>',
+ upload:'<path d="M12 20V8M6 13l6-6 6 6M5 4h14"/>',
+ file:'<path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5"/>'};
+const ic=(n,cls='i')=>`<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICON[n]}</svg>`;
+
+/* ---------- example data ---------- */
+const STUDENTS=[['s1','Sokha Pich','sokha.p'],['s2','Rithy Som','rithy.s'],['s3','Bopha Lim','bopha.l'],['s4','Chenda Ouk','chenda.o'],['s5','Kosal Meas','kosal.m'],['s6','Nita Keo','nita.k'],['s7','Piseth Long','piseth.l'],['s8','Sreyleak Chea','sreyleak.c'],['s9','Vanna Ros','vanna.r'],['s10','Lina Sok','lina.s'],['s11','Malis Hem','malis.h'],['s12','Theara Nhem','theara.n']].map(([id,name,user])=>({id,name,user}));
+const S=id=>STUDENTS.find(s=>s.id===id);
+const initials=n=>n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+const TEACHERS=['Sophea Chan','Dara Kim','Vibol Heng'];
+const TERMS={'T4-2026':'Term 4 · 2026','T1-2027':'Term 1 · 2027'};
+const CLASSES=[
+ {id:'c1',name:'Python Level 1',lang:'python',term:'T4-2026',day:'Sat',time:'09:00',mins:90,first:D(2026,10,3),weeks:12,teacher:'Sophea Chan',room:'Room A',
+  roster:['s1','s2','s3','s4','s5','s6','s7','s8','s9','s10'],enrolled:{s10:D(2026,10,12)},cancel:{'2026-10-31':'Public holiday'}},
+ {id:'c2',name:'Java Level 2',lang:'java',term:'T4-2026',day:'Sat',time:'14:00',mins:120,first:D(2026,10,10),weeks:10,teacher:'Dara Kim',room:'Room B',
+  roster:['s3','s5','s7','s11','s12'],enrolled:{},cancel:{'2026-10-31':'Public holiday'}},
+ {id:'c3',name:'Web Basics',lang:'web',term:'T4-2026',day:'Sun',time:'09:00',mins:90,first:D(2026,10,4),weeks:11,teacher:'Vibol Heng',room:'Room A',
+  roster:['s2','s3','s4','s6','s8','s9','s12'],enrolled:{},cancel:{}}
+];
+const C=id=>CLASSES.find(c=>c.id===id);
+const SYLLABUS={c1:['Output with print()','Variables & input()','Conditions: if / elif / else','for loops & range()','while loops','Lists','Functions','Mini project: text adventure','Debugging','Revision']};
+const COVERED={c1:{1:[0,1],2:[2],3:[3]}};
+const ASSESS={
+ c1:[{id:'a1',type:'classwork',title:'Hello, print()',week:1,max:10,lang:'python'},
+     {id:'a2',type:'homework',title:'Mad Libs story',week:1,due:2,max:10,lang:'python'},
+     {id:'a3',type:'classwork',title:'If / else quiz (paper)',week:2,max:20,lang:'none'},
+     {id:'a4',type:'classwork',title:'Loop patterns',week:3,max:10,lang:'python'},
+     {id:'a5',type:'homework',title:'Number guessing game',week:3,due:4,max:10,lang:'python'},
+     {id:'a6',type:'exam',title:'End-term exam · theory',week:12,max:40,lang:'none'},
+     {id:'a7',type:'exam',title:'End-term exam · practical',week:12,max:60,lang:'python'}],
+ c2:[{id:'b1',type:'classwork',title:'Classes & objects',week:1,max:10,lang:'java'},
+     {id:'b2',type:'homework',title:'Bank account class',week:1,due:2,max:10,lang:'java'},
+     {id:'b3',type:'homework',title:'Shapes with packages',week:2,due:3,max:10,lang:'java'},
+     {id:'b4',type:'exam',title:'End-term exam',week:10,max:100,lang:'java'}],
+ c3:[{id:'w1',type:'classwork',title:'HTML skeleton',week:1,max:10,lang:'web'},
+     {id:'w2',type:'homework',title:'Favourite food page',week:1,due:2,max:10,lang:'web'},
+     {id:'w3',type:'classwork',title:'CSS boxes',week:2,max:10,lang:'web'},
+     {id:'w4',type:'homework',title:'My profile page',week:3,due:4,max:20,lang:'web'},
+     {id:'w5',type:'exam',title:'End-term exam',week:11,max:100,lang:'web'}]
+};
+// number = score · 'L8' = late, scored 8 before penalty · 'M' = missing · 'E' = excused · 'S' = submitted, not graded yet
+const SCORES={
+ c1:{s1:{a1:9,a2:10,a3:18,a4:9,a5:'S'},s2:{a1:7,a2:'L8',a3:14,a4:8},s3:{a1:10,a2:9,a3:19,a4:10,a5:'S'},s4:{a1:6,a2:'M',a3:11,a4:6},
+     s5:{a1:8,a2:9,a3:16,a4:7},s6:{a1:9,a2:8,a3:'E',a4:9},s7:{a1:5,a2:'M',a3:9,a4:'M'},s8:{a1:8,a2:7,a3:15,a4:8,a5:'S'},s9:{a1:7,a2:9,a3:17,a4:8},s10:{a4:9}},
+ c2:{s3:{b1:9,b2:8},s5:{b1:7,b2:6},s7:{b1:4,b2:'M'},s11:{b1:10,b2:9},s12:{b1:8,b2:'L9'}},
+ c3:{s2:{w1:7,w2:8,w3:6},s3:{w1:8,w2:'L9',w3:9},s4:{w1:6,w2:7,w3:7},s6:{w1:9,w2:9,w3:8},s8:{w1:8,w2:'M',w3:7},s9:{w1:9,w2:8,w3:9},s12:{w1:10,w2:10,w3:9}}
+};
+// one letter per held session: P present · L late · A absent · E excused · '-' before enrolment
+const ATT={
+ c1:{s1:'PPP',s2:'PLP',s3:'PPP',s4:'PAP',s5:'PPL',s6:'PEP',s7:'AAP',s8:'PPP',s9:'LPP',s10:'--P'},
+ c2:{s3:'PP',s5:'PP',s7:'AP',s11:'PP',s12:'PL'},
+ c3:{s2:'PPP',s3:'PPP',s4:'PPA',s6:'PPP',s8:'PAP',s9:'PPP',s12:'PPP'}
+};
+const SUPPORT={s7:'Missed two sessions and is behind on loops. Suggest a short catch-up before week 5.',s4:'Finds homework hard without help at home; pair with Sokha in class.'};
+const LESSONS={c1:{
+ 1:{title:'Talking to the computer with print()',status:'published'},
+ 2:{title:'Making decisions with if / else',status:'published'},
+ 3:{title:'Repeating things with for loops',status:'published',md:
+`## What we did today
+We used **for loops** to repeat code without copying it.
+
+- \`range(5)\` gives the numbers 0, 1, 2, 3, 4
+- the code inside the loop must be **indented**
+
+\`\`\`python
+for i in range(5):
+    print("Lap", i + 1)
+\`\`\`
+
+## Try at home
+Change the program so it counts **down** from 10 to 1, then prints "Lift off!".`},
+ 4:{title:'While loops and guessing games',status:'draft'}}};
+const REPORTS={c1:{1:true,2:true,3:false}};
+let QUESTIONS=[
+ {id:'q1',week:3,author:'s2',body:'Why does range(5) stop at 4 and not 5?',vis:'visible',replies:[
+   {id:'r1',author:'s3',body:'It starts at 0, so 0, 1, 2, 3, 4 is five numbers.',accepted:true},
+   {id:'r2',author:'T',body:'Bopha is right. range(1, 6) gives 1 to 5 if you want to start at 1.'}]},
+ {id:'q2',week:3,author:'s4',body:'Can I print my name 10 times with a loop?',code:'for i in range(10):\nprint("Chenda")',vis:'visible',replies:[]},
+ {id:'q3',week:3,author:'s7',body:'this lesson is so boring lol',vis:'review',reportedBy:'s1',replies:[]}
+];
+
+/* ---------- rules (from 02-system-requirements) ---------- */
+function sessions(c){const out=[];let n=0,i=0;while(n<c.weeks){const d=addDays(c.first,7*i++);const k=iso(d);
+  if(c.cancel[k]){out.push({date:d,cancelled:true,reason:c.cancel[k]});continue}
+  n++;out.push({date:d,week:n,status:+d<+TODAY?'held':(+d===+TODAY?'today':'upcoming')})}return out}
+const weekDate=(c,w)=>{const s=sessions(c).find(s=>s.week===w);return s?s.date:addDays(c.first,7*(w-1))};
+const dueDate=(c,a)=>weekDate(c,a.due??a.week);
+const isDue=(c,a)=>+dueDate(c,a)<=+TODAY;
+const beforeEnrol=(c,sid,a)=>c.enrolled[sid]&&+dueDate(c,a)<+c.enrolled[sid];       // BR-17
+function cellPoints(v,max){if(typeof v==='number')return Math.min(v,max);if(typeof v==='string'&&v[0]==='L')return +v.slice(1)*(1-LATE_PENALTY);return 0}
+function standing(c,sid){                                                            // BR-12, BR-14, BR-17
+  const acc={exam:[0,0],classwork:[0,0],homework:[0,0]};
+  for(const a of ASSESS[c.id]||[]){
+    if(!isDue(c,a)||beforeEnrol(c,sid,a))continue;
+    const v=(SCORES[c.id]?.[sid]||{})[a.id];
+    if(v==='E'||v==='S')continue;
+    acc[a.type][0]+=cellPoints(v,a.max);acc[a.type][1]+=a.max}
+  let used=0,sum=0;const parts={};
+  for(const k in W){const[p,m]=acc[k];parts[k]=m?p/m*100:null;if(m){used+=W[k];sum+=W[k]*p/m}}
+  return{score:used?Math.round(sum/used*1000)/10:null,parts,used};
+}
+function attendance(c,sid){const a=(ATT[c.id]||{})[sid]||'';let ok=0,den=0;                // BR-09
+  for(const ch of a){if(ch==='-'||ch==='E')continue;den++;if(ch==='P'||ch==='L')ok++}return den?Math.round(ok/den*100):null}
+function completion(c,sid){const hw=(ASSESS[c.id]||[]).filter(a=>a.type==='homework'&&isDue(c,a)&&!beforeEnrol(c,sid,a));
+  if(!hw.length)return null;const done=hw.filter(a=>{const v=(SCORES[c.id]?.[sid]||{})[a.id];return v!==undefined&&v!=='M'}).length;return Math.round(done/hw.length*100)}
+function taskAvg(c,a){let p=0,m=0;for(const sid of c.roster){if(beforeEnrol(c,sid,a))continue;const v=(SCORES[c.id]?.[sid]||{})[a.id];if(v==='E'||v==='S')continue;p+=cellPoints(v,a.max);m+=a.max}return m?p/m*100:null}
+const classesOf=sid=>CLASSES.filter(c=>c.roster.includes(sid));
+const avg=a=>{const x=a.filter(v=>v!=null);return x.length?x.reduce((s,v)=>s+v,0)/x.length:null};
+const schedule=c=>`${c.day==='Sat'?'Saturday':'Sunday'} ${c.time}–${endTime(c.time,c.mins)} · ${c.weeks} weeks`;
+const LANGN={python:'Python',java:'Java',web:'HTML/CSS/JS',none:'Paper'};
+const lang=l=>`<span class="lang" style="--c:var(--${l==='none'?'muted':l==='python'?'py':l})">${LANGN[l]}</span>`;
+const typeLabel={classwork:'Classwork',homework:'Homework',exam:'Exam'};
+const pill=(kind,text,icon)=>`<span class="pill ${kind}">${icon?ic(icon):''}${esc(text)}</span>`;
+const scorePill=s=>s==null?pill('','No marks yet'):s>=PASS?pill('good',s.toFixed(1),'check'):s>=PASS-10?pill('warn',s.toFixed(1),'alert'):pill('bad',s.toFixed(1),'alert');
+function meter(v){if(v==null)return'<div class="meter"></div>';const k=v>=PASS?'':v>=PASS-10?'warn':'bad';return`<div class="meter" role="img" aria-label="${v.toFixed(1)} of 100, pass mark ${PASS}"><i class="${k}" style="width:${Math.min(v,100)}%"></i><b style="left:${PASS}%"></b></div>`}
+const note=(text,kind='',icon='info')=>`<div class="note ${kind}">${ic(icon)}<div>${text}</div></div>`;
+
+/* ---------- tiny markdown (lesson notes) ---------- */
+function md(src){const out=[];const lines=String(src||'').split('\n');let i=0,list=false;
+  const inline=t=>esc(t).replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
+  while(i<lines.length){const l=lines[i];
+    if(l.startsWith('```')){const buf=[];i++;while(i<lines.length&&!lines[i].startsWith('```'))buf.push(lines[i++]);i++;if(list){out.push('</ul>');list=false}out.push(`<pre><code>${esc(buf.join('\n'))}</code></pre>`);continue}
+    if(/^- /.test(l)){if(!list){out.push('<ul>');list=true}out.push(`<li>${inline(l.slice(2))}</li>`);i++;continue}
+    if(list){out.push('</ul>');list=false}
+    if(l.startsWith('### '))out.push(`<h3>${inline(l.slice(4))}</h3>`);else if(l.startsWith('## '))out.push(`<h2>${inline(l.slice(3))}</h2>`);else if(l.trim())out.push(`<p>${inline(l)}</p>`);i++}
+  if(list)out.push('</ul>');return out.join('')}
+
+/* ---------- charts (dataviz method: thin marks, hairline grid, one scale, hover + table view) ---------- */
+let chartId=0;
+const tipAttr=(t,rows)=>`data-tip="${esc(JSON.stringify({t,rows}))}"`;
+function niceMax(m){if(m<=5)return 5;if(m<=10)return 10;const p=Math.pow(10,Math.floor(Math.log10(m)));const n=m/p;return(n<=2?2:n<=5?5:10)*p}
+function colChart(items,{max=100,unit='%',ref=null,refLabel='',h=220,valueLabel=true}={}){
+  const w=560,pl=40,pr=12,pt=18,pb=30,ch=h-pt-pb,cw=w-pl-pr,step=cw/items.length,bw=Math.min(24,step*.45);
+  const y=v=>pt+ch-(Math.max(0,Math.min(v,max))/max)*ch;const base=pt+ch;
+  let s=`<svg class="c" viewBox="0 0 ${w} ${h}" role="img" aria-label="Column chart">`;
+  for(const t of [0,max/2,max]){s+=`<line class="${t?'gl':'ax'}" x1="${pl}" x2="${w-pr}" y1="${y(t)}" y2="${y(t)}"/><text x="${pl-8}" y="${y(t)+4}" text-anchor="end">${t}${unit}</text>`}
+  items.forEach((it,i)=>{const cx=pl+step*i+step/2,x=cx-bw/2,v=it.value;
+    s+=`<g class="hb" tabindex="0" ${tipAttr(it.label,[[it.series||'Value',v==null?'—':`${Math.round(v)}${unit}`,'--s1']])}><rect x="${pl+step*i}" y="${pt}" width="${step}" height="${ch}" fill="transparent"/>`;
+    if(v!=null&&v>0){const yt=y(v),r=Math.min(4,base-yt);s+=`<path class="bar" d="M${x},${base} V${yt+r} Q${x},${yt} ${x+r},${yt} H${x+bw-r} Q${x+bw},${yt} ${x+bw},${yt+r} V${base} Z"/>`;
+      if(valueLabel)s+=`<text class="v" x="${cx}" y="${yt-6}" text-anchor="middle">${Math.round(v)}${unit}</text>`}
+    s+=`</g><text x="${cx}" y="${h-10}" text-anchor="middle">${esc(it.short||it.label)}</text>`});
+  if(ref!=null)s+=`<line class="ref" x1="${pl}" x2="${w-pr}" y1="${y(ref)}" y2="${y(ref)}"/><text class="reflbl" x="${w-pr}" y="${y(ref)-6}" text-anchor="end">${esc(refLabel)}</text>`;
+  return s+'</svg>'}
+function lineChart(series,{h=240,ref=PASS,refLabel=`Pass mark ${PASS}`}={}){
+  const labels=series[0].points.map(p=>p.label),n=labels.length;const w=600,pl=40,pr=16,pt=16,pb=30,ch=h-pt-pb,cw=w-pl-pr;
+  const x=i=>pl+(n<2?cw/2:cw*i/(n-1)),y=v=>pt+ch-(v/100)*ch;
+  let s=`<svg class="c" viewBox="0 0 ${w} ${h}" role="img" aria-label="Line chart">`;
+  for(const t of [0,50,100])s+=`<line class="${t?'gl':'ax'}" x1="${pl}" x2="${w-pr}" y1="${y(t)}" y2="${y(t)}"/><text x="${pl-8}" y="${y(t)+4}" text-anchor="end">${t}</text>`;
+  if(ref!=null)s+=`<line class="ref" x1="${pl}" x2="${w-pr}" y1="${y(ref)}" y2="${y(ref)}"/><text class="reflbl" x="${pl+6}" y="${y(ref)-6}">${esc(refLabel)}</text>`;
+  const first=series[0];const p0=first.points.map((p,i)=>`${i?'L':'M'}${x(i)},${y(p.value)}`).join(' ');
+  s+=`<path d="${p0} L${x(n-1)},${y(0)} L${x(0)},${y(0)} Z" fill="${first.wash}"/>`;
+  [...series].reverse().forEach(se=>{s+=`<path class="ln" stroke="var(${se.color})" d="${se.points.map((p,i)=>`${i?'L':'M'}${x(i)},${y(p.value)}`).join(' ')}"/>`});
+  series.forEach(se=>{const p=se.points[n-1];s+=`<circle class="dot" cx="${x(n-1)}" cy="${y(p.value)}" r="4.5" fill="var(${se.color})"/>`});
+  const lp=first.points[n-1];s+=`<text class="v" x="${x(n-1)-8}" y="${y(lp.value)-10}" text-anchor="end">${Math.round(lp.value)}%</text>`;
+  const band=n<2?cw:cw/(n-1);
+  labels.forEach((l,i)=>{const rows=series.map(se=>[se.name,`${Math.round(se.points[i].value)}%`,se.color]);
+    s+=`<g class="hx" tabindex="0" ${tipAttr(series[0].points[i].full||l,rows)}><rect x="${Math.max(pl,x(i)-band/2)}" y="${pt}" width="${band}" height="${ch}" fill="transparent"/><line class="xh" x1="${x(i)}" x2="${x(i)}" y1="${pt}" y2="${pt+ch}"/></g>`;
+    s+=`<text x="${x(i)}" y="${h-10}" text-anchor="middle">${esc(l)}</text>`});
+  return s+'</svg>'}
+function legend(series){return series.length<2?'':`<div class="legend">${series.map(s=>`<span><i style="--c:var(${s.color})"></i>${esc(s.name)}</span>`).join('')}</div>`}
+function hbars(items,{ref=null,unit='%'}={}){return`<div class="hbars">${items.map(it=>`<div class="hbar"><span class="l">${esc(it.label)}${it.sub?` <span class="muted xs">${esc(it.sub)}</span>`:''}</span><span class="val">${it.value==null?'—':Math.round(it.value)+unit}</span>
+  <div class="track"><div class="fill" style="width:${Math.max(0,Math.min(100,it.value??0))}%"></div>${ref!=null?`<span class="tick" style="left:${ref}%" title="Pass mark ${ref}"></span>`:''}</div></div>`).join('')}</div>`}
+function chartCard(title,sub,chart,table,{span=''}={}){const id='ch'+(++chartId);
+  return`<section class="card ${span}"><div class="chead"><div><h2>${esc(title)}</h2>${sub?`<p>${sub}</p>`:''}</div><button class="btn ghost sm viewtoggle" data-act="viewtable" data-id="${id}" aria-pressed="false">Table</button></div>
+   <div id="${id}-c" class="chart">${chart}</div><div id="${id}-t" class="ctable tw" hidden>${table}</div></section>`}
+const tbl=(head,rows)=>`<table><thead><tr>${head.map((h,i)=>`<th class="${i?'n':''}">${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map((c,i)=>`<td class="${i?'n':''}">${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+function spark(vals){if(vals.length<2)return'';const w=120,h=28,mx=100;const x=i=>i*(w-6)/(vals.length-1)+3,y=v=>h-3-(v/mx)*(h-6);
+  return`<svg class="spark" viewBox="0 0 ${w} ${h}" width="120" height="28" aria-hidden="true"><path d="${vals.map((v,i)=>`${i?'L':'M'}${x(i)},${y(v)}`).join(' ')}" fill="none" stroke="var(--s1)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${x(vals.length-1)}" cy="${y(vals[vals.length-1])}" r="3.5" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"/></svg>`}
+function weekendAttendance(){const m=new Map();for(const c of CLASSES)for(const s of sessions(c)){if(s.cancelled||s.status==='upcoming')continue;
+  const sat=c.day==='Sun'?addDays(s.date,-1):s.date;const k=iso(sat);const e=m.get(k)||{date:sat,ok:0,den:0};
+  for(const sid of c.roster){const ch=(ATT[c.id]?.[sid]||'')[s.week-1];if(!ch||ch==='-'||ch==='E')continue;e.den++;if(ch!=='A')e.ok++}m.set(k,e)}
+  return[...m.values()].filter(e=>e.den).sort((a,b)=>a.date-b.date).map(e=>({label:`Weekend of ${fmt(e.date,{day:'numeric',month:'short'})}`,short:fmt(e.date,{day:'numeric',month:'short'}),value:e.ok/e.den*100}))}
+
+/* ---------- state & navigation ---------- */
+const st={role:'admin',screen:'dash',week:3,weekTab:'lesson',report:'s7',grade:{aid:'a2',sid:'s1'},termTab:{},work:'py',nc:null,users:'students',shown:null,promoted:false,certs:{},certSel:'s3'};
+const NAV={
+ admin:[['Overview',[['dash','Dashboard','home']]],['Club',[['classes','Classes','classes'],['newclass','New class','plus'],['users','People','users']]],['Term',[['report','Student reports','report'],['promote','Promotion','promote'],['certs','Certificates','award']]]],
+ teacher:[['Python Level 1',[['class','Class overview','classes'],['week','This week','calendar'],['gradebook','Gradebook','grid'],['grade','Grade work','check',3]]],['Insights',[['stats','Statistics','chart'],['termreport','Term reports','clipboard']]]],
+ student:[['Learning',[['home','My week','home'],['lesson','Lessons','book'],['work','Homework','code',3],['mystats','My progress','trend']]]]};
+const HOME={admin:'dash',teacher:'class',student:'home'};
+const WHO={admin:['Admin','Club admin'],teacher:['Sophea Chan','Teacher'],student:['Bopha Lim','Student']};
+const CRUMB={admin:'CCKH Coding Club',teacher:'Python Level 1',student:'Bopha Lim'};
+function go(screen){st.screen=screen;render();window.scrollTo({top:0})}
+function setRole(r){st.role=r;st.screen=HOME[r];render();window.scrollTo({top:0})}
+function header(eyebrow,title,req,actions=''){return`<div class="phead"><div><div class="eyebrow">${eyebrow}</div><h1>${title}</h1></div><div class="row">${actions}</div></div>`+(req?`<div class="req" style="margin-top:-12px">Covers ${req}</div>`:'')}
+
+const SCREENS={};
+/* ---------- ADMIN ---------- */
+SCREENS.dash=()=>{
+  const c1=C('c1');const wk=sessions(c1).filter(s=>s.status!=='upcoming'&&!s.cancelled).length;
+  const next=CLASSES.map(c=>({c,s:sessions(c).find(s=>!s.cancelled&&s.status==='upcoming')})).filter(x=>x.s).sort((a,b)=>a.s.date-b.s.date||a.c.time.localeCompare(b.c.time));
+  const lowAtt=CLASSES.flatMap(c=>c.roster.map(sid=>({c,sid,a:attendance(c,sid)}))).filter(x=>x.a!=null&&x.a<75);
+  const wa=weekendAttendance();const allAtt=avg(wa.map(x=>x.value));
+  const enrols=CLASSES.flatMap(c=>c.roster.map(sid=>standing(c,sid).score)).filter(x=>x!=null);
+  const bins=[['Below 50',0,50],['50–59',50,60],['60–69',60,70],['70–79',70,80],['80–89',80,90],['90–100',90,101]].map(([l,a,b])=>({label:`${l} points`,short:l,value:enrols.filter(v=>v>=a&&v<b).length,series:'Students'}));
+  const bmax=niceMax(Math.max(...bins.map(b=>b.value)));
+  return header(`Term 4 · 2026 · week ${wk} of 12`,'Dashboard','FR-ADM-09 · FR-ADM-10')+`
+  <div class="grid g4">
+    <div class="card tile"><span class="k">Active classes</span><span class="v">${CLASSES.filter(c=>c.term==='T4-2026').length}</span><span class="s">Python, Java, Web</span></div>
+    <div class="card tile"><span class="k">Students enrolled</span><span class="v">${new Set(CLASSES.flatMap(c=>c.roster)).size}</span><span class="s">${enrols.length} class places · 1 joined late</span></div>
+    <div class="card tile"><span class="k">Attendance this term</span><span class="v">${Math.round(allAtt)}<small>%</small></span>${spark(wa.map(x=>x.value))}</div>
+    <div class="card tile"><span class="k">Need support</span><span class="v">${Object.keys(SUPPORT).length}</span><span class="s">flagged by teachers</span></div>
+  </div>
+  <div class="grid g21">
+    ${chartCard('Current standing across all classes',`Number of class places in each score band · pass mark ${PASS}`,colChart(bins,{max:bmax,unit:''}),tbl(['Score band','Class places'],bins.map(b=>[b.short,b.value])))}
+    <section class="card"><div class="chead"><div><h2>Next weekend</h2><p>Sat 31 Oct is a public holiday, so no classes</p></div></div><div class="list">
+      ${next.map(({c,s})=>`<div class="spread"><div><div style="font-weight:500">${esc(c.name)}</div><div class="xs muted">${fmt(s.date)} · ${c.time}–${endTime(c.time,c.mins)} · ${esc(c.room)}</div></div><span class="pill">Week ${s.week}</span></div>`).join('')}</div></section>
+  </div>
+  <div class="grid g21">
+    <section class="card flush"><div class="chead" style="padding:20px 20px 0"><div><h2>Classes</h2><p>Average current standing and attendance</p></div><button class="btn sm" data-go="classes">View all</button></div><div class="tw"><table>
+      <thead><tr><th>Class</th><th>Teacher</th><th class="n">Students</th><th class="n">Attendance</th><th style="min-width:170px">Average standing</th></tr></thead><tbody>
+      ${CLASSES.filter(c=>c.term==='T4-2026').map(c=>{const a=avg(c.roster.map(sid=>standing(c,sid).score));const at=avg(c.roster.map(sid=>attendance(c,sid)));
+        return`<tr><td><span style="font-weight:500">${esc(c.name)}</span><span class="sub">${schedule(c)}</span></td><td>${esc(c.teacher)}</td><td class="n">${c.roster.length}</td><td class="n">${Math.round(at)}%</td><td><div class="row" style="flex-wrap:nowrap"><span class="tnum" style="width:36px">${a.toFixed(1)}</span><div style="flex:1">${meter(a)}</div></div></td></tr>`}).join('')}
+      </tbody></table></div></section>
+    <section class="card"><div class="chead"><div><h2>Needs attention</h2><p>From teachers and attendance</p></div></div><div class="list">
+      ${Object.entries(SUPPORT).map(([sid,t])=>`<div class="stack" style="gap:6px"><div class="spread"><span style="font-weight:500">${S(sid).name}</span>${pill('warn','Needs support','alert')}</div><p class="xs muted">${esc(t)}</p><div><button class="btn sm" data-report="${sid}">Open report</button></div></div>`).join('')}
+      <div class="spread"><div><div style="font-weight:500">Python Level 1 · week 3</div><div class="xs muted">Sophea Chan · held Sat 17 Oct</div></div>${pill('bad','Report missing','alert')}</div>
+      ${lowAtt.map(x=>`<div class="spread"><div><div style="font-weight:500">${S(x.sid).name}</div><div class="xs muted">${esc(x.c.name)}</div></div>${pill('bad',`Attendance ${x.a}%`,'alert')}</div>`).join('')}
+    </div></section>
+  </div>`};
+
+SCREENS.classes=()=>header('Term 4 · 2026','Classes','FR-ADM-05 · FR-ADM-06 · FR-TCH-20',`<button class="btn primary" data-go="newclass">${ic('plus')}New class</button>`)+`
+  <section class="card flush"><div class="tw"><table><thead><tr><th>Class</th><th>Term</th><th>Schedule</th><th>Teacher</th><th class="n">Students</th><th>Syllabus covered</th></tr></thead><tbody>
+  ${CLASSES.map(c=>{const cov=COVERED[c.id]?new Set(Object.values(COVERED[c.id]).flat()).size:null;const tot=SYLLABUS[c.id]?.length;
+    return`<tr><td><span style="font-weight:500">${esc(c.name)}</span><span class="sub">${lang(c.lang)}</span></td><td>${TERMS[c.term]}</td><td>${schedule(c)}<span class="sub">${esc(c.room)} · starts ${fmt(c.first)}</span></td><td>${esc(c.teacher)}</td><td class="n">${c.roster.length}</td><td style="min-width:150px">${cov!=null?`<div class="stack" style="gap:4px"><span class="xs muted">${cov} of ${tot} topics</span><div class="meter"><i style="width:${cov/tot*100}%"></i></div></div>`:'<span class="muted">—</span>'}</td></tr>`}).join('')}
+  </tbody></table></div></section>`;
+
+function ncDefaults(){return{course:'Python Level 2',term:'T1-2027',day:'Sat',time:'09:00',mins:90,first:'2027-01-09',weeks:12,teacher:'Sophea Chan',room:'Room A',cancel:{}}}
+const COURSES={'Python Level 1':'python','Python Level 2':'python','Java Level 1':'java','Java Level 2':'java','Web Basics':'web'};
+SCREENS.newclass=()=>{const n=st.nc||(st.nc=ncDefaults());
+  return header('Classes','New weekend class','FR-ADM-05 · FR-ADM-08 · FR-TCH-05 · BR-15')+`
+  <div class="grid g2">
+    <form class="card stack" id="ncForm" autocomplete="off" style="gap:16px"><h2>Class details</h2>
+      <div class="grid g2">
+        <label class="f">Course<select id="nc-course">${Object.keys(COURSES).map(k=>`<option ${k===n.course?'selected':''}>${k}</option>`).join('')}</select></label>
+        <label class="f">Term<select id="nc-term">${Object.entries(TERMS).map(([k,v])=>`<option value="${k}" ${k===n.term?'selected':''}>${v}</option>`).join('')}</select></label>
+      </div>
+      <div class="grid g2"><div class="f">Day<div class="seg" id="nc-day">${['Sat','Sun'].map(d=>`<button type="button" data-v="${d}" aria-pressed="${n.day===d}">${d==='Sat'?'Saturday':'Sunday'}</button>`).join('')}</div></div>
+        <div class="f">Session length<div class="seg" id="nc-mins">${[90,120].map(m=>`<button type="button" data-v="${m}" aria-pressed="${n.mins===m}">${m} min</button>`).join('')}</div></div></div>
+      <div class="grid g3">
+        <label class="f">Start time<input type="time" id="nc-time" value="${n.time}"></label>
+        <label class="f">First session<input type="date" id="nc-first" value="${n.first}"></label>
+        <label class="f">Weeks<select id="nc-weeks">${[10,11,12].map(w=>`<option ${w===n.weeks?'selected':''}>${w}</option>`).join('')}</select></label>
+      </div>
+      <div class="grid g2">
+        <label class="f">Lead teacher<select id="nc-teacher">${TEACHERS.map(t=>`<option ${t===n.teacher?'selected':''}>${t}</option>`).join('')}</select></label>
+        <label class="f">Room<input type="text" id="nc-room" value="${esc(n.room)}"></label>
+      </div>
+      <div id="ncCheck"></div>
+      <div class="row"><button class="btn primary" type="submit">Create class</button><button class="btn ghost" type="button" data-act="nc-reset">Reset</button></div>
+    </form>
+    <section class="card"><div class="chead"><div><h2>Weekly sessions</h2><p>Tap a date to cancel it, e.g. a public holiday. The weeks after it move along.</p></div><span class="pill info" id="ncCount"></span></div><div id="ncSessions" class="list"></div></section>
+  </div>`};
+function ncRefresh(){const n=st.nc;const box=$('#ncSessions');if(!box)return;
+  const first=new Date(n.first+'T00:00:00Z');const msgs=[];const dayName=n.day==='Sat'?'Saturday':'Sunday';
+  if(isNaN(first))msgs.push(['bad','Choose the date of the first session.']);
+  else if(first.getUTCDay()!==(n.day==='Sat'?6:0))msgs.push(['bad',`${fmt(first,{weekday:'long',day:'numeric',month:'short'})} is not a ${dayName}. Pick a ${dayName} for the first session.`]);
+  const s1=n.time,e1=endTime(n.time,n.mins);
+  for(const c of CLASSES){if(c.term!==n.term||c.day!==n.day)continue;const s2=c.time,e2=endTime(c.time,c.mins);
+    if(s1<e2&&s2<e1){if(c.teacher===n.teacher)msgs.push(['warn',`${n.teacher} already teaches ${c.name} on ${c.day==='Sat'?'Saturday':'Sunday'} ${s2}–${e2}.`]);
+      if(c.room===n.room)msgs.push(['warn',`${n.room} is booked for ${c.name} at ${s2}–${e2}.`])}}
+  $('#ncCheck').innerHTML=msgs.map(([k,m])=>note(esc(m),k,'alert')).join('')||`<div class="row xs muted">${ic('check')} No clashes for ${esc(n.teacher)} or ${esc(n.room)}.</div>`;
+  if(isNaN(first)){box.innerHTML='';return}
+  const list=sessions({first,weeks:+n.weeks,cancel:n.cancel});$('#ncCount').textContent=`${n.weeks} sessions`;
+  box.innerHTML=list.map(s=>`<button type="button" class="spread" style="border:0;background:transparent;width:100%;cursor:pointer;text-align:left;color:inherit;font:inherit" data-act="nc-cancel" data-d="${iso(s.date)}">
+    <span>${s.cancelled?pill('','Cancelled','x'):`<span style="font-weight:500">Week ${s.week}</span>`}</span><span class="tnum ${s.cancelled?'muted':''}">${fmt(s.date,{weekday:'short',day:'numeric',month:'short',year:'numeric'})} · ${n.time}–${e1}</span></button>`).join('')}
+
+SCREENS.users=()=>{const t=st.users;
+  const rows=t==='students'?STUDENTS.map(s=>`<tr><td><div class="row" style="flex-wrap:nowrap"><span class="av">${initials(s.name)}</span><span style="font-weight:500">${s.name}</span></div></td><td class="mono">${s.user}</td><td>${classesOf(s.id).map(c=>esc(c.name)).join(', ')}</td><td>${pill('good','Active')}</td><td><div class="row" style="flex-wrap:nowrap;justify-content:flex-end"><button class="btn sm" data-act="reset-pw" data-id="${s.id}">Reset password</button><button class="btn sm ghost" data-act="signout-all" data-id="${s.id}">Sign out everywhere</button></div></td></tr>`).join('')
+    :TEACHERS.map(n=>`<tr><td><div class="row" style="flex-wrap:nowrap"><span class="av">${initials(n)}</span><span style="font-weight:500">${n}</span></div></td><td class="mono">${n.split(' ')[0].toLowerCase()}</td><td>${CLASSES.filter(c=>c.teacher===n).map(c=>esc(c.name)).join(', ')}</td><td>${pill('good','Active')}</td><td><div class="row" style="justify-content:flex-end"><button class="btn sm" data-act="reset-pw" data-id="${n}">Reset password</button></div></td></tr>`).join('');
+  return header('Club','People','FR-ADM-01 · FR-AUTH-03/04/07/09/10')+`
+  <div class="grid g21">
+    <section class="card flush"><div style="padding:6px 16px 0"><div class="tabs" role="tablist">${['students','teachers'].map(k=>`<button role="tab" aria-selected="${t===k}" data-act="users-tab" data-v="${k}">${k[0].toUpperCase()+k.slice(1)}</button>`).join('')}</div></div>
+      <div class="tw"><table><thead><tr><th>Name</th><th>Username</th><th>Classes</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></section>
+    <div class="stack" style="gap:16px">
+      <form class="card stack" id="addStudent" autocomplete="off" style="gap:14px"><h2>Add a student</h2>
+        <label class="f">Full name<input type="text" id="as-name" value="Dalin Prak"></label>
+        <label class="f">Guardian phone <span class="xs muted">(only Admin can see this)</span><input type="text" id="as-phone" value="012 345 678"></label>
+        <div class="f">Enrol in${CLASSES.map(c=>`<label class="row small" style="font-weight:400;color:var(--ink)"><input type="checkbox" value="${c.id}" ${c.id==='c1'?'checked':''}> ${esc(c.name)} · ${c.day} ${c.time}</label>`).join('')}</div>
+        <button class="btn primary" type="submit">Create account</button></form>
+      ${st.shown?`<section class="card stack"><h2>Password for ${esc(st.shown.name)}</h2>${note('Shown once. Write it on the login slip now. Only a hash is stored, so nobody can see it again. You can reset it later.','warn','alert')}
+        <div class="slip"><b>CCKH Coding Club · lms.cckh.dev</b><span>Name: ${esc(st.shown.name)}</span><span>Username: ${esc(st.shown.user)}</span><span>Password: ${esc(st.shown.pw)}</span></div>
+        <div class="row"><button class="btn" data-act="copy-pw">Copy password</button><button class="btn ghost" data-act="hide-pw">Done</button></div></section>`:''}
+    </div></div>`};
+
+function classReport(c,sid){const r=standing(c,sid),a=attendance(c,sid),cp=completion(c,sid);
+  const items=(ASSESS[c.id]||[]).filter(x=>isDue(c,x)&&!beforeEnrol(c,sid,x)).map(x=>{const v=(SCORES[c.id]?.[sid]||{})[x.id];
+    return{label:x.title,sub:typeLabel[x.type]+(v==='E'?' · excused':v==='M'||v===undefined?' · missing':typeof v==='string'&&v[0]==='L'?' · late':''),value:v==='E'||v==='S'?null:cellPoints(v,x.max)/x.max*100}});
+  return`<section class="card stack" style="gap:18px"><div class="spread"><div><h2>${esc(c.name)}</h2><p class="xs muted">${schedule(c)} · ${esc(c.teacher)}</p></div>${lang(c.lang)}</div>
+   <div class="grid g3"><div class="tile"><span class="k">Current standing</span><span class="v">${r.score==null?'—':r.score.toFixed(1)}<small> / 100</small></span>${meter(r.score)}</div>
+    <div class="tile"><span class="k">Attendance</span><span class="v">${a??'—'}<small>%</small></span></div><div class="tile"><span class="k">Homework handed in</span><span class="v">${cp??'—'}<small>%</small></span></div></div>
+   ${items.length?`<div><div class="spread" style="margin-bottom:10px"><h3>Scores by task</h3><span class="xs muted">Line on each bar = pass mark ${PASS}</span></div>${hbars(items,{ref:PASS})}</div>`:''}
+   ${r.used<100&&r.score!=null?`<p class="xs muted">The exam isn't marked yet, so the standing uses classwork and homework only, with their weights shared out (BR-12).</p>`:''}
+   ${c.enrolled[sid]?`<p class="xs muted">Joined on ${fmt(c.enrolled[sid])}. Earlier work and sessions are not counted (BR-17).</p>`:''}</section>`}
+SCREENS.report=()=>{const sid=st.report;return header('Student reports',S(sid).name,'FR-ADM-09 · BR-09 · BR-10 · BR-12',`<select id="reportPick" aria-label="Student" style="width:auto">${STUDENTS.map(s=>`<option value="${s.id}" ${s.id===sid?'selected':''}>${s.name}</option>`).join('')}</select>`)+
+  (SUPPORT[sid]?note(`<strong>Needs support.</strong> ${esc(SUPPORT[sid])} <span class="muted">· Sophea Chan, week 3</span>`,'warn','alert'):'')+`<div class="grid g2">${classesOf(sid).map(c=>classReport(c,sid)).join('')}</div>`};
+
+const EXAMPLE_FINAL={s1:91.5,s2:72.0,s3:95.2,s4:58.4,s5:76.8,s6:84.0,s7:41.3,s8:79.5,s9:81.1,s10:66.0};
+SCREENS.promote=()=>{const c=C('c1');const passN=c.roster.filter(s=>EXAMPLE_FINAL[s]>=PASS).length;return header('Term end · example','Promote Python Level 1','FR-ADM-13 · BR-07 · BR-13')+
+  note('This is how the wizard looks at the end of term, using example final scores. Promotion never deletes the old class. It is archived and stays viewable.')+`
+  <div class="grid g3"><div class="card tile"><span class="k">From</span><span style="font-weight:600">Python Level 1</span><span class="s">Term 4 · 2026 · ${schedule(c)}</span></div>
+   <div class="card tile"><span class="k">Passed (${passN}) move to</span><span style="font-weight:600">Python Level 2</span><span class="s">Term 1 · 2027 · Saturday 09:00–10:30 · Sophea Chan</span></div>
+   <div class="card tile"><span class="k">Not passed (${c.roster.length-passN}) move to</span><span style="font-weight:600">Python Level 1 (repeat)</span><span class="s">Term 1 · 2027 · Sunday 14:00–15:30 · Vibol Heng</span></div></div>
+  <section class="card flush"><div class="tw"><table><thead><tr><th>Student</th><th class="n">Final score</th><th>Result</th><th>Next class</th></tr></thead><tbody>
+  ${c.roster.map(sid=>{const f=EXAMPLE_FINAL[sid],p=f>=PASS;return`<tr><td style="font-weight:500">${S(sid).name}</td><td class="n">${f.toFixed(1)}</td><td>${p?pill('good','Pass','check'):pill('bad','Not passed','x')}</td>
+    <td><select aria-label="Next class for ${S(sid).name}" style="max-width:280px"><option ${p?'selected':''}>Python Level 2 · Sat 09:00</option><option ${p?'':'selected'}>Python Level 1 (repeat) · Sun 14:00</option><option>Leave the club</option></select></td></tr>`}).join('')}
+  </tbody></table></div></section>
+  <div class="row">${st.promoted?pill('good',`Done: ${passN} students moved to Python Level 2, ${c.roster.length-passN} to the repeat class. Term 4 class archived.`,'check'):`<button class="btn primary" data-act="promote">Confirm promotion</button><span class="xs muted">All changes happen together and are written to the audit log.</span>`}</div>`};
+
+const CERT_LIST=[['s3','Python Level 1',96.0],['s1','Python Level 1',90.5],['s12','Web Basics',93.0],['s11','Java Level 1',88.5],['s9','Python Level 1',62.0]];
+function qrSvg(seed){let s=`<svg viewBox="0 0 21 21" width="76" height="76" role="img" aria-label="QR code linking to the verify page"><rect width="21" height="21" fill="#fff"/>`;let x=seed;
+  for(let i=0;i<21;i++)for(let j=0;j<21;j++){x=(x*1103515245+12345)&0x7fffffff;const finder=(i<7&&j<7)||(i<7&&j>13)||(i>13&&j<7);
+    const on=finder?((i%14<7&&j%14<7)&&(i%14===0||i%14===6||j%14===0||j%14===6||(i%14>1&&i%14<5&&j%14>1&&j%14<5))):(x>>16)&1;if(on)s+=`<rect x="${j}" y="${i}" width="1" height="1" fill="#111"/>`}
+  return s+'</svg>'}
+SCREENS.certs=()=>{const sel=st.certSel;const row=CERT_LIST.find(r=>r[0]===sel);const code=st.certs[sel]||'7F3K-Q9WD-2MZA';
+  return header('Term 3 · 2026','Certificates','FR-ADM-11 · FR-ADM-12 · BR-05 · BR-06')+`
+  <div class="grid g2"><section class="card flush"><div class="tw"><table><thead><tr><th>Student</th><th>Class</th><th class="n">Final</th><th></th></tr></thead><tbody>
+   ${CERT_LIST.map(([sid,cls,f])=>`<tr class="click" tabindex="0" data-act="cert-view" data-id="${sid}"><td style="font-weight:500">${S(sid).name}</td><td>${cls}</td><td class="n">${f.toFixed(1)}</td><td><div class="row" style="justify-content:flex-end">${st.certs[sid]?pill('good','Issued','check'):`<button class="btn sm primary" data-act="issue" data-id="${sid}">Issue</button>`}</div></td></tr>`).join('')}
+   </tbody></table></div></section>
+   <div class="stack"><div class="cert"><span class="ph-design">Your club design goes here</span><div class="stack" style="align-items:center;gap:8px">
+     <div class="xs muted" style="letter-spacing:.14em;text-transform:uppercase">CCKH Coding Club · Certificate of completion</div>
+     <h1 style="font-size:clamp(1.4rem,4vw,2.1rem)">${S(row[0]).name}</h1><div class="ink2">has completed <strong>${row[1]}</strong> · Term 3 · 2026</div>
+     <div class="row" style="justify-content:center;gap:16px;margin-top:8px">${qrSvg(sel.charCodeAt(1)*97)}<div class="xs" style="text-align:left">Verify at<br><span class="mono">lms.cckh.dev/verify/${code}</span><br><span class="muted">Signed: Club Director</span></div></div></div></div>
+    <section class="card small"><div class="spread"><span>What the QR code opens</span>${pill('good','Valid','check')}</div><p class="xs muted" style="margin-top:6px">${S(row[0]).name} · ${row[1]} · Term 3 · 2026 · issued 12 Oct 2026</p></section></div></div>`};
+
+/* ---------- TEACHER ---------- */
+SCREENS.class=()=>{const c=C('c1');const ss=sessions(c);const cov=new Set(Object.values(COVERED.c1).flat());
+  const avgS=avg(c.roster.map(sid=>standing(c,sid).score)),avgA=avg(c.roster.map(sid=>attendance(c,sid)));const toMark=c.roster.filter(sid=>(SCORES.c1[sid]||{}).a5==='S').length;
+  return header(`Term 4 · 2026 · ${schedule(c)} · ${esc(c.room)}`,'Python Level 1','FR-TCH-05 · FR-TCH-20 · BR-15 · BR-16',`<button class="btn" data-act="toast" data-msg="In the real LMS: pick a new date or add a make-up session.">Move or add session</button>`)+`
+  <div class="grid g4">
+    <div class="card tile"><span class="k">Students</span><span class="v">${c.roster.length}</span><span class="s">1 joined in week 2</span></div>
+    <div class="card tile"><span class="k">Attendance</span><span class="v">${Math.round(avgA)}<small>%</small></span><span class="s">weeks 1–3</span></div>
+    <div class="card tile"><span class="k">Class average</span><span class="v">${avgS.toFixed(1)}<small> / 100</small></span>${meter(avgS)}</div>
+    <div class="card tile"><span class="k">To mark</span><span class="v">${toMark}</span><span class="s">Number guessing game</span></div>
+  </div>
+  <div class="grid g21">
+    <section class="card flush"><div class="chead" style="padding:20px 20px 0"><div><h2>Weeks</h2><p>Open a week to write the lesson, take attendance and set work</p></div></div><div class="tw"><table>
+      <thead><tr><th>Week</th><th>Date</th><th>Lesson</th><th>Weekly report</th></tr></thead><tbody>
+      ${ss.map(s=>{if(s.cancelled)return`<tr><td class="muted">—</td><td class="muted">${fmt(s.date)}</td><td colspan="2">${pill('','No class · '+s.reason,'x')}</td></tr>`;
+        const L=LESSONS.c1[s.week];const rep=REPORTS.c1[s.week];
+        return`<tr class="click" tabindex="0" data-week="${s.week}"><td style="font-weight:500;white-space:nowrap">Week ${s.week}${s.week===4?' '+pill('info','Next'):''}</td><td class="tnum" style="white-space:nowrap">${fmt(s.date)}</td>
+          <td>${L?`<span>${esc(L.title)}</span><span class="sub">${L.status==='published'?'Published':'Draft'}</span>`:'<span class="muted">Not written yet</span>'}</td>
+          <td>${s.status==='upcoming'?'<span class="muted">—</span>':rep?pill('good','Done','check'):pill('bad','Missing','alert')}</td></tr>`}).join('')}
+      </tbody></table></div></section>
+    <section class="card"><div class="chead"><div><h2>Syllabus coverage</h2><p>${cov.size} of ${SYLLABUS.c1.length} topics, from your weekly reports</p></div></div>
+      <div class="meter" style="margin-bottom:16px"><i style="width:${cov.size/SYLLABUS.c1.length*100}%"></i></div>
+      <div class="list">${SYLLABUS.c1.map((t,i)=>`<div class="spread small"><span class="${cov.has(i)?'':'muted'}">${esc(t)}</span>${cov.has(i)?pill('good','Covered','check'):''}</div>`).join('')}</div></section>
+  </div>`};
+
+SCREENS.week=()=>{const c=C('c1');const w=st.week;const d=weekDate(c,w);const tab=st.weekTab;const L=LESSONS.c1[w]||{title:'',status:'draft'};
+  const tabs=[['lesson','Lesson note'],['attendance','Attendance'],['work','Classwork & homework'],['qa','Questions'],['report','Weekly report']];
+  const topics=()=>`<div class="f">Syllabus topics covered<div class="row">${SYLLABUS.c1.map((t,i)=>`<label class="pill" style="cursor:pointer"><input type="checkbox" ${(COVERED.c1[w]||[]).includes(i)?'checked':''}> ${esc(t)}</label>`).join('')}</div></div>`;
+  let body='';
+  if(tab==='lesson')body=`<div class="grid g2"><section class="card stack" style="gap:14px"><label class="f">Title<input type="text" id="ls-title" value="${esc(L.title)}"></label>
+     <label class="f">Lesson note <span class="xs muted">Markdown, code blocks allowed</span><textarea id="ls-md" rows="14" class="mono">${esc(L.md||'')}</textarea></label>${topics()}
+     <div class="row"><button class="btn primary" data-act="toast" data-msg="Lesson published. Students in Python Level 1 can see it now.">${L.status==='published'?'Update':'Publish'}</button><button class="btn" data-act="toast" data-msg="Draft saved.">Save draft</button>${L.status==='published'?pill('good','Published','check'):pill('','Draft')}</div></section>
+     <section class="card md" id="ls-preview"><div class="xs muted">Preview</div><h2>${esc(L.title)}</h2>${md(L.md)}</section></div>`;
+  if(tab==='attendance'){const held=+d<=+TODAY;body=held?`<section class="card flush"><div class="chead" style="padding:20px 20px 0"><div><h2>Attendance</h2><p>Everyone starts as Present. Tap to change. Saved as you go.</p></div><span class="pill info" id="attSum"></span></div>
+     <div class="tw"><table><tbody>${c.roster.map(sid=>{const ch=(ATT.c1[sid]||'')[w-1];if(ch==='-')return`<tr><td style="font-weight:500">${S(sid).name}</td><td class="muted small">Not enrolled yet (joined ${fmt(c.enrolled[sid])})</td></tr>`;
+       return`<tr><td style="font-weight:500">${S(sid).name}</td><td><div class="seg att" data-sid="${sid}">${[['P','Present'],['L','Late'],['A','Absent'],['E','Excused']].map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${(ch||'P')===v}">${l}</button>`).join('')}</div></td></tr>`}).join('')}</tbody></table></div></section>`
+     :note(`Attendance opens on the day of the session (${fmt(d)}).`)}
+  if(tab==='work'){const list=ASSESS.c1.filter(a=>a.week===w);body=`<div class="grid g2"><section class="card"><div class="chead"><div><h2>Set this week</h2></div></div><div class="list">${list.map(a=>`<div class="spread"><div><div style="font-weight:500">${esc(a.title)}</div><div class="xs muted">${typeLabel[a.type]} · ${LANGN[a.lang]} · out of ${a.max}${a.due?` · due ${fmt(dueDate(c,a))} ${c.time}`:''}</div></div><button class="btn sm" data-go="${a.lang==='none'?'gradebook':'grade'}">${a.lang==='none'?'Enter scores':'Submissions'}</button></div>`).join('')||'<p class="muted">Nothing set for this week yet.</p>'}</div></section>
+     <form class="card stack" id="newWork" autocomplete="off" style="gap:14px"><h2>Set new work</h2>
+      <div class="grid g2"><label class="f">Type<select><option>Homework</option><option>Classwork</option></select></label><label class="f">Language<select><option>Python</option><option>Paper / in class</option></select></label></div>
+      <label class="f">Title<input type="text" value="Countdown to lift off"></label>
+      <label class="f">Instructions<textarea rows="3">Use a for loop to count down from 10 to 1, then print "Lift off!".</textarea></label>
+      <div class="grid g2"><label class="f">Due<input type="text" value="${fmt(weekDate(c,w+1))} ${c.time} (next session)"></label><label class="f">Out of<input type="number" value="10"></label></div>
+      <label class="row small"><input type="checkbox" checked> Accept late work (10% off)</label>
+      <label class="f">Starter files<input type="text" value="main.py" class="mono"></label>
+      <div><button class="btn primary" type="submit">Publish to class</button></div></form></div>`}
+  if(tab==='qa')body=qaList(w,'teacher');
+  if(tab==='report'){const att=c.roster.map(sid=>(ATT.c1[sid]||'')[w-1]).filter(ch=>ch&&ch!=='-');const cnt=k=>att.filter(x=>x===k).length;
+    body=`<form class="card stack" id="weekReport" style="gap:16px"><div class="row">${pill('good',cnt('P')+' present')}${pill('warn',cnt('L')+' late')}${pill('bad',cnt('A')+' absent')}${pill('',cnt('E')+' excused')}<span class="xs muted">from attendance</span></div>
+     ${topics()}<label class="f">Comment on the session<textarea rows="4">Most students got for loops quickly. Piseth and Chenda need more practice with indentation.</textarea></label>
+     <div><button class="btn primary" type="submit">Save weekly report</button></div></form>`}
+  return header(`Python Level 1 · ${fmt(d,{weekday:'long',day:'numeric',month:'long'})}`,`Week ${w}`,'FR-TCH-01/02/03/06/07/08/14',`<div class="seg">${[1,2,3,4].map(n=>`<button type="button" data-act="pick-week" data-v="${n}" aria-pressed="${n===w}">Week ${n}</button>`).join('')}</div>`)+
+   `<div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" aria-selected="${tab===k}" data-act="week-tab" data-v="${k}">${l}</button>`).join('')}</div>${body}`};
+
+function qaList(w,role){const me='s3';const qs=QUESTIONS.filter(q=>q.week===w);
+  const name=a=>a==='T'?'Sophea Chan · teacher':S(a).name;
+  const items=qs.map(q=>{if(q.vis==='removed')return'';if(q.vis==='review'&&role==='student'&&q.author!==me)return'';
+    return`<div class="q ${q.vis==='review'?'review':''}"><div class="spread"><div class="row" style="flex-wrap:nowrap"><span class="av" style="width:26px;height:26px;font-size:.7rem">${q.author==='T'?'SC':initials(S(q.author).name)}</span><span class="meta"><strong>${name(q.author)}</strong> asked</span></div>
+      ${q.vis==='review'?(role==='teacher'?`<div class="row">${pill('warn','Reported by '+S(q.reportedBy).name,'alert')}<button class="btn sm" data-act="qa-restore" data-id="${q.id}">Restore</button><button class="btn sm danger" data-act="qa-remove" data-id="${q.id}">Remove</button></div>`:pill('warn','Under review','alert')):(role==='student'&&q.author!==me?`<button class="btn sm ghost" data-act="qa-report" data-id="${q.id}">Report</button>`:'')}</div>
+      <p>${esc(q.body)}</p>${q.code?`<div class="md"><pre><code>${esc(q.code)}</code></pre></div>`:''}
+      ${q.replies.map(r=>`<div class="reply ${r.accepted?'accepted':''}"><span class="meta"><strong>${name(r.author)}</strong>${r.accepted?' · accepted answer':''}</span><p class="small">${esc(r.body)}</p></div>`).join('')}
+      <form class="row" data-reply="${q.id}"><input type="text" placeholder="${role==='teacher'?'Answer as teacher…':'Help with an answer…'}" aria-label="Reply" style="flex:1;min-width:160px"><button class="btn sm" type="submit">Reply</button></form></div>`}).join('');
+  return`<div class="stack">${role==='student'?`<form class="card stack" id="askQ"><h3>Ask about this lesson</h3><textarea id="askBody" rows="2" placeholder="What are you stuck on?"></textarea><textarea id="askCode" rows="2" class="mono" placeholder="Paste code (optional)"></textarea><div><button class="btn primary" type="submit">Post question</button></div></form>`:''}${items||'<p class="muted">No questions yet.</p>'}</div>`}
+
+SCREENS.gradebook=()=>{const c=C('c1');const list=ASSESS.c1;
+  const cell=(sid,a)=>{if(beforeEnrol(c,sid,a))return`<td class="na" title="Before ${S(sid).name} joined (BR-17)">not enrolled</td>`;
+    if(!isDue(c,a))return`<td class="future">due ${fmt(dueDate(c,a),{day:'numeric',month:'short'})}</td>`;
+    const v=(SCORES.c1[sid]||{})[a.id];const shown=v===undefined||v==='M'||v==='E'||v==='S'?'':typeof v==='string'?v.slice(1):v;
+    const tag=v==='M'||v===undefined?pill('bad','Missing'):v==='E'?pill('','Excused'):v==='S'?pill('info','To mark'):typeof v==='string'?pill('warn','Late'):'';
+    return`<td><div class="row" style="gap:6px;flex-wrap:nowrap"><input type="number" min="0" max="${a.max}" step="0.5" value="${shown}" data-gb="${sid}|${a.id}" aria-label="${S(sid).name}, ${esc(a.title)}, out of ${a.max}">${tag}</div></td>`};
+  return header('Python Level 1 · Term 4 · 2026','Gradebook','FR-TCH-19 · FR-TCH-17 · BR-12 · BR-14 · BR-17')+
+  note(`Type a score, then press Enter to move to the next student. Each cell saves itself. <strong>Current / 100</strong> = exam 60% + classwork 30% + homework 10%. Until the exam is marked, classwork and homework share the full 100. Late work loses 10%. Excused work and work set before a student joined are left out.`)+`
+  <section class="card flush"><div class="tw gb"><table><thead><tr><th class="sticky">Student</th>${list.map(a=>`<th class="a"><span class="t">${esc(a.title)}</span>${typeLabel[a.type]} · out of ${a.max}</th>`).join('')}<th class="n">Attendance</th><th class="n">Current / 100</th></tr></thead>
+   <tbody>${c.roster.map(sid=>{const r=standing(c,sid);return`<tr><td class="sticky" style="font-weight:500">${S(sid).name}</td>${list.map(a=>cell(sid,a)).join('')}<td class="n">${attendance(c,sid)}%</td><td class="n" data-standing="${sid}">${scorePill(r.score)}</td></tr>`}).join('')}</tbody></table></div></section>`};
+
+const SUBS={a2:{s1:{files:{'main.py':`# Mad Libs story by Sokha\nfrom story_words import ask_words\n\nwords = ask_words()\nprint("Once upon a time, a", words["adjective"], words["animal"])\nprint("ran to the", words["place"], "and shouted", words["word"] + "!")\n`,'story_words.py':`def ask_words():\n    return {\n        "adjective": input("An adjective: "),\n        "animal": input("An animal: "),\n        "place": input("A place: "),\n        "word": input("A funny word: "),\n    }\n`},at:'Fri 9 Oct, 19:12'},
+  s2:{files:{'main.py':`adj = input("adjective? ")\nanimal = input("animal? ")\nprint("The " + adj + " " + animal + " danced.")\n`},at:'Sat 10 Oct, 11:03 (late)'}}};
+SCREENS.grade=()=>{const g=st.grade;const a=ASSESS.c1.find(x=>x.id===g.aid);const sub=SUBS[g.aid][g.sid];const files=Object.keys(sub.files);g.file=files.includes(g.file)?g.file:files[0];
+  const v=(SCORES.c1[g.sid]||{})[g.aid];const src=sub.files[g.file];const lines=src.split('\n').length;
+  return header(`${esc(a.title)} · homework · out of ${a.max}`,S(g.sid).name,'FR-TCH-10/11/12 · FR-CODE-03',`<div class="seg">${Object.keys(SUBS.a2).map(sid=>`<button type="button" data-act="grade-pick" data-v="${sid}" aria-pressed="${sid===g.sid}">${S(sid).name}</button>`).join('')}</div>`)+`
+  <div class="grid" style="grid-template-columns:minmax(0,1fr) 320px" id="gradeGrid">
+   <div class="stack"><div class="spread"><span class="small muted">Submitted ${esc(sub.at)} · ${files.length} file${files.length>1?'s':''}</span><button class="btn sm" data-act="toast" data-msg="In the real LMS this downloads ${S(g.sid).user}-mad-libs.zip to run in Thonny or VS Code.">${ic('down')}Download .zip</button></div>
+    <div class="ide"><div class="tree">${files.map(f=>`<button data-act="grade-file" data-v="${f}" aria-current="${f===g.file}">${f}</button>`).join('')}</div>
+     <div class="code"><div class="gutter">${Array.from({length:lines},(_,i)=>i+1).join('\n')}</div><pre>${esc(src)}</pre></div></div></div>
+   <form class="card stack" id="gradeForm" style="gap:14px;align-self:start"><h2>Score and feedback</h2>
+    <label class="f">Score (out of ${a.max})<input type="number" id="gr-score" min="0" max="${a.max}" step="0.5" value="${typeof v==='number'?v:typeof v==='string'&&v[0]==='L'?v.slice(1):''}"></label>
+    ${typeof v==='string'&&v[0]==='L'?note('Late: 10% comes off automatically in the overall score.','warn','alert'):''}
+    <label class="f">Feedback<textarea id="gr-fb" rows="6">${g.sid==='s1'?'Great use of a second file for the questions! Next time, check the spacing around the "!" at the end.':''}</textarea></label>
+    <div class="row"><button class="btn primary" type="submit">Save grade</button><button class="btn" type="button" data-act="toast" data-msg="Returned for a redo. The student can resubmit.">Return for redo</button></div></form></div>
+  <style>@media (max-width:1000px){#gradeGrid{grid-template-columns:minmax(0,1fr)!important}}</style>`};
+
+SCREENS.stats=()=>{const c=C('c1');const held=sessions(c).filter(s=>!s.cancelled&&s.status!=='upcoming');
+  const attItems=held.map(s=>{let ok=0,den=0;for(const sid of c.roster){const ch=(ATT.c1[sid]||'')[s.week-1];if(!ch||ch==='-'||ch==='E')continue;den++;if(ch!=='A')ok++}return{label:`Week ${s.week} · ${fmt(s.date)}`,short:`Week ${s.week}`,value:ok/den*100,series:'Attendance'}});
+  const done=ASSESS.c1.filter(a=>isDue(c,a));const avgItems=done.map(a=>({label:a.title,sub:typeLabel[a.type],value:taskAvg(c,a)}));
+  const bins=[0,0,0,0,0];for(const sid of c.roster){const v=(SCORES.c1[sid]||{}).a3;if(typeof v==='number')bins[Math.min(4,Math.floor(v/4))]++}
+  const binItems=['0–3','4–7','8–11','12–15','16–20'].map((l,i)=>({label:`${l} marks`,short:l,value:bins[i],series:'Students'}));
+  const standings=c.roster.map(sid=>standing(c,sid).score).filter(x=>x!=null);
+  const topics=[['Output with print()',82],['Conditions: if / elif / else',78],['for loops & range()',74],['Variables & input()',69]].map(([l,v])=>({label:l,value:v}));
+  return header('Python Level 1 · weeks 1–3','Statistics','FR-TCH-18 · FR-ADM-09')+`
+  <div class="grid g3"><div class="card tile"><span class="k">Class average</span><span class="v">${avg(standings).toFixed(1)}<small> / 100</small></span>${meter(avg(standings))}</div>
+   <div class="card tile"><span class="k">Below pass mark</span><span class="v">${standings.filter(x=>x<PASS).length}<small> of ${standings.length} students</small></span><span class="s">Pass mark ${PASS}</span></div>
+   <div class="card tile"><span class="k">Homework handed in</span><span class="v">${Math.round(avg(c.roster.map(sid=>completion(c,sid))))}<small>%</small></span><span class="s">tasks past their due date</span></div></div>
+  <div class="grid g2">
+   ${chartCard('Attendance by week','Present or late, as a share of students expected',colChart(attItems),tbl(['Week','Attendance %'],attItems.map(i=>[i.label,Math.round(i.value)])))}
+   ${chartCard('Average score by task',`Class average as a percentage · line = pass mark ${PASS}`,hbars(avgItems,{ref:PASS}),tbl(['Task','Average %'],avgItems.map(i=>[i.label,Math.round(i.value)])))}
+   ${chartCard('If / else quiz: spread of marks','Number of students in each mark band (out of 20)',colChart(binItems,{max:niceMax(Math.max(...bins)),unit:''}),tbl(['Marks','Students'],binItems.map(i=>[i.short,i.value])))}
+   ${chartCard('Topics to revisit','Average score on tasks linked to each syllabus topic',hbars(topics,{ref:PASS}),tbl(['Topic','Average %'],topics.map(i=>[i.label,i.value])))}
+  </div>`};
+
+SCREENS.termreport=()=>{const c=C('c1');return header('Python Level 1 · Term 4 · 2026','Term reports','FR-TCH-15/16/17 · BR-13 · BR-08')+
+  note(`The suggested result comes from the overall score and the pass mark (${PASS}). If you choose a different result, write a reason. It goes to the audit log. The exam isn't marked yet, so these are mid-term standings.`)+`
+  <section class="card flush"><div class="tw"><table><thead><tr><th>Student</th><th class="n">Overall</th><th>Suggested</th><th>Rating</th><th>Needs support</th><th>Result</th><th>Comment</th></tr></thead><tbody>
+  ${c.roster.map(sid=>{const r=standing(c,sid).score;const sug=r==null?'—':r>=PASS?'Pass':'Fail';const chosen=st.termTab[sid]??sug;
+    return`<tr><td style="font-weight:500;white-space:nowrap">${S(sid).name}</td><td class="n">${scorePill(r)}</td><td>${sug}</td>
+    <td><select aria-label="Rating for ${S(sid).name}" style="width:auto"><option>Excellent</option><option selected>Good</option><option>Developing</option><option>Needs work</option></select></td>
+    <td><input type="checkbox" ${SUPPORT[sid]?'checked':''} aria-label="Needs support"></td>
+    <td><select data-result="${sid}" aria-label="Result for ${S(sid).name}" style="width:auto"><option ${chosen==='Pass'?'selected':''}>Pass</option><option ${chosen==='Fail'?'selected':''}>Fail</option></select>
+      ${chosen!==sug&&sug!=='—'?`<input type="text" placeholder="Reason for the change" aria-label="Reason" style="margin-top:6px;min-width:180px">`:''}</td>
+    <td><input type="text" placeholder="Short comment" aria-label="Comment for ${S(sid).name}" style="min-width:200px" value="${sid==='s3'?'Helps others in Q&amp;A. Ready for Level 2.':''}"></td></tr>`}).join('')}
+  </tbody></table></div></section><div class="row"><button class="btn primary" data-act="toast" data-msg="Term reports saved as drafts. Publish them when the exam is marked.">Save drafts</button></div>`};
+
+/* ---------- STUDENT (Bopha Lim) ---------- */
+const ME='s3';
+SCREENS.home=()=>{const mine=classesOf(ME);const nexts=mine.map(c=>({c,s:sessions(c).find(s=>!s.cancelled&&s.status==='upcoming')})).sort((a,b)=>a.s.date-b.s.date||a.c.time.localeCompare(b.c.time));const n=nexts[0];
+  const due=mine.flatMap(c=>(ASSESS[c.id]||[]).filter(a=>a.type==='homework'&&!isDue(c,a)).map(a=>({c,a,d:dueDate(c,a)}))).sort((x,y)=>x.d-y.d);
+  return header('Sunday 18 October','Hi Bopha','FR-STU-01 · FR-STU-06 · FR-AUTH-10')+`
+  <div class="grid g3">${mine.map(c=>{const r=standing(c,ME);return`<div class="card tile"><div class="spread"><span class="k">${esc(c.name)}</span>${lang(c.lang)}</div><span class="v">${r.score.toFixed(1)}<small> / 100 so far</small></span>${meter(r.score)}<span class="s">Pass mark ${PASS} · attendance ${attendance(c,ME)}%</span></div>`}).join('')}</div>
+  <div class="grid g12">
+   <section class="card stack"><span class="xs muted">Next class</span><h2 style="font-size:1.2rem">${esc(n.c.name)}</h2><div class="tnum">${fmt(n.s.date,{weekday:'long',day:'numeric',month:'long'})}</div><div class="ink2 small">${n.c.time}–${endTime(n.c.time,n.c.mins)} · ${esc(n.c.room)} · ${esc(n.c.teacher)}</div>
+     <div class="wkstrip" aria-label="Weeks of the term">${sessions(n.c).map(s=>s.cancelled?'<span class="x" title="No class">–</span>':`<span class="${s.status==='upcoming'?(s.week===n.s.week?'now':''):'done'}" title="Week ${s.week} · ${fmt(s.date)}">${s.week}</span>`).join('')}</div></section>
+   <section class="card"><div class="chead"><div><h2>Homework due</h2><p>Hand in before the start of the class</p></div></div><div class="list">${due.map(({c,a,d})=>`<div class="spread"><div><div style="font-weight:500">${esc(a.title)}</div><div class="xs muted tnum">${esc(c.name)} · due ${fmt(d)} ${c.time}</div></div><button class="btn sm" data-work="${a.lang==='python'?'py':a.lang==='java'?'java':'web'}">Open</button></div>`).join('')}</div></section>
+  </div>
+  <section class="card"><div class="chead"><div><h2>Latest feedback</h2></div></div><div class="spread"><div><div style="font-weight:500">Mad Libs story <span class="muted small">· Python Level 1</span></div><p class="small ink2" style="margin-top:4px">"Lovely clear questions. Try adding one more sentence to your story!" · Sophea Chan</p></div>${pill('good','9 / 10','check')}</div></section>
+  <p class="xs muted">On a shared club laptop you'll be signed out after 2 hours without activity. Always sign out when you finish.</p>`};
+
+SCREENS.lesson=()=>{const L=LESSONS.c1[3];return header('Python Level 1 · Week 3 · Sat 17 Oct',esc(L.title),'FR-STU-02/03/04/10 · BR-20',`<div class="seg">${[1,2,3].map(n=>`<button type="button" aria-pressed="${n===3}" data-act="toast" data-msg="Week ${n} lesson">Week ${n}</button>`).join('')}</div>`)+`
+  <div class="grid" style="grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)" id="lessonGrid"><article class="card md">${md(L.md)}</article><div class="stack"><h2>Questions</h2>${qaList(3,'student')}</div></div>
+  <style>@media (max-width:1000px){#lessonGrid{grid-template-columns:minmax(0,1fr)!important}}</style>`};
+
+const PROJECTS={
+ py:{title:'Number guessing game',cls:'Python Level 1',lang:'python',due:'Sat 24 Oct 09:00',files:{'main.py':`import random\n\nsecret = random.randint(1, 20)\nguesses = 0\n\nprint("I'm thinking of a number from 1 to 20.")\nwhile True:\n    guess = int(input("Your guess: "))\n    guesses = guesses + 1\n    if guess < secret:\n        print("Too low!")\n    elif guess > secret:\n        print("Too high!")\n    else:\n        print("You got it in", guesses, "guesses!")\n        break\n`}},
+ java:{title:'Shapes with packages',cls:'Java Level 2',lang:'java',due:'Sat 24 Oct 14:00',files:{
+  'src/com/club/shapes/Main.java':`package com.club.shapes;\n\npublic class Main {\n    public static void main(String[] args) {\n        Shape[] shapes = { new Circle(2), new Square(3) };\n        for (Shape s : shapes) {\n            System.out.println(s.name() + ": " + s.area());\n        }\n    }\n}\n`,
+  'src/com/club/shapes/Shape.java':`package com.club.shapes;\n\npublic interface Shape {\n    String name();\n    double area();\n}\n`,
+  'src/com/club/shapes/Circle.java':`package com.club.shapes;\n\npublic class Circle implements Shape {\n    private final double r;\n    public Circle(double r) { this.r = r; }\n    public String name() { return "Circle"; }\n    public double area() { return Math.PI * r * r; }\n}\n`,
+  'src/com/club/shapes/Square.java':`package com.club.shape;\n\npublic class Square implements Shape {\n    private final double side;\n    public Square(double side) { this.side = side; }\n    public String name() { return "Square"; }\n    public double area() { return side * side; }\n}\n`}},
+ web:{title:'My profile page',cls:'Web Basics',lang:'web',due:'Sun 25 Oct 09:00',files:{
+  'index.html':`<!doctype html>\n<html>\n<head>\n  <title>Bopha's page</title>\n  <link rel="stylesheet" href="style.css">\n</head>\n<body>\n  <h1>Hi, I'm Bopha</h1>\n  <p>I like drawing, cats and Python.</p>\n  <button onclick="cheer()">Say hello</button>\n  <p id="out"></p>\n  <script src="script.js"><\/script>\n</body>\n</html>\n`,
+  'style.css':`body {\n  font-family: sans-serif;\n  background: #fff7e6;\n  padding: 24px;\n}\nh1 { color: #1c5cab; }\nbutton {\n  padding: 8px 16px;\n  border-radius: 8px;\n}\n`,
+  'script.js':`let count = 0;\nfunction cheer() {\n  count = count + 1;\n  document.getElementById("out").textContent = "Hello x" + count + "!";\n  console.log("button clicked", count);\n}\nconsole.log("page loaded");\n`}}};
+const workState={};
+function proj(){const k=st.work;if(!workState[k])workState[k]={files:{...PROJECTS[k].files},cur:Object.keys(PROJECTS[k].files)[0],submitted:null};return workState[k]}
+function javaWarnings(files){const out={};for(const[p,src]of Object.entries(files)){if(!p.endsWith('.java'))continue;const m=src.match(/^\s*package\s+([\w.]+)\s*;/m);
+  const dir=p.replace(/^src\//,'').split('/').slice(0,-1).join('.');if((m?m[1]:'')!==dir)out[p]={found:m?m[1]:'(none)',want:dir}}return out}
+SCREENS.work=()=>{const P=PROJECTS[st.work];const w=proj();const files=Object.keys(w.files).sort();const src=w.files[w.cur]??'';const warns=P.lang==='java'?javaWarnings(w.files):{};
+  let tree='',lastDir=null;for(const f of files){const dir=f.includes('/')?f.slice(0,f.lastIndexOf('/')+1):'';if(dir!==lastDir){if(dir)tree+=`<div class="dir">${esc(dir)}</div>`;lastDir=dir}
+    tree+=`<button data-act="file" data-v="${esc(f)}" aria-current="${f===w.cur}"><span>${esc(f.slice(dir.length))}</span>${warns[f]?'<span class="wm" title="package does not match folder">!</span>':''}</button>`}
+  const wn=warns[w.cur];
+  return header(`${esc(P.cls)} · due ${P.due}`,esc(P.title),'FR-CODE-01…06 · FR-STU-05 · ADR-02 · ADR-09',`<div class="seg">${[['py','Python'],['java','Java'],['web','Web']].map(([k,l])=>`<button type="button" data-act="work-pick" data-v="${k}" aria-pressed="${st.work===k}">${l}</button>`).join('')}</div>`)+`
+  ${P.lang==='python'?note('There is no Run button for Python yet. Test your program in Thonny on the club laptop, then paste it here or upload the file.'):''}
+  ${P.lang==='java'?note('Test your project in IntelliJ or VS Code, then upload the files or the .zip. Folders are packages: <span class="mono">src/com/club/shapes/</span> means <span class="mono">package com.club.shapes;</span>'):''}
+  ${wn?note(`<strong>${esc(w.cur.split('/').pop())}</strong> says <span class="mono">package ${esc(wn.found)};</span> but it is in the folder for <span class="mono">${esc(wn.want)}</span>. <button class="btn sm" data-act="fix-pkg" style="margin-left:6px">Change to package ${esc(wn.want)};</button>`,'warn','alert'):''}
+  <div class="spread"><div class="row"><button class="btn sm" data-act="new-file">${ic('file')}New file</button><button class="btn sm" data-act="toast" data-msg="In the real LMS: pick files or a .zip from your computer; they are unpacked here in the browser.">${ic('upload')}Upload files or .zip</button><button class="btn sm" data-act="toast" data-msg="In the real LMS this downloads your project as a .zip.">${ic('down')}Download .zip</button></div>
+   <div class="row">${w.submitted?pill('good',`Submitted ${w.submitted} · you can resubmit until ${P.due}`,'check'):pill('','Draft · saved automatically')}<button class="btn primary" data-act="submit">Submit</button></div></div>
+  <div class="grid ${P.lang==='web'?'g2':''}" style="${P.lang==='web'?'':'grid-template-columns:minmax(0,1fr)'}">
+   <div class="ide"><div class="tree">${tree}</div><div class="code"><div class="gutter" id="gutter"></div><textarea id="editor" spellcheck="false" aria-label="Code for ${esc(w.cur)}">${esc(src)}</textarea></div></div>
+   ${P.lang==='web'?`<div class="preview"><div class="bar"><span>Preview</span><span>Prototype. The real one runs on <span class="mono">preview.cckh.dev</span></span></div><iframe id="pv" title="Web page preview" sandbox="allow-scripts allow-modals"></iframe><div class="console" id="console" aria-live="polite"></div></div>`:''}
+  </div>`};
+const BRIDGE='<script>(function(){var send=function(t,a){parent.postMessage({__pv:1,t:t,m:Array.prototype.map.call(a,function(x){try{return typeof x==="object"?JSON.stringify(x):String(x)}catch(e){return String(x)}}).join(" ")},"*")};["log","warn","error"].forEach(function(k){var o=console[k];console[k]=function(){send(k,arguments);o.apply(console,arguments)}});window.onerror=function(m,s,l){send("error",[m+" (line "+l+")"])}})();<\/script>';
+function buildPreview(files){let html=files['index.html']||'<p>Add an index.html file.</p>';
+  html=html.replace(/<link[^>]+href=["']([^"']+\.css)["'][^>]*>/gi,(m,h)=>files[h]!=null?`<style>${files[h]}</style>`:m);
+  html=html.replace(/<script[^>]+src=["']([^"']+\.js)["'][^>]*>\s*<\/script>/gi,(m,h)=>files[h]!=null?`<script>${files[h].replace(/<\/script/gi,'<\\/script')}<\/script>`:m);
+  return /<head[^>]*>/i.test(html)?html.replace(/<head[^>]*>/i,x=>x+BRIDGE):BRIDGE+html}
+let pvTimer;function refreshPreview(){const pv=$('#pv');if(!pv)return;$('#console').innerHTML='';pv.srcdoc=buildPreview(proj().files)}
+function syncGutter(){const ed=$('#editor'),g=$('#gutter');if(!ed||!g)return;g.textContent=Array.from({length:ed.value.split('\n').length},(_,i)=>i+1).join('\n');g.scrollTop=ed.scrollTop}
+window.addEventListener('message',e=>{const pv=$('#pv');if(!pv||e.source!==pv.contentWindow||!e.data||!e.data.__pv)return;const box=$('#console');if(!box)return;
+  const d=document.createElement('div');d.className=e.data.t==='error'?'e':e.data.t==='warn'?'w':'';d.textContent=(e.data.t==='log'?'› ':e.data.t+': ')+e.data.m;box.appendChild(d);box.scrollTop=box.scrollHeight});
+
+SCREENS.mystats=()=>{const c=C('c1');const tasks=ASSESS.c1.filter(a=>isDue(c,a));
+  const mine={name:'Bopha',color:'--s1',wash:'var(--s1-wash)',points:tasks.map((a,i)=>({label:`Task ${i+1}`,full:a.title,value:cellPoints((SCORES.c1[ME]||{})[a.id],a.max)/a.max*100}))};
+  const cls={name:'Class average',color:'--s2',points:tasks.map((a,i)=>({label:`Task ${i+1}`,value:taskAvg(c,a)}))};
+  const thisAvg=avg(classesOf(ME).map(x=>standing(x,ME).score));
+  return header('Bopha Lim · Term 4 · 2026','My progress','FR-STU-07 · BR-09 · BR-10')+`
+  <div class="grid g3">${classesOf(ME).map(x=>{const r=standing(x,ME);return`<div class="card tile"><div class="spread"><span class="k">${esc(x.name)}</span>${lang(x.lang)}</div><span class="v">${r.score.toFixed(1)}<small> / 100</small></span>${meter(r.score)}<span class="s">Attendance ${attendance(x,ME)}% · homework handed in ${completion(x,ME)}%</span></div>`}).join('')}</div>
+  <div class="grid g21">
+   ${chartCard('Python Level 1: my scores by task','Each task as a percentage, compared with the class average. Other students\' own scores are never shown.',legend([mine,cls])+lineChart([mine,cls]),tbl(['Task','Bopha %','Class average %'],tasks.map((a,i)=>[a.title,Math.round(mine.points[i].value),Math.round(cls.points[i].value)])))}
+   <section class="card stack"><div class="chead" style="margin:0"><div><h2>Compared with last term</h2><p>Average of your classes</p></div></div>
+     <div class="tile"><span class="k">Term 3 · 2026 (final)</span><span class="v">96.0</span></div><div class="tile"><span class="k">This term so far</span><span class="v">${thisAvg.toFixed(1)}</span><span class="s">${(thisAvg-96).toFixed(1)} points so far · the exam isn't marked yet</span></div></section>
+  </div>`};
+
+/* ---------- SIGN IN ---------- */
+SCREENS.signin=()=>`<form class="card stack signin" id="signinForm" autocomplete="off" style="gap:16px"><div class="brand" style="padding:0"><div class="logo">ck</div><div><b>CCKH LMS</b><small>lms.cckh.dev</small></div></div><div><h1 style="font-size:1.3rem">Sign in</h1><p class="small muted">Use the username and password from your login slip.</p></div>
+  <label class="f">Username<input type="text" id="si-user" value="bopha.l"></label><label class="f">Password<input type="password" id="si-pw" value="lotus-comet-42"></label>
+  <button class="btn primary" type="submit">Sign in</button>
+  <p class="xs muted">Forgot your password? Ask your teacher or the club admin to reset it. On a shared laptop you'll be signed out after 2 hours without activity.</p>
+  <p class="xs muted">Prototype: try <span class="mono">bopha.l</span>, <span class="mono">sophea</span> or <span class="mono">admin</span>.</p></form>`;
+
+/* ---------- render ---------- */
+function render(){
+  const signin=st.screen==='signin';
+  $('#roleSel').value=st.role;
+  const[nm,rl]=signin?['Signed out','']:WHO[st.role];$('#meName').textContent=nm;$('#meRole').textContent=rl;$('#meAv').textContent=signin?'–':initials(nm);
+  $('#crumb').innerHTML=signin?'Sign in':`${esc(CRUMB[st.role])} / <strong>${esc(NAV[st.role].flatMap(g=>g[1]).find(x=>x[0]===st.screen)?.[1]||'')}</strong>`;
+  $('#nav').innerHTML=signin?'':NAV[st.role].map(([sec,items])=>`<div class="sec">${esc(sec)}</div>`+items.map(([k,l,icn,b])=>`<button data-go="${k}" aria-current="${st.screen===k?'page':'false'}">${ic(icn)}<span>${l}</span>${b?`<span class="badge">${b}</span>`:''}</button>`).join('')).join('');
+  chartId=0;$('#main').innerHTML=(SCREENS[st.screen]||SCREENS[HOME[st.role]])();
+  if(st.screen==='newclass')ncRefresh();
+  if(st.screen==='work'){syncGutter();refreshPreview()}
+  if(st.screen==='week'&&st.weekTab==='attendance')attSummary()}
+function attSummary(){const el=$('#attSum');if(!el)return;const v=$$('.seg.att').map(s=>s.querySelector('[aria-pressed="true"]')?.dataset.v);el.textContent=`${v.filter(x=>x==='P').length} present · ${v.filter(x=>x==='L').length} late · ${v.filter(x=>x==='A').length} absent · ${v.filter(x=>x==='E').length} excused`}
+
+/* ---------- chart tooltip ---------- */
+const tip=$('#tip');
+function showTip(el,x,y){let d;try{d=JSON.parse(el.dataset.tip)}catch(e){return}tip.replaceChildren();const t=document.createElement('div');t.className='t';t.textContent=d.t;tip.appendChild(t);
+  for(const[name,val,color]of d.rows){const r=document.createElement('div');r.className='rw';const b=document.createElement('b');b.textContent=val;const s=document.createElement('span');const k=document.createElement('i');k.style.setProperty('--c',`var(${color})`);s.append(k,document.createTextNode(name));r.append(b,s);tip.appendChild(r)}
+  tip.hidden=false;const w=tip.offsetWidth,h=tip.offsetHeight;tip.style.left=Math.min(window.innerWidth-w-8,Math.max(8,x+14))+'px';tip.style.top=Math.max(8,y-h-12)+'px'}
+document.addEventListener('pointermove',e=>{const el=e.target.closest?.('[data-tip]');if(el)showTip(el,e.clientX,e.clientY);else tip.hidden=true});
+document.addEventListener('focusin',e=>{const el=e.target.closest?.('[data-tip]');if(el){const r=el.getBoundingClientRect();showTip(el,r.left+r.width/2,r.top)}});
+document.addEventListener('focusout',()=>{tip.hidden=true});
+
+/* ---------- events ---------- */
+$('#roleSel').addEventListener('change',e=>setRole(e.target.value));
+document.addEventListener('click',e=>{
+  const g=e.target.closest('[data-go]');if(g){go(g.dataset.go);return}
+  const rep=e.target.closest('[data-report]');if(rep){st.report=rep.dataset.report;go('report');return}
+  const wk=e.target.closest('[data-week]');if(wk){st.week=+wk.dataset.week;st.weekTab='lesson';go('week');return}
+  const wo=e.target.closest('[data-work]');if(wo){st.work=wo.dataset.work;go('work');return}
+  const segB=e.target.closest('.seg button');
+  if(segB&&segB.closest('#nc-day')){st.nc.day=segB.dataset.v;st.nc.first=st.nc.day==='Sat'?'2027-01-09':'2027-01-10';render();return}
+  if(segB&&segB.closest('#nc-mins')){st.nc.mins=+segB.dataset.v;render();return}
+  if(segB&&segB.closest('.seg.att')){const seg=segB.closest('.seg.att');seg.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b===segB));const sid=seg.dataset.sid;const a=(ATT.c1[sid]||'').padEnd(st.week,'P').split('');a[st.week-1]=segB.dataset.v;ATT.c1[sid]=a.join('');attSummary();return}
+  const a=e.target.closest('[data-act="issue"]')||e.target.closest('[data-act]');if(!a)return;const act=a.dataset.act,v=a.dataset.v,id=a.dataset.id;
+  switch(act){
+   case 'toast':toast(a.dataset.msg);break;
+   case 'viewtable':{const on=a.getAttribute('aria-pressed')!=='true';a.setAttribute('aria-pressed',on);a.textContent=on?'Chart':'Table';$('#'+id+'-c').hidden=on;$('#'+id+'-t').hidden=!on;break}
+   case 'nc-reset':st.nc=ncDefaults();render();break;
+   case 'nc-cancel':{const k=a.dataset.d;if(st.nc.cancel[k])delete st.nc.cancel[k];else st.nc.cancel[k]='Cancelled';ncRefresh();break}
+   case 'users-tab':st.users=v;render();break;
+   case 'reset-pw':{const s=S(id);st.shown={name:s?s.name:id,user:s?s.user:id.split(' ')[0].toLowerCase(),pw:newPassword()};render();toast('Password reset. The old one no longer works.');break}
+   case 'signout-all':toast(`${S(id).name} is signed out on every device.`);break;
+   case 'copy-pw':navigator.clipboard?.writeText(st.shown.pw).then(()=>toast('Copied.'),()=>toast('Copy is blocked here. Select the password and copy it.'));break;
+   case 'hide-pw':st.shown=null;render();break;
+   case 'promote':st.promoted=true;render();toast('Promotion done.');break;
+   case 'issue':{const r=()=>Math.random().toString(36).slice(2,6).toUpperCase();st.certs[id]=`${r()}-${r()}-${r()}`;st.certSel=id;render();toast('Certificate issued.');break}
+   case 'cert-view':st.certSel=id;render();break;
+   case 'pick-week':st.week=+v;render();break;
+   case 'week-tab':st.weekTab=v;render();break;
+   case 'grade-pick':st.grade.sid=v;st.grade.file=null;render();break;
+   case 'grade-file':st.grade.file=v;render();break;
+   case 'work-pick':st.work=v;render();break;
+   case 'file':proj().cur=v;render();break;
+   case 'new-file':{const w=proj();const ext={py:'.py',java:'.java',web:'.html'}[st.work];let i=1;const base=st.work==='java'?'src/com/club/shapes/NewClass':'new_file';while(w.files[base+i+ext])i++;const name=base+i+ext;
+     w.files[name]=st.work==='java'?`package com.club.shapes;\n\npublic class NewClass${i} {\n}\n`:'';w.cur=name;render();toast(`Created ${name.split('/').pop()}`);break}
+   case 'fix-pkg':{const w=proj();const wn=javaWarnings(w.files)[w.cur];w.files[w.cur]=w.files[w.cur].replace(/^\s*package\s+[\w.]+\s*;/m,`package ${wn.want};`);render();toast('Package line fixed.');break}
+   case 'submit':proj().submitted='Sun 18 Oct, 10:42';render();toast('Submitted. Your teacher can see it now.');break;
+   case 'qa-report':{const q=QUESTIONS.find(x=>x.id===id);q.vis='review';q.reportedBy=ME;render();toast('Thanks. A teacher will look at it. It is hidden until then.');break}
+   case 'qa-restore':QUESTIONS.find(x=>x.id===id).vis='visible';render();toast('Post restored.');break;
+   case 'qa-remove':QUESTIONS.find(x=>x.id===id).vis='removed';render();toast('Post removed. The author is told it broke the class rules.');break;
+  }
+});
+document.addEventListener('submit',e=>{e.preventDefault();const f=e.target;
+  if(f.id==='ncForm'){const n=st.nc;const first=new Date(n.first+'T00:00:00Z');if(isNaN(first)||first.getUTCDay()!==(n.day==='Sat'?6:0)){toast('Fix the first session date first.');return}
+    const id='c'+(CLASSES.length+1);CLASSES.push({id,name:n.course,lang:COURSES[n.course],term:n.term,day:n.day,time:n.time,mins:n.mins,first,weeks:+n.weeks,teacher:n.teacher,room:n.room,roster:[],enrolled:{},cancel:{...n.cancel}});
+    st.nc=null;go('classes');toast(`${n.course} created with ${n.weeks} weekly sessions.`);return}
+  if(f.id==='addStudent'){const name=$('#as-name').value.trim()||'New Student';const parts=name.toLowerCase().split(/\s+/);const user=parts[0]+'.'+(parts[1]?.[0]||'x');
+    st.shown={name,user,pw:newPassword()};render();toast(`Account created for ${name}.`);return}
+  if(f.id==='gradeForm'){const s=$('#gr-score').value;if(s!==''){const row=SCORES.c1[st.grade.sid]||(SCORES.c1[st.grade.sid]={});const cur=row[st.grade.aid];row[st.grade.aid]=typeof cur==='string'&&cur[0]==='L'?'L'+s:+s}toast('Grade saved. The student sees the score and feedback now.');return}
+  if(f.id==='askQ'){const b=$('#askBody').value.trim();if(!b){toast('Write your question first.');return}QUESTIONS.push({id:'q'+Date.now(),week:3,author:ME,body:b,code:$('#askCode').value.trim()||null,vis:'visible',replies:[]});render();toast('Question posted.');return}
+  if(f.dataset.reply){const inp=f.querySelector('input');const t=inp.value.trim();if(!t)return;QUESTIONS.find(q=>q.id===f.dataset.reply).replies.push({id:'r'+Date.now(),author:st.role==='teacher'?'T':ME,body:t});render();return}
+  if(f.id==='signinForm'){const u=$('#si-user').value.trim().toLowerCase();setRole(u==='admin'?'admin':u.startsWith('sophea')?'teacher':'student');toast('Signed in.');return}
+  if(f.id==='newWork'){toast('Homework published. Due at the start of the next session.');return}
+  if(f.id==='weekReport'){REPORTS.c1[st.week]=true;toast('Weekly report saved.');return}
+});
+document.addEventListener('input',e=>{const t=e.target;
+  if(t.id&&t.id.startsWith('nc-')&&st.nc){const k=t.id.slice(3);st.nc[k]=k==='weeks'?+t.value:t.value;ncRefresh();return}
+  if(t.id==='editor'){const w=proj();w.files[w.cur]=t.value;syncGutter();if(st.work==='web'){clearTimeout(pvTimer);pvTimer=setTimeout(refreshPreview,500)}
+    if(st.work==='java'){clearTimeout(pvTimer);pvTimer=setTimeout(()=>{const pos=t.selectionStart;render();const ed=$('#editor');ed.focus();ed.setSelectionRange(pos,pos)},700)}return}
+  if(t.id==='ls-md'||t.id==='ls-title'){const L=LESSONS.c1[st.week]||(LESSONS.c1[st.week]={status:'draft'});if(t.id==='ls-md')L.md=t.value;else L.title=t.value;$('#ls-preview').innerHTML=`<div class="xs muted">Preview</div><h2>${esc(L.title)}</h2>${md(L.md)}`;return}
+  if(t.dataset.gb){const[sid,aid]=t.dataset.gb.split('|');const a=ASSESS.c1.find(x=>x.id===aid);const row=SCORES.c1[sid]||(SCORES.c1[sid]={});const cur=row[aid];
+    if(t.value==='')row[aid]='M';else{const n=Math.max(0,Math.min(a.max,+t.value));row[aid]=typeof cur==='string'&&cur[0]==='L'?'L'+n:n}
+    const cell=document.querySelector(`[data-standing="${sid}"]`);if(cell)cell.innerHTML=scorePill(standing(C('c1'),sid).score);return}
+});
+document.addEventListener('change',e=>{const t=e.target;
+  if(t.id==='reportPick'){st.report=t.value;render();return}
+  if(t.dataset.result){st.termTab[t.dataset.result]=t.value;render();return}
+});
+document.addEventListener('keydown',e=>{const t=e.target;
+  if(t.id==='editor'&&e.key==='Tab'){e.preventDefault();const s=t.selectionStart,en=t.selectionEnd;t.value=t.value.slice(0,s)+'    '+t.value.slice(en);t.selectionStart=t.selectionEnd=s+4;t.dispatchEvent(new Event('input',{bubbles:true}))}
+  if(t.dataset&&t.dataset.gb&&e.key==='Enter'){e.preventDefault();const[sid,aid]=t.dataset.gb.split('|');const ro=C('c1').roster;for(let i=ro.indexOf(sid)+1;i<ro.length;i++){const nx=document.querySelector(`[data-gb="${ro[i]}|${aid}"]`);if(nx){nx.focus();nx.select();return}}}
+  if((e.key==='Enter'||e.key===' ')&&t.matches&&t.matches('tr.click')){e.preventDefault();t.click()}
+});
+document.addEventListener('scroll',e=>{if(e.target.id==='editor'){const g=$('#gutter');if(g)g.scrollTop=e.target.scrollTop}},true);
+render();
+</script>

@@ -1,0 +1,29 @@
+* { box-sizing: border-box; }
+body { margin: 0; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; color: #101828; background: #f5f6f8; }
+.page { padding: 16px max(16px, env(safe-area-inset-left, 0px)); max-width: 1320px; margin: 0 auto; }
+h1 { font-size: 1.3rem; }
+.workspace { display: flex; flex-direction: column; gap: 10px; }
+.toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
+button, .upload { font: inherit; border: 1px solid #d5dae1; background: #fff; border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+.upload input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.error { color: #a72a2a; background: #fce9e9; padding: 8px 12px; border-radius: 8px; margin: 0; }
+.warning { background: #fef4dc; padding: 8px 12px; border-radius: 8px; margin: 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.panes { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+.panes.with-preview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ide { display: grid; grid-template-columns: 220px minmax(0, 1fr); border: 1px solid #e4e7ec; border-radius: 12px; overflow: hidden; background: #fff; min-height: 380px; }
+.tree { display: flex; flex-direction: column; gap: 1px; padding: 8px; background: #f2f4f7; border-right: 1px solid #e4e7ec; overflow: auto; max-height: 520px; min-width: 0; }
+.tree button { border: 0; background: transparent; text-align: left; font: 12px ui-monospace, Menlo, monospace; padding: 4px 6px; border-radius: 6px; overflow-wrap: anywhere; }
+.tree button[aria-current="true"] { background: #fff; box-shadow: 0 0 0 1px #e4e7ec; }
+.editor { min-width: 0; }
+.editor .cm-editor { height: 100%; min-height: 380px; font-size: 13px; }
+.preview { display: grid; grid-template-rows: minmax(260px, 1fr) auto; border: 1px solid #e4e7ec; border-radius: 12px; overflow: hidden; background: #fff; }
+.preview iframe { width: 100%; height: 100%; min-height: 260px; border: 0; }
+.console { font: 12px ui-monospace, Menlo, monospace; min-height: 48px; max-height: 140px; overflow: auto; padding: 8px 12px; border-top: 1px solid #e4e7ec; background: #f2f4f7; }
+.console .error { color: #a72a2a; background: none; padding: 0; }
+@media (max-width: 900px) {
+  .panes.with-preview { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .ide { grid-template-columns: minmax(0, 1fr); }
+  .tree { border-right: 0; border-bottom: 1px solid #e4e7ec; max-height: 160px; }
+}

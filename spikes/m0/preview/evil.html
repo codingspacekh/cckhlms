@@ -1,0 +1,9 @@
+<!doctype html>
+<html><head><title>Another website</title></head><body>
+<p>Another website trying to embed the preview frame.</p>
+<script>
+  window.readyFromFrame = false;
+  addEventListener('message', function (e) { if (e.data && e.data.__pvReady) window.readyFromFrame = true; });
+</script>
+<iframe src="http://preview.localhost:3102/frame"></iframe>
+</body></html>
