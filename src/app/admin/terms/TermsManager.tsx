@@ -3,11 +3,10 @@ import { useActionState, useState, useTransition } from 'react';
 import { Pill } from '@/components/ui/Pill';
 import { TableScroll } from '@/components/ui/TableScroll';
 import { createTermAction, setTermStatusAction } from '@/modules/academics/actions';
+import { formatDay } from '@/modules/academics/schedule';
 import type { TermStatus } from '@/modules/academics/terms';
 
 type Row = { id: string; name: string; startDate: string; endDate: string; status: string };
-const fmt = (d: string) =>
-  new Date(`${d}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 
 function StatusPill({ status }: { status: string }) {
   if (status === 'active')
@@ -63,7 +62,7 @@ export function TermsManager({ terms }: { terms: Row[] }) {
                 <tr key={t.id}>
                   <td className="strong">{t.name}</td>
                   <td>
-                    {fmt(t.startDate)} – {fmt(t.endDate)}
+                    {formatDay(t.startDate)} – {formatDay(t.endDate)}
                   </td>
                   <td>
                     <StatusPill status={t.status} />

@@ -23,6 +23,9 @@ describe('startup', () => {
     expect(await tables()).toEqual([
       'account',
       'audit_log',
+      'class',
+      'class_session',
+      'class_teacher',
       'club_settings',
       'course',
       'rate_limit',

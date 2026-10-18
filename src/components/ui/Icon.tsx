@@ -49,6 +49,12 @@ const ICONS = {
       <path d="M4 19.5A1.5 1.5 0 0 0 5.5 21H20" />
     </>
   ),
+  layers: (
+    <>
+      <path d="m12 3 9 5-9 5-9-5z" />
+      <path d="m3 13 9 5 9-5" />
+    </>
+  ),
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof ICONS;

@@ -12,10 +12,12 @@ import {
   integer,
   jsonb,
   pgTable,
+  primaryKey,
   smallint,
   text,
   timestamp,
   unique,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 
 const ts = (name: string) => timestamp(name, { withTimezone: true });
@@ -189,4 +191,77 @@ export const syllabusTopic = pgTable(
     title: text('title').notNull(),
   },
   (t) => [index('syllabus_topic_course_idx').on(t.courseId, t.position)],
+);
+
+// Classes (FR-ADM-05): one run of a course in a term, meeting once a week at the weekend.
+export const klass = pgTable(
+  'class',
+  {
+    id: text('id').primaryKey(),
+    courseId: text('course_id')
+      .notNull()
+      .references(() => course.id, { onDelete: 'restrict' }),
+    termId: text('term_id')
+      .notNull()
+      .references(() => term.id, { onDelete: 'restrict' }),
+    name: text('name').notNull(),
+    day: text('day').notNull(),
+    startTime: text('start_time').notNull(),
+    minutes: smallint('minutes').notNull(),
+    firstDate: date('first_date').notNull(),
+    weeks: smallint('weeks').notNull(),
+    room: text('room'),
+    capacity: smallint('capacity'),
+    status: text('status').notNull().default('active'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [
+    index('class_term_idx').on(t.termId),
+    check('class_weekend_day', sql`${t.day} in ('sat', 'sun')`),
+    check('class_start_time_format', sql`${t.startTime} ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'`),
+    check('class_minutes_90_or_120', sql`${t.minutes} in (90, 120)`),
+    check('class_weeks_10_to_12', sql`${t.weeks} between 10 and 12`),
+    check('class_status_known', sql`${t.status} in ('active', 'archived')`),
+  ],
+);
+
+export const classTeacher = pgTable(
+  'class_teacher',
+  {
+    classId: text('class_id')
+      .notNull()
+      .references(() => klass.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'restrict' }),
+    role: text('role').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.classId, t.userId] }),
+    index('class_teacher_user_idx').on(t.userId),
+    uniqueIndex('class_one_lead')
+      .on(t.classId)
+      .where(sql`${t.role} = 'lead'`),
+    check('class_teacher_role_known', sql`${t.role} in ('lead', 'assistant')`),
+  ],
+);
+
+// One meeting of a class. Week numbers are worked out from the dates (BR-15), not stored.
+export const classSession = pgTable(
+  'class_session',
+  {
+    id: text('id').primaryKey(),
+    classId: text('class_id')
+      .notNull()
+      .references(() => klass.id, { onDelete: 'cascade' }),
+    date: date('date').notNull(),
+    startTime: text('start_time').notNull(),
+    minutes: smallint('minutes').notNull(),
+    status: text('status').notNull().default('scheduled'),
+    note: text('note'),
+  },
+  (t) => [
+    unique('class_session_one_per_day').on(t.classId, t.date),
+    check('class_session_status_known', sql`${t.status} in ('scheduled', 'cancelled')`),
+  ],
 );
