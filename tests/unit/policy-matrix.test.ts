@@ -13,6 +13,8 @@ const MATRIX: Record<Action, Record<Role, boolean>> = {
   'student.area': { admin: false, teacher: false, student: true },
   'accounts.manage': { admin: true, teacher: false, student: false },
   'settings.manage': { admin: true, teacher: false, student: false },
+  'terms.manage': { admin: true, teacher: false, student: false },
+  'courses.manage': { admin: true, teacher: false, student: false },
 };
 
 const actor = (role: string): Actor => ({ userId: 'u1', username: 'x', name: 'X', role, sessionId: 's1' });

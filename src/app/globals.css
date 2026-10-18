@@ -629,3 +629,40 @@ textarea {
 .narrow-form {
   max-width: 560px;
 }
+.g2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 640px) {
+  .g2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.grid.start {
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .grid.g2.start {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.fs {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+.topics {
+  margin: 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.88rem;
+  color: var(--ink-2);
+}
+.phead .eyebrow a {
+  color: var(--muted);
+}

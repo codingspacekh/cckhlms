@@ -11,6 +11,8 @@ export const ACTIONS = {
   'student.area': hasRole('student'),
   'accounts.manage': hasRole('admin'),
   'settings.manage': hasRole('admin'),
+  'terms.manage': hasRole('admin'),
+  'courses.manage': hasRole('admin'),
 } satisfies Record<string, (actor: Actor) => boolean>;
 
 export type Action = keyof typeof ACTIONS;

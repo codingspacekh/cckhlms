@@ -1,7 +1,22 @@
 // Database schema. Auth tables follow Better Auth's username + admin plugins (ADR 0003);
 // club settings (FR-ADM-16) and the audit log (NFR-11) are ours.
 import { sql } from 'drizzle-orm';
-import { bigint, bigserial, boolean, check, index, integer, jsonb, pgTable, smallint, text, timestamp } from 'drizzle-orm/pg-core';
+import {
+  type AnyPgColumn,
+  bigint,
+  bigserial,
+  boolean,
+  check,
+  date,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  smallint,
+  text,
+  timestamp,
+  unique,
+} from 'drizzle-orm/pg-core';
 
 const ts = (name: string) => timestamp(name, { withTimezone: true });
 
@@ -118,3 +133,60 @@ export const teacherProfile = pgTable('teacher_profile', {
   phone: text('phone'),
   notes: text('notes'),
 });
+
+// Terms (FR-ADM-03): normally 4 a year. At most one is active (enforced in the service).
+export const term = pgTable(
+  'term',
+  {
+    id: text('id').primaryKey(),
+    year: integer('year').notNull(),
+    number: smallint('number').notNull(),
+    name: text('name').notNull(),
+    startDate: date('start_date').notNull(),
+    endDate: date('end_date').notNull(),
+    status: text('status').notNull().default('planned'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [
+    unique('term_year_number').on(t.year, t.number),
+    check('term_number_1_to_4', sql`${t.number} between 1 and 4`),
+    check('term_dates_in_order', sql`${t.endDate} > ${t.startDate}`),
+    check('term_status_known', sql`${t.status} in ('planned', 'active', 'closed')`),
+  ],
+);
+
+// Courses (FR-ADM-04): reusable across terms; a class is one run of a course in a term.
+export const course = pgTable(
+  'course',
+  {
+    id: text('id').primaryKey(),
+    code: text('code').notNull().unique(),
+    name: text('name').notNull(),
+    description: text('description'),
+    defaultLanguage: text('default_language').notNull(),
+    passMark: smallint('pass_mark').notNull().default(60),
+    weightExam: smallint('weight_exam').notNull().default(60),
+    weightClasswork: smallint('weight_classwork').notNull().default(30),
+    weightHomework: smallint('weight_homework').notNull().default(10),
+    nextCourseId: text('next_course_id').references((): AnyPgColumn => course.id, { onDelete: 'set null' }),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [
+    check('course_language_known', sql`${t.defaultLanguage} in ('python', 'java', 'web')`),
+    check('course_pass_mark_range', sql`${t.passMark} between 0 and 100`),
+    check('course_weights_sum_100', sql`${t.weightExam} + ${t.weightClasswork} + ${t.weightHomework} = 100`),
+  ],
+);
+
+export const syllabusTopic = pgTable(
+  'syllabus_topic',
+  {
+    id: text('id').primaryKey(),
+    courseId: text('course_id')
+      .notNull()
+      .references(() => course.id, { onDelete: 'cascade' }),
+    position: smallint('position').notNull(),
+    title: text('title').notNull(),
+  },
+  (t) => [index('syllabus_topic_course_idx').on(t.courseId, t.position)],
+);

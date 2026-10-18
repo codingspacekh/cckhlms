@@ -24,10 +24,13 @@ describe('startup', () => {
       'account',
       'audit_log',
       'club_settings',
+      'course',
       'rate_limit',
       'session',
       'student_profile',
+      'syllabus_topic',
       'teacher_profile',
+      'term',
       'user',
       'verification',
     ]);
