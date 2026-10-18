@@ -1,6 +1,6 @@
 import type { ZodError } from 'zod';
 import type { Actor } from './actor';
-import { can, type Action } from './policy';
+import { can, type Action, type PolicyContext } from './policy';
 
 export class ForbiddenError extends Error {
   constructor(message = "You don't have permission to do that.") {
@@ -24,6 +24,6 @@ export class ValidationError extends Error {
   }
 }
 
-export function assertCan(actor: Actor | null, action: Action): asserts actor is Actor {
-  if (!can(actor, action)) throw new ForbiddenError();
+export function assertCan(actor: Actor | null, action: Action, ctx: PolicyContext = {}): asserts actor is Actor {
+  if (!can(actor, action, ctx)) throw new ForbiddenError();
 }

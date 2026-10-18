@@ -7,7 +7,9 @@ import type { Actor } from '@/server/actor';
 const ROLES = ['admin', 'teacher', 'student'] as const;
 type Role = (typeof ROLES)[number];
 
-const MATRIX: Record<Action, Record<Role, boolean>> = {
+// true = always · false = never · 'own' = only for a class the person teaches
+type Rule = boolean | 'own';
+const MATRIX: Record<Action, Record<Role, Rule>> = {
   'admin.area': { admin: true, teacher: false, student: false },
   'teacher.area': { admin: false, teacher: true, student: false },
   'student.area': { admin: false, teacher: false, student: true },
@@ -15,6 +17,8 @@ const MATRIX: Record<Action, Record<Role, boolean>> = {
   'settings.manage': { admin: true, teacher: false, student: false },
   'terms.manage': { admin: true, teacher: false, student: false },
   'courses.manage': { admin: true, teacher: false, student: false },
+  'classes.manage': { admin: true, teacher: false, student: false },
+  'class.schedule': { admin: true, teacher: 'own', student: false },
 };
 
 const actor = (role: string): Actor => ({ userId: 'u1', username: 'x', name: 'X', role, sessionId: 's1' });
@@ -24,11 +28,24 @@ describe('policy matrix', () => {
     expect(Object.keys(ACTIONS).sort()).toEqual(Object.keys(MATRIX).sort());
   });
 
-  for (const [action, row] of Object.entries(MATRIX) as [Action, Record<Role, boolean>][]) {
+  const own = { classTeacherIds: ['u1'] }; // actor() has userId u1
+  const other = { classTeacherIds: ['someone-else'] };
+  for (const [action, row] of Object.entries(MATRIX) as [Action, Record<Role, Rule>][]) {
     for (const role of ROLES) {
-      it(`${role} ${row[role] ? 'may' : 'may not'} use ${action}`, () => {
-        expect(can(actor(role), action)).toBe(row[role]);
-      });
+      const rule = row[role];
+      if (rule === 'own') {
+        it(`${role} may use ${action} for their own class only`, () => {
+          expect(can(actor(role), action, own)).toBe(true);
+          expect(can(actor(role), action, other)).toBe(false);
+          expect(can(actor(role), action)).toBe(false);
+        });
+      } else {
+        it(`${role} ${rule ? 'may' : 'may not'} use ${action}, for any class`, () => {
+          expect(can(actor(role), action)).toBe(rule);
+          expect(can(actor(role), action, own)).toBe(rule);
+          expect(can(actor(role), action, other)).toBe(rule);
+        });
+      }
     }
     it(`nobody signed out may use ${action}`, () => {
       expect(can(null, action)).toBe(false);

@@ -11,6 +11,7 @@ export const NAV: Record<Role, NavSection[]> = {
     {
       title: 'Club',
       items: [
+        { href: '/admin/classes', label: 'Classes', icon: 'layers' },
         { href: '/admin/people', label: 'People', icon: 'users' },
         { href: '/admin/terms', label: 'Terms', icon: 'calendar' },
         { href: '/admin/courses', label: 'Courses', icon: 'book' },
