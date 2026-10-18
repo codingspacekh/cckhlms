@@ -1,0 +1,89 @@
+# Deploys main to the VPS after CI passes (architecture §9.3). Off until the repo variable
+# DEPLOY_ENABLED is "true" and the secrets in docs/runbook.md exist. Never on weekend class days
+# unless run by hand with "force".
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Deploy even on a weekend (class days)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to production
+    if: vars.DEPLOY_ENABLED == 'true' && (github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: production
+    env:
+      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      HOST: ${{ secrets.DEPLOY_HOST }}
+      LMS_HOST: ${{ vars.LMS_HOST || 'lms.cckh.dev' }}
+      FORCE: ${{ inputs.force || false }}
+    steps:
+      - name: No deploys on weekend class days (Asia/Phnom_Penh)
+        id: day
+        run: |
+          d=$(TZ=Asia/Phnom_Penh date +%u)
+          if [ "$d" -ge 6 ] && [ "$FORCE" != "true" ]; then
+            echo "::notice::Weekend in Phnom Penh, not deploying. Run this workflow by hand with 'force' if it's urgent."
+            echo "go=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.day.outputs.go == 'true'
+        with: { ref: '${{ env.SHA }}' }
+
+      - name: Build images
+        if: steps.day.outputs.go == 'true'
+        run: |
+          docker build --build-arg GIT_SHA="$SHA" -t "cckhlms-app:$SHA" .
+          docker build -t "cckhlms-preview:$SHA" -f infra/preview/Dockerfile .
+          docker build -t "cckhlms-backup:$SHA" infra/backup
+
+      - name: Set up SSH
+        if: steps.day.outputs.go == 'true'
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Send images and files to the server
+        if: steps.day.outputs.go == 'true'
+        run: |
+          docker save "cckhlms-app:$SHA" "cckhlms-preview:$SHA" "cckhlms-backup:$SHA" | gzip -1 | ssh "deploy@$HOST" 'gunzip | docker load'
+          scp infra/compose.prod.yaml infra/server/deploy.sh "deploy@$HOST:/opt/cckhlms/"
+
+      - name: Start the new version (rolls back automatically if unhealthy)
+        if: steps.day.outputs.go == 'true'
+        run: ssh "deploy@$HOST" "sh /opt/cckhlms/deploy.sh $SHA"
+
+      - name: Check the public site reports the new version
+        if: steps.day.outputs.go == 'true'
+        run: |
+          for _ in $(seq 1 30); do
+            v=$(curl -fsS "https://$LMS_HOST/api/health" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p' || true)
+            [ "$v" = "$SHA" ] && { echo "live: $SHA"; exit 0; }
+            sleep 5
+          done
+          echo "https://$LMS_HOST/api/health did not report $SHA"; exit 1

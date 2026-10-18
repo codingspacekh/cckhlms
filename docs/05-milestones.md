@@ -131,7 +131,7 @@ The next milestone does not start until all four are true.
 **Exit criteria:** ADRs `docs/adr/0001-preview-origin.md`, `0002-editor.md` and `0003-auth.md` each record **go** or the fallback, with measurements. If Better Auth can't do per-role session lengths cleanly, the ADR records the wrapper design (or an alternative library) before M1.
 
 ### M1 — Walking skeleton (5 days) — 🔨 IN PROGRESS
-> **Progress:** PR 1 (app skeleton + CI) · PR 2 (production infrastructure) · owner setup (Hetzner, Cloudflare, secrets) · first deploy + restore drill.
+> **Progress:** ✅ PR #1 app skeleton + CI (merged) · 🔨 PR 2 production infrastructure · ⏳ owner setup (Hetzner, Cloudflare, secrets; `docs/runbook.md` §2) · ⏳ first deploy + restore drill.
 
 **Goal:** every later change runs through a working TDD pipeline and lands on the real server.
 

@@ -1,0 +1,14 @@
+.git
+node_modules
+.next
+coverage
+test-results
+playwright-report
+spikes
+prototype
+docs
+tests
+infra
+.env
+.env.*
+*.md

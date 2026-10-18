@@ -13,6 +13,7 @@ Learning management system for the CCKH weekend coding club: lessons, attendance
 | [04 Architecture review](docs/04-architecture-review.md) | accepted review |
 | [05 Milestones](docs/05-milestones.md) | build order, tests first, exit criteria |
 | [ADRs](docs/adr/) | decisions with evidence |
+| [Runbook](docs/runbook.md) | server set-up, deploys, backups, restore drills, alerts |
 | [P0 prototype](prototype/cckh-lms-prototype.html) | approved clickable prototype |
 
 ## Way of working
