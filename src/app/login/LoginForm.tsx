@@ -5,6 +5,7 @@ const MESSAGES: Record<number, string> = {
   401: 'Wrong username or password.',
   429: 'Too many attempts. Wait a minute and try again.',
 };
+const SWITCHED_OFF = 'This account is switched off. Ask the club admin.';
 
 export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
@@ -18,14 +19,20 @@ export function LoginForm() {
     const res = await fetch('/api/auth/sign-in/username', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ username: String(form.get('username') ?? '').trim(), password: String(form.get('password') ?? '') }),
+      body: JSON.stringify({
+        username: String(form.get('username') ?? '')
+          .trim()
+          .toLowerCase(),
+        password: String(form.get('password') ?? ''),
+      }),
     });
     if (res.ok) {
       window.location.assign('/');
       return;
     }
     setBusy(false);
-    setError(MESSAGES[res.status] ?? 'Sign-in failed. Please try again.');
+    const body = (await res.json().catch(() => ({}))) as { code?: string };
+    setError(body.code === 'BANNED_USER' ? SWITCHED_OFF : (MESSAGES[res.status] ?? 'Sign-in failed. Please try again.'));
   }
 
   return (

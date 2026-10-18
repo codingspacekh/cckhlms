@@ -20,7 +20,17 @@ const tables = async () =>
 describe('startup', () => {
   it('creates every table on an empty database', async () => {
     await startup({ bootstrapAdmin: null });
-    expect(await tables()).toEqual(['account', 'audit_log', 'club_settings', 'rate_limit', 'session', 'user', 'verification']);
+    expect(await tables()).toEqual([
+      'account',
+      'audit_log',
+      'club_settings',
+      'rate_limit',
+      'session',
+      'student_profile',
+      'teacher_profile',
+      'user',
+      'verification',
+    ]);
   });
 
   it('is safe to run on every start', async () => {

@@ -18,7 +18,7 @@ export default defineConfig({
   use: { baseURL: E2E.lms, trace: 'retain-on-failure' },
   webServer: [
     {
-      command: 'node scripts/ensure-db.mjs && npx next start -p 3100',
+      command: 'node scripts/ensure-db.mjs && sh scripts/start-standalone.sh',
       url: 'http://localhost:3100/api/health',
       reuseExistingServer: !process.env.CI,
       timeout: 90_000,

@@ -100,3 +100,21 @@ export const auditLog = pgTable(
   },
   (t) => [index('audit_log_actor_at_idx').on(t.actorId, t.at)],
 );
+
+// Admin-only details (NFR-07): guardian contact never leaves the admin screens.
+export const studentProfile = pgTable('student_profile', {
+  userId: text('user_id')
+    .primaryKey()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  guardianName: text('guardian_name'),
+  guardianPhone: text('guardian_phone'),
+  notes: text('notes'),
+});
+
+export const teacherProfile = pgTable('teacher_profile', {
+  userId: text('user_id')
+    .primaryKey()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  phone: text('phone'),
+  notes: text('notes'),
+});
