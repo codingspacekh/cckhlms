@@ -60,6 +60,12 @@ html,
 body {
   height: 100%;
 }
+/* The sticky top bar (≈47px) plus main's top padding. Next.js reads this after each navigation: without it,
+   content hidden under the bar counted as "in view" and new pages could open part-way down. It also keeps
+   keyboard focus and #anchors from landing under the bar. */
+html {
+  scroll-padding-top: 72px;
+}
 body {
   background: var(--page);
   color: var(--ink);
@@ -374,6 +380,11 @@ main#main {
   line-height: 1.1;
   overflow-wrap: anywhere;
 }
+.tile .v.text {
+  font-size: 1.3rem;
+  overflow-wrap: normal;
+  padding-top: 6px;
+}
 .tile .s {
   font-size: 0.8rem;
   color: var(--muted);
@@ -546,7 +557,8 @@ th {
   font-weight: 500;
   white-space: nowrap;
 }
-tbody tr:last-child td {
+tbody tr:last-child td,
+tbody tr:last-child th {
   border-bottom: 0;
 }
 .strong {
@@ -755,9 +767,9 @@ fieldset.f legend {
   gap: 4px;
 }
 .summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 12px 24px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 48px;
 }
 .summary div {
   display: flex;
@@ -783,6 +795,9 @@ tbody th {
   width: min(440px, calc(100vw - 32px));
   background: var(--surface);
   color: var(--ink);
+}
+.dialog.wide {
+  width: min(560px, calc(100vw - 32px));
 }
 .dialog::backdrop {
   background: rgb(16 24 40 / 0.45);
@@ -845,6 +860,12 @@ article h3 {
 .md ol {
   margin: 8px 0;
   padding-left: 22px;
+}
+.md ul {
+  list-style: disc;
+}
+.md ol {
+  list-style: decimal;
 }
 .md li {
   margin: 2px 0;
@@ -1030,7 +1051,6 @@ td.n {
 tbody th {
   font-size: inherit;
   color: var(--ink);
-  white-space: normal;
 }
 tbody tr.off th {
   color: var(--muted);
@@ -1074,7 +1094,17 @@ th a:hover {
   margin: 4px 0;
 }
 .qa-head {
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+.qa-head > :first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.qa-head > .row {
+  flex: none;
+  flex-wrap: nowrap;
 }
 .reply {
   margin-left: 14px;
@@ -1112,4 +1142,24 @@ pre.code {
 }
 .narrow-wide {
   max-width: 820px;
+}
+
+/* One line (owner, 2026-10-19): table cells, buttons, chips and summary values don't wrap. A table that's too
+   wide scrolls sideways inside its TableScroll instead; td.text opts free text (notes) back into wrapping. */
+td,
+tbody th,
+.btn,
+.chip,
+.summary div,
+.qa-head > :first-child {
+  white-space: nowrap;
+}
+td.text {
+  white-space: normal;
+  min-width: 24ch;
+}
+.cell-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }

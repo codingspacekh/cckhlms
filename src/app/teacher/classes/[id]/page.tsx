@@ -51,16 +51,14 @@ export default async function TeacherClassPage({ params }: { params: Promise<{ i
           <span>{roster.filter((r) => r.status === 'active').length}</span>
         </div>
       </section>
-      <div className="grid g21">
-        <section className="stack" aria-labelledby="weeks-title">
-          <h2 id="weeks-title">Weeks</h2>
-          <p className="small muted">Open a week to write the lesson, take attendance, answer questions and write the report.</p>
-          <div className="card flush">
-            <WeeksTable classId={c.id} weeks={weeks} />
-          </div>
-        </section>
-        <CoverageCard coverage={coverage} />
-      </div>
+      <section className="stack" aria-labelledby="weeks-title">
+        <h2 id="weeks-title">Weeks</h2>
+        <p className="small muted">Open a week to write the lesson, take attendance, answer questions and write the report.</p>
+        <div className="card flush">
+          <WeeksTable classId={c.id} weeks={weeks} />
+        </div>
+      </section>
+      <CoverageCard coverage={coverage} />
       <section className="stack" aria-labelledby="students-title">
         <h2 id="students-title">Students</h2>
         <div className="card flush">

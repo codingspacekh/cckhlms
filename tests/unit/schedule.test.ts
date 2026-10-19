@@ -5,6 +5,7 @@ import {
   toClubTime,
   formatDate,
   formatDay,
+  formatDayMonth,
   generateSessions,
   nextSession,
   numberWeeks,
@@ -102,6 +103,7 @@ describe('formatDate', () => {
   it('writes dates the same way everywhere', () => {
     expect(formatDate('2028-01-22')).toBe('Sat 22 Jan 2028');
     expect(formatDay('2027-12-05')).toBe('5 Dec 2027');
+    expect(formatDayMonth('2027-12-05')).toBe('5 Dec');
   });
 });
 

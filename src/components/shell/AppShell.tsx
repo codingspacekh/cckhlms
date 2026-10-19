@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { db } from '@/db/client';
 import { clubSettings } from '@/db/schema';
 import type { Role } from './nav';
+import { ScrollReset } from './ScrollReset';
 import { Sidebar } from './Sidebar';
 
 const ROLE_LABEL: Record<Role, string> = { admin: 'Admin', teacher: 'Teacher', student: 'Student' };
@@ -17,6 +18,7 @@ export async function AppShell({ role, name, crumb, children }: { role: Role; na
   }).format(new Date());
   return (
     <div className="app">
+      <ScrollReset />
       <a className="skip" href="#main">
         Skip to content
       </a>

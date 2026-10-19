@@ -75,7 +75,7 @@ export function SessionsManager({ classId, weeks, defaultStart, defaultMinutes, 
                   <td className="tnum">
                     {s.startTime}–{addMinutes(s.startTime, s.minutes)}
                   </td>
-                  <td>
+                  <td className="text">
                     {s.status === 'cancelled' && <Pill icon="x">Cancelled</Pill>} {s.note && <span className="small muted">{s.note}</span>}
                   </td>
                   <td>

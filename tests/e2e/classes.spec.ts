@@ -18,6 +18,7 @@ test.beforeAll(async ({ browser }) => {
   await t.getByRole('button', { name: 'Add term' }).click();
   await expect(page.getByRole('row', { name: /Term 1 · 2028/ })).toBeVisible();
   await page.goto('/admin/courses');
+  await page.getByRole('button', { name: 'Add a course' }).click();
   const c = page.getByRole('form', { name: 'Add a course' });
   await c.getByLabel('Code').fill('JV1');
   await c.getByLabel('Course name').fill('Java Level 1');

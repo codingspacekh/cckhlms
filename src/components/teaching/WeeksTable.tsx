@@ -37,9 +37,9 @@ export function WeeksTable({ classId, weeks }: { classId: string; weeks: WeekRow
                 <td className="tnum">{formatDate(w.date)}</td>
                 <td>
                   {w.lesson ? (
-                    <>
+                    <span className="cell-line">
                       <span>{w.lesson.title}</span>
-                      <span className="sub">{STATE[w.lesson.state]}</span>
+                      <span className="small muted">{STATE[w.lesson.state]}</span>
                       {w.toReview > 0 && (
                         <Link href={`/teacher/classes/${classId}/weeks/${w.week}/questions`}>
                           <Pill tone="warn" icon="alert">
@@ -47,7 +47,7 @@ export function WeeksTable({ classId, weeks }: { classId: string; weeks: WeekRow
                           </Pill>
                         </Link>
                       )}
-                    </>
+                    </span>
                   ) : (
                     <span className="muted">Not written yet</span>
                   )}
