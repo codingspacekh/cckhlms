@@ -61,7 +61,7 @@ test('a future week can’t be taken yet; the class page shows each student’s 
   await expect(page.getByText(/Attendance opens on/)).toBeVisible();
   await expect(page.getByRole('radiogroup')).toHaveCount(0);
 
-  await page.goto(`/teacher/classes/${c.classId}`);
+  await page.goto(`/teacher/classes/${c.classId}/students`);
   const roster = page.getByRole('table', { name: 'Students' });
   // absent in week 2; week 1 may also have been taken by the phone spec (present)
   await expect(roster.getByRole('row', { name: new RegExp(c.students[14]!) })).toContainText(/\D(0|50)%$/);

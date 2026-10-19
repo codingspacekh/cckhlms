@@ -7,7 +7,7 @@ import { enrolStudent, transferEnrolment, withdrawEnrolment } from './enrolments
 export type EnrolFormResult = FormResult<{ warnings: string[] }>;
 const refresh = (classId: string) => {
   revalidatePath(`/admin/classes/${classId}`);
-  revalidatePath(`/teacher/classes/${classId}`);
+  revalidatePath(`/teacher/classes/${classId}`, 'layout'); // every section of the class
 };
 
 export async function enrolAction(_prev: EnrolFormResult | null, form: FormData): Promise<EnrolFormResult> {

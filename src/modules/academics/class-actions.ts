@@ -37,7 +37,7 @@ export async function cancelSessionAction(classId: string, sessionId: string, re
   return toResult(async () => {
     await cancelSession(await currentActor(), sessionId, { reason, addWeekAtEnd });
     revalidatePath(`/admin/classes/${classId}`);
-    revalidatePath(`/teacher/classes/${classId}`);
+    revalidatePath(`/teacher/classes/${classId}`, 'layout'); // every section of the class
     return { ok: true, message: 'Session cancelled.' };
   });
 }
@@ -46,7 +46,7 @@ export async function moveSessionAction(classId: string, sessionId: string, date
   return toResult(async () => {
     await moveSession(await currentActor(), sessionId, { date, startTime });
     revalidatePath(`/admin/classes/${classId}`);
-    revalidatePath(`/teacher/classes/${classId}`);
+    revalidatePath(`/teacher/classes/${classId}`, 'layout'); // every section of the class
     return { ok: true, message: 'Session moved.' };
   });
 }
@@ -60,7 +60,7 @@ export async function addMakeUpAction(_prev: FormResult | null, form: FormData):
       minutes: t(form, 'minutes') ?? '',
     });
     revalidatePath(`/admin/classes/${classId}`);
-    revalidatePath(`/teacher/classes/${classId}`);
+    revalidatePath(`/teacher/classes/${classId}`, 'layout'); // every section of the class
     return { ok: true, message: 'Make-up session added.' };
   });
 }

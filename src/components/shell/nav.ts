@@ -22,3 +22,18 @@ export const NAV: Record<Role, NavSection[]> = {
   teacher: [{ title: 'Teaching', items: [{ href: '/teacher', label: 'Dashboard', icon: 'home' }] }],
   student: [{ title: 'Learning', items: [{ href: '/student', label: 'My week', icon: 'home' }] }],
 };
+
+// A teacher's class opens in the sidebar as these sections (owner, 2026-10-19: sub-tabs instead of one long page).
+// The week pages (lesson, attendance, questions, report) belong to Weeks.
+export type ClassLink = { id: string; name: string };
+export const CLASS_SECTIONS = [
+  { path: '', label: 'Weeks' },
+  { path: '/students', label: 'Students' },
+  { path: '/syllabus', label: 'Syllabus' },
+  { path: '/schedule', label: 'Schedule' },
+] as const;
+
+export function classSectionActive(pathname: string, base: string, path: string) {
+  if (path === '') return pathname === base || pathname.startsWith(`${base}/weeks`);
+  return pathname === base + path || pathname.startsWith(`${base + path}/`);
+}

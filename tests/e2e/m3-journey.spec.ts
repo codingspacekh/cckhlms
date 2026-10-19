@@ -82,6 +82,10 @@ test('the teacher writes the weekly report; coverage matches for the teacher and
 
   await page.goto(`/teacher/classes/${c.classId}`);
   await expect(page.getByRole('table', { name: 'Weeks' }).getByRole('row', { name: /Week 2/ })).toContainText('Done');
+  await page
+    .getByRole('group', { name: `${c.className} sections` })
+    .getByRole('link', { name: 'Syllabus' })
+    .click();
   const coverage = page.getByRole('region', { name: 'Syllabus coverage' });
   await expect(coverage).toContainText('2 of 4 topics, from the weekly reports');
   await expect(coverage.getByRole('list', { name: 'Syllabus topics' })).toHaveText(

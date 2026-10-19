@@ -41,7 +41,7 @@ test.describe('teacher', () => {
     await expect(form.getByText('Published', { exact: true })).toBeVisible();
     expect(await problems.cspViolations()).toEqual([]);
 
-    await page.getByRole('link', { name: c.className }).click();
+    await page.getByRole('main').getByRole('link', { name: c.className }).click(); // the sidebar lists it too
     await expect(page.getByRole('table', { name: 'Weeks' }).getByRole('row', { name: /Week 3/ })).toContainText('Published');
   });
 

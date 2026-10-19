@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
-import { NAV, type Role } from './nav';
+import { CLASS_SECTIONS, classSectionActive, NAV, type ClassLink, type Role } from './nav';
 import { SignOutButton } from './SignOutButton';
 
 const initials = (name: string) =>
@@ -13,7 +13,7 @@ const initials = (name: string) =>
     .slice(0, 2)
     .toUpperCase();
 
-export function Sidebar({ role, user }: { role: Role; user: { name: string; roleLabel: string } }) {
+export function Sidebar({ role, user, classes = [] }: { role: Role; user: { name: string; roleLabel: string }; classes?: ClassLink[] }) {
   const pathname = usePathname();
   return (
     <aside className="side">
@@ -38,6 +38,36 @@ export function Sidebar({ role, user }: { role: Role; user: { name: string; role
             ))}
           </div>
         ))}
+        {classes.length > 0 && (
+          <div className="navsec">
+            <div className="sec">My classes</div>
+            {classes.map((k) => {
+              const base = `/teacher/classes/${k.id}`;
+              const open = pathname === base || pathname.startsWith(`${base}/`);
+              return (
+                <div key={k.id} className="navgroup">
+                  <Link href={base} className={open ? 'open' : undefined} title={k.name}>
+                    <Icon name="layers" />
+                    <span>{k.name}</span>
+                  </Link>
+                  {open && (
+                    <div className="subnav" role="group" aria-label={`${k.name} sections`}>
+                      {CLASS_SECTIONS.map((s) => (
+                        <Link
+                          key={s.path}
+                          href={base + s.path}
+                          aria-current={classSectionActive(pathname, base, s.path) ? 'page' : undefined}
+                        >
+                          {s.label}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </nav>
       <div className="me">
         <div className="av" aria-hidden="true">

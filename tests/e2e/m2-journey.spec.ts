@@ -112,7 +112,13 @@ test.describe('teacher', () => {
     await expect(card).toContainText('1 student');
     await expect(card).toContainText('Next: Sat 15 Apr 2028 · 09:00–10:30 · Week 1');
     await card.getByRole('link', { name: 'Open class' }).click();
+    // the class's sections are in the sidebar
+    const sections = page.getByRole('group', { name: 'Python Level 2 · Sat 09:00 sections' });
+    await expect(sections.getByRole('link', { name: 'Weeks' })).toHaveAttribute('aria-current', 'page');
+    await sections.getByRole('link', { name: 'Students' }).click();
     await expect(page.getByRole('table', { name: 'Students' })).toContainText('Kosal Meas');
+    await expectAccessible(page);
+    await sections.getByRole('link', { name: 'Schedule' }).click();
     await expect(page.getByRole('table', { name: 'Sessions' })).toBeVisible();
     await expectAccessible(page);
   });
