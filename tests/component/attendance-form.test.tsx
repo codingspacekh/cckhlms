@@ -1,6 +1,6 @@
 // FR-TCH-06: everyone shows as present until the first save; each change saves at once and is undone if
 // saving fails; notes; late joiners can't be marked.
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within, waitFor } from '@testing-library/react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { AttendanceRow } from '@/modules/attendance/attendance';
 
@@ -102,9 +102,11 @@ describe('AttendanceForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Note for Bopha Lim' }));
     expect(screen.getByText('Saving a note also saves everyone else as present.')).toBeTruthy();
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Late bus' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save note' }));
+    const save = screen.getByRole('button', { name: 'Save note' }) as HTMLButtonElement;
+    fireEvent.click(save);
     expect((await screen.findByRole('alert')).textContent).toMatch(/200/);
-    fireEvent.click(screen.getByRole('button', { name: 'Save note' }));
+    await waitFor(() => expect(save.disabled).toBe(false)); // the button waits for the action
+    fireEvent.click(save);
     expect(await screen.findByText('Saved a note for Bopha Lim.')).toBeTruthy();
     expect(setAttendanceNoteAction).toHaveBeenLastCalledWith('c1', 's1', 'e-Bopha Lim', 'Late bus');
     expect(screen.getByText('Late bus')).toBeTruthy();
