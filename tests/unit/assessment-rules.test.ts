@@ -2,10 +2,13 @@
 // sessions in club time each time they're read.
 import { describe, expect, it } from 'vitest';
 import {
+  afterPenalty,
   canSubmit,
+  checkScore,
   defaultDueMode,
   dueChoices,
   formatDue,
+  markOf,
   nextHeldSession,
   resolveDue,
   workStatus,
@@ -120,6 +123,44 @@ describe('submitting (BR-03, BR-04)', () => {
   });
   it('work with no due date can always be submitted', () => {
     expect(canSubmit({ due: null, now: after, allowLate: false, submitted: true })).toEqual({ ok: true, late: false });
+  });
+  it('once it’s marked it can’t be changed, even before the due time', () => {
+    const marked = { ok: false, reason: 'Your teacher has marked this, so it can’t be changed.' };
+    expect(canSubmit({ due, now: before, allowLate: true, submitted: true, mark: 'graded' })).toEqual(marked);
+    expect(canSubmit({ due: null, now: after, allowLate: true, submitted: true, mark: 'graded' })).toEqual(marked);
+  });
+  it('FR-TCH-12: returned for a redo, it can be submitted again after the due time; late stays late', () => {
+    expect(canSubmit({ due, now: after, allowLate: false, submitted: true, mark: 'returned', lastLate: false })).toEqual({
+      ok: true,
+      late: false,
+    });
+    expect(canSubmit({ due, now: after, allowLate: true, submitted: true, mark: 'returned', lastLate: true })).toEqual({
+      ok: true,
+      late: true,
+    });
+  });
+});
+
+describe('marking (FR-TCH-11/12, BR-04, BR-14)', () => {
+  it('the latest version is to mark, marked, or returned', () => {
+    expect(markOf(null)).toBeNull();
+    expect(markOf({ score: null, returnedAt: null })).toBe('to_mark');
+    expect(markOf({ score: '7.5', returnedAt: null })).toBe('graded');
+    expect(markOf({ score: null, returnedAt: new Date() })).toBe('returned');
+  });
+  it('a score is a number from 0 to the maximum, in steps of 0.5 at most', () => {
+    expect(checkScore('8', 10)).toBe(8);
+    expect(checkScore(' 7.5 ', 10)).toBe(7.5);
+    expect(checkScore('0', 10)).toBe(0);
+    expect(checkScore('10', 10)).toBe(10);
+    for (const bad of ['', 'abc', '-1', '10.5', '7.25', '1e1'])
+      expect(() => checkScore(bad, 10), bad).toThrow('Enter a score from 0 to 10, in steps of 0.5.');
+  });
+  it('BR-14: late work counts with the late penalty taken off, to 2 decimals', () => {
+    expect(afterPenalty(8, { late: true, latePenaltyPct: 10 })).toBe(7.2);
+    expect(afterPenalty(7.5, { late: true, latePenaltyPct: 15 })).toBe(6.38);
+    expect(afterPenalty(8, { late: false, latePenaltyPct: 10 })).toBe(8);
+    expect(afterPenalty(8, { late: true, latePenaltyPct: 0 })).toBe(8);
   });
 });
 

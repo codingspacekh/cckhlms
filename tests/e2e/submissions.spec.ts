@@ -36,7 +36,7 @@ test.describe('teacher', () => {
   test('sees who submitted, with versions; the others aren’t due yet', async ({ page }) => {
     await page.goto(`/teacher/classes/${w.classId}/work/${w.workId}`);
     const table = page.getByRole('table', { name: 'Submissions' });
-    await expect(table.getByRole('row', { name: /Bopha Lim/ })).toContainText(/Submitted\w{3} \d+ \w{3} \d{4}, \d\d:\d\d2$/);
+    await expect(table.getByRole('row', { name: /Bopha Lim/ })).toContainText(/Submitted\w{3} \d+ \w{3} \d{4}, \d\d:\d\d2To mark$/);
     await expect(page.getByTestId('submission-counts')).toContainText('1 submitted0 late0 missing');
     await expect(table.getByRole('row', { name: /Borey Sam/ })).toContainText('Not due yet');
     await expectAccessible(page);

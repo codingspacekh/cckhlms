@@ -3,18 +3,30 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { Pill } from '@/components/ui/Pill';
 import type { ProjectFile } from '@/lib/project/files';
 import { toClubTime } from '@/modules/academics/schedule';
+import type { Mark } from '@/modules/assessments/rules';
 import { saveDraftAction } from '@/modules/assessments/project-actions';
 import { submitWorkAction } from '@/modules/assessments/submission-actions';
 import { ProjectEditor } from './ProjectEditor';
 
-// What the student has handed in so far, and whether they can hand it in now (worked out on the server).
+// What the student has handed in so far, its mark, and whether they can hand it in now (worked out on the
+// server).
 export type SubmitPanel = {
   canSubmit: boolean;
   reason: string | null; // why not
   late: boolean; // submitting now would be late
   latePenaltyPct: number;
   dueLabel: string;
-  versions: { version: number; at: string; late: boolean }[]; // newest first
+  maxScore: number;
+  mark: Mark | null; // the latest version's
+  versions: {
+    version: number;
+    at: string;
+    late: boolean;
+    score: number | null;
+    counts: number | null; // after the late penalty (BR-14)
+    feedbackHtml: string; // sanitised on the server
+    returned: boolean;
+  }[]; // newest first
 };
 type Props = {
   classId: string;
@@ -32,8 +44,8 @@ type SaveState = { kind: 'idle' | 'saving' } | { kind: 'saved'; at: string } | {
 
 const AUTOSAVE_MS = 1000;
 
-// FR-CODE-05 · FR-STU-05: the student's project, saved about a second after they stop typing, and handed in
-// with "Submit" (which saves first, so the last change is always in it).
+// FR-CODE-05 · FR-STU-05 · FR-STU-06: the student's project, saved about a second after they stop typing, and
+// handed in with "Submit" (which saves first, so the last change is always in it); their mark and feedback.
 export function StudentWorkspace({
   classId,
   assessmentId,
@@ -107,6 +119,29 @@ export function StudentWorkspace({
   const latest = submit.versions[0];
   return (
     <>
+      {latest && submit.mark === 'graded' && (
+        <section className="card stack" aria-labelledby="mark-title">
+          <div className="spread">
+            <h2 id="mark-title">Your mark</h2>
+            <span className="score tnum" data-testid="score">
+              {latest.score} / {submit.maxScore}
+            </span>
+          </div>
+          {latest.late && latest.counts !== latest.score && (
+            <p className="small muted">
+              Handed in late, so {submit.latePenaltyPct}% comes off: it counts as {latest.counts}.
+            </p>
+          )}
+          {latest.feedbackHtml && <div className="md" dangerouslySetInnerHTML={{ __html: latest.feedbackHtml }} />}
+        </section>
+      )}
+      {latest && submit.mark === 'returned' && (
+        <section className="card stack warn-card" aria-labelledby="returned-title">
+          <h2 id="returned-title">Returned for a redo</h2>
+          <p className="small">Your teacher returned version {latest.version}. Change your project and submit it again.</p>
+          <div className="md" dangerouslySetInnerHTML={{ __html: latest.feedbackHtml }} />
+        </section>
+      )}
       <section className="stack" aria-labelledby="project-title">
         <div className="spread">
           <h2 id="project-title">Your project</h2>
@@ -127,9 +162,11 @@ export function StudentWorkspace({
           <div>
             <h2 id="submit-title">Hand it in</h2>
             <p className="small muted" data-testid="submit-state">
-              {latest
-                ? `Version ${latest.version} submitted ${latest.at}${latest.late ? ', late' : ''}.${submit.canSubmit && !submit.late ? ` You can submit again until ${submit.dueLabel}.` : ''}`
-                : `Not submitted yet. Due ${submit.dueLabel}.`}
+              {!latest
+                ? `Not submitted yet. Due ${submit.dueLabel}.`
+                : submit.mark === 'returned'
+                  ? `Version ${latest.version} returned for a redo.`
+                  : `Version ${latest.version} submitted ${latest.at}${latest.late ? ', late' : ''}.${submit.canSubmit && !submit.late ? ` You can submit again until ${submit.dueLabel}.` : ''}`}
             </p>
           </div>
           <button type="button" className="btn primary" disabled={!submit.canSubmit || submitting} onClick={handIn}>
@@ -156,6 +193,11 @@ export function StudentWorkspace({
                 <span className="cell-line tnum">
                   {v.at}
                   {v.late && <Pill tone="warn">Late</Pill>}
+                  {v.returned ? (
+                    <Pill icon="alert">Returned</Pill>
+                  ) : (
+                    v.score !== null && <strong>{`${v.score} / ${submit.maxScore}`}</strong>
+                  )}
                 </span>
               </li>
             ))}

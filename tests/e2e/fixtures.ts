@@ -158,3 +158,20 @@ export const pythonHomework = () =>
 // Web homework in week 11, for the preview spec.
 export const webHomework = () =>
   publishedHomework({ title: 'My first web page', language: 'web', week: 11, instructionsMd: 'Make a page with a button.' });
+
+// Python homework in week 7, for the grading spec.
+export const gradingHomework = () =>
+  publishedHomework({ title: 'Countdown', language: 'python', week: 7, instructionsMd: 'Count down from 10 to 0.' });
+
+// A student in the teaching class hands in a project, through the services.
+export async function handIn(workId: string, studentName: string, files: { path: string; content: string }[]) {
+  const { db } = await import('../../src/db/client');
+  const { user } = await import('../../src/db/schema');
+  const { eq } = await import('drizzle-orm');
+  const { saveDraft } = await import('../../src/modules/assessments/projects');
+  const { submitWork } = await import('../../src/modules/assessments/submissions');
+  const [s] = await db.select({ id: user.id, username: user.username }).from(user).where(eq(user.name, studentName));
+  const student = { userId: s!.id, username: s!.username ?? '', name: studentName, role: 'student', sessionId: 'e2e' };
+  await saveDraft(student, workId, files);
+  return submitWork(student, workId);
+}

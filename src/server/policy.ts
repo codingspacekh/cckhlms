@@ -41,6 +41,7 @@ export const ACTIONS = {
   'assessment.read': either(hasRole('admin'), teachesClass, studiesInClass),
   'work.save': studiesInClass,
   'work.submit': studiesInClass,
+  'work.grade': teachesClass,
 } satisfies Record<string, Rule>;
 
 export type Action = keyof typeof ACTIONS;

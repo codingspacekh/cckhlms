@@ -15,7 +15,8 @@ import { PREVIEW_ORIGIN } from '@/server/preview-origin';
 
 export const metadata: Metadata = { title: 'Classwork & homework' };
 
-// One piece of work for a student: what to do, when it's due, and their project in the editor (FR-STU-05).
+// One piece of work for a student: what to do, when it's due, their project in the editor (FR-STU-05), and
+// their mark and feedback (FR-STU-06).
 export default async function StudentWorkPage({ params }: { params: Promise<{ id: string; workId: string }> }) {
   const actor = await requireActor('student.area');
   const { id, workId } = await params;
@@ -75,6 +76,7 @@ export default async function StudentWorkPage({ params }: { params: Promise<{ id
           java={a.language === 'java'}
           web={a.language === 'web'}
           latePenaltyPct={a.latePenaltyPct}
+          maxScore={a.maxScore}
           timeZone={timeZone}
         />
       )}
@@ -90,6 +92,7 @@ async function Workspace(props: {
   java: boolean;
   web: boolean;
   latePenaltyPct: number;
+  maxScore: number;
   timeZone: string;
 }) {
   const actor = await requireActor('student.area');
@@ -115,7 +118,17 @@ async function Workspace(props: {
         late: mine.next.ok && mine.next.late,
         latePenaltyPct: props.latePenaltyPct,
         dueLabel: formatDue(mine.due, props.timeZone),
-        versions: mine.versions.map((v) => ({ version: v.version, at: formatDue(v.submittedAt, props.timeZone), late: v.late })),
+        maxScore: props.maxScore,
+        mark: mine.mark,
+        versions: mine.versions.map((v) => ({
+          version: v.version,
+          at: formatDue(v.submittedAt, props.timeZone),
+          late: v.late,
+          score: v.score,
+          counts: v.counts,
+          feedbackHtml: v.feedbackHtml,
+          returned: v.returned,
+        })),
       }}
     />
   );

@@ -2,6 +2,7 @@
 // tied to a session is worked out from the sessions each time it's read, so moving or cancelling a session
 // moves the work with it (BR-16) without a background job.
 import { addMinutes, formatDate, toClubTime, zonedToUtc } from '@/modules/academics/schedule';
+import { ValidationError } from '@/server/errors';
 
 export const KINDS = ['classwork', 'homework', 'exam'] as const;
 export type Kind = (typeof KINDS)[number];
@@ -109,7 +110,12 @@ export function canSubmit(a: {
   now: Date;
   allowLate: boolean;
   submitted: boolean;
+  mark?: Mark | null; // the latest version's
+  lastLate?: boolean;
 }): { ok: true; late: boolean } | { ok: false; reason: string } {
+  if (a.mark === 'graded') return { ok: false, reason: 'Your teacher has marked this, so it can’t be changed.' };
+  // Returned for a redo (FR-TCH-12): the student may hand it in again, even after the due time.
+  if (a.mark === 'returned') return { ok: true, late: !!a.lastLate };
   if (!a.due || a.now.getTime() <= a.due.getTime()) return { ok: true, late: false };
   if (a.submitted) return { ok: false, reason: 'The due time has passed, so your submission can’t be changed.' };
   if (!a.allowLate) return { ok: false, reason: 'The due time has passed and late work isn’t accepted for this.' };
@@ -138,4 +144,30 @@ export function workStatus(a: {
   if (!a.due) return 'not_due';
   if (a.enrolledOn > toClubTime(a.due, a.tz).date) return 'excused';
   return a.now.getTime() > a.due.getTime() ? 'missing' : 'not_due';
+}
+
+// FR-TCH-11/12 · BR-04: marking is done on the latest version. It's waiting to be marked, marked, or
+// returned for a redo.
+export type Mark = 'to_mark' | 'graded' | 'returned';
+export const MARK_LABEL: Record<Mark, string> = { to_mark: 'To mark', graded: 'Marked', returned: 'Returned for redo' };
+
+export function markOf(latest: { score: string | number | null; returnedAt: Date | null } | null): Mark | null {
+  if (!latest) return null;
+  if (latest.returnedAt) return 'returned';
+  return latest.score === null ? 'to_mark' : 'graded';
+}
+
+// A score typed by the teacher: 0 to the maximum, in steps of 0.5.
+export function checkScore(raw: string, maxScore: number): number {
+  const text = raw.trim();
+  const n = /^\d+(\.\d+)?$/.test(text) ? Number(text) : NaN;
+  if (!(n >= 0 && n <= maxScore && Number.isInteger(n * 2)))
+    throw new ValidationError(`Enter a score from 0 to ${maxScore}, in steps of 0.5.`);
+  return n;
+}
+
+// BR-14: late work counts with the late penalty taken off.
+export function afterPenalty(score: number, a: { late: boolean; latePenaltyPct: number }): number {
+  if (!a.late || a.latePenaltyPct <= 0) return score;
+  return Math.round(score * (100 - a.latePenaltyPct)) / 100;
 }

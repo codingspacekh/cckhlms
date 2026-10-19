@@ -14,7 +14,8 @@ import { PREVIEW_ORIGIN } from '@/server/preview-origin';
 
 export const metadata: Metadata = { title: 'Classwork & homework' };
 
-// One piece of code work, for its teacher: who has handed it in (FR-TCH-10) and the starter files (FR-CODE-06).
+// One piece of code work, for its teacher: who has handed it in and what's to mark (FR-TCH-10/11), and the
+// starter files (FR-CODE-06).
 export default async function TeacherWorkPage({ params }: { params: Promise<{ id: string; workId: string }> }) {
   const actor = await requireActor('teacher.area');
   const { id, workId } = await params;
@@ -65,11 +66,16 @@ export default async function TeacherWorkPage({ params }: { params: Promise<{ id
       </section>
       <SubmissionsTable
         counts={subs.counts}
+        toMark={subs.toMark}
+        maxScore={a.maxScore}
+        base={`/teacher/classes/${id}/work/${workId}`}
         rows={subs.rows.map((r) => ({
           studentId: r.studentId,
           name: r.name,
           status: r.status,
           versions: r.versions,
+          mark: r.mark,
+          score: r.score,
           submittedLabel: r.latest ? formatDue(r.latest.submittedAt, timeZone) : null,
         }))}
       />
