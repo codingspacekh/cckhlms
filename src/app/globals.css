@@ -816,3 +816,119 @@ h2.big {
 article h3 {
   font-size: 1rem;
 }
+
+/* lessons (M3): rendered Markdown, topic chips, scheduling */
+.md h2 {
+  margin: 18px 0 8px;
+  font-size: 1.05rem;
+}
+.md h3 {
+  margin: 14px 0 6px;
+  font-size: 0.98rem;
+}
+.md h4,
+.md h5,
+.md h6 {
+  margin: 12px 0 4px;
+  font-size: 0.92rem;
+}
+.md > :first-child,
+.md > div > :first-child {
+  margin-top: 0;
+}
+.md p,
+.md blockquote {
+  margin: 8px 0;
+  max-width: 68ch;
+}
+.md ul,
+.md ol {
+  margin: 8px 0;
+  padding-left: 22px;
+}
+.md li {
+  margin: 2px 0;
+}
+.md blockquote {
+  padding-left: 12px;
+  border-left: 3px solid var(--line-2);
+  color: var(--ink-2);
+}
+.md a {
+  color: var(--accent);
+}
+.md pre {
+  background: var(--surface-2);
+  border-radius: var(--r-sm);
+  padding: 12px 14px;
+  overflow: auto;
+  font-family: var(--f-mono);
+  font-size: 0.82rem;
+  margin: 8px 0;
+}
+.md code {
+  font-family: var(--f-mono);
+  font-size: 0.85em;
+  background: var(--surface-2);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.md pre code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+}
+.md img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--r-sm);
+}
+.md table {
+  margin: 8px 0;
+  width: auto;
+}
+.md th,
+.md td {
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 400;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.chip:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+.chip input {
+  accent-color: var(--accent);
+}
+.sched summary {
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--ink-2);
+  margin-bottom: 10px;
+}
+.sub-head {
+  margin-top: -16px;
+}
+.stack-sm {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

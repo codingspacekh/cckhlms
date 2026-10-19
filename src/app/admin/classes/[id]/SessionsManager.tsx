@@ -46,7 +46,7 @@ export function SessionsManager({ classId, weeks, defaultStart, defaultMinutes, 
   const title = mode === 'cancel' ? 'Cancel this session' : 'Move this session';
   return (
     <>
-      <section className="card flush" aria-label="Weeks">
+      <section className="card flush" aria-label="All sessions">
         {status && (
           <p className="note m16" role="status">
             {status}

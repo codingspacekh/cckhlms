@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { sessionWhen } from '@/components/academics/nextSessionText';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { myClasses } from '@/modules/academics/enrolments';
@@ -34,7 +35,9 @@ export default async function StudentHome() {
           <ul className="plain list">
             {classes.map((c) => (
               <li key={c.id}>
-                <span className="strong">{c.name}</span>
+                <Link className="strong" href={`/student/classes/${c.id}`}>
+                  {c.name}
+                </Link>
                 <span className="sub">
                   {scheduleLabel(c)}
                   {c.room ? ` · ${c.room}` : ''} · {c.teachers.join(', ')}

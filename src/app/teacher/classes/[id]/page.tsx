@@ -3,22 +3,24 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { SessionsManager } from '@/app/admin/classes/[id]/SessionsManager';
 import { RosterTable } from '@/components/academics/RosterTable';
+import { WeeksTable } from '@/components/teaching/WeeksTable';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { getClass } from '@/modules/academics/classes';
 import { listRoster } from '@/modules/academics/enrolments';
 import { scheduleLabel } from '@/modules/academics/schedule';
+import { classWeeks } from '@/modules/teaching/lessons';
 import { ValidationError } from '@/server/errors';
 import { requireActor } from '@/server/guard';
 
 export const metadata: Metadata = { title: 'Class' };
 
-// A teacher's own class: schedule, sessions (they may cancel, move or add one) and the students.
+// A teacher's own class: its weeks (lessons), the students, and the sessions (they may cancel, move or add one).
 export default async function TeacherClassPage({ params }: { params: Promise<{ id: string }> }) {
   const actor = await requireActor('teacher.area');
   const { id } = await params;
   const c = await getClass(actor, id).catch((e) => (e instanceof ValidationError ? null : Promise.reject(e)));
   if (!c) notFound();
-  const roster = await listRoster(actor, id);
+  const [roster, weeks] = await Promise.all([listRoster(actor, id), classWeeks(actor, id)]);
   return (
     <>
       <PageHeader eyebrow={<Link href="/teacher">My classes</Link>} title={c.name} />
@@ -40,13 +42,20 @@ export default async function TeacherClassPage({ params }: { params: Promise<{ i
           <span>{roster.filter((r) => r.status === 'active').length}</span>
         </div>
       </section>
+      <section className="stack" aria-labelledby="weeks-title">
+        <h2 id="weeks-title">Weeks</h2>
+        <p className="small muted">Open a week to write its lesson note.</p>
+        <div className="card flush">
+          <WeeksTable classId={c.id} weeks={weeks} />
+        </div>
+      </section>
       <section className="stack" aria-labelledby="students-title">
         <h2 id="students-title">Students</h2>
         <div className="card flush">
           <RosterTable rows={roster} />
         </div>
       </section>
-      <h2>Sessions</h2>
+      <h2>Schedule changes</h2>
       <SessionsManager classId={c.id} weeks={c.weeks} defaultStart={c.startTime} defaultMinutes={c.minutes} sessions={c.sessions} />
     </>
   );
