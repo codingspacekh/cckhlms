@@ -34,6 +34,8 @@ export const ACTIONS = {
   'lesson.write': teachesClass,
   'lesson.read': either(hasRole('admin'), teachesClass, studiesInClass),
   'attendance.mark': teachesClass,
+  'qa.post': either(teachesClass, studiesInClass),
+  'qa.moderate': teachesClass,
 } satisfies Record<string, Rule>;
 
 export type Action = keyof typeof ACTIONS;

@@ -16,7 +16,6 @@ export default async function globalSetup() {
   const { emptyDatabase } = await import('../integration/db');
   const { startup } = await import('../../src/server/startup');
   const { seedUser } = await import('../../src/server/seed');
-  const { auth } = await import('../../src/server/auth');
   const { pool: appPool } = await import('../../src/db/client');
 
   const pool = new Pool({ connectionString: E2E.databaseUrl });
@@ -34,30 +33,35 @@ export default async function globalSetup() {
     ['signout', USERS.teacher],
   ];
   let ip = 10;
-  for (const [file, u] of states) {
-    const res = await auth.handler(
-      new Request(`${E2E.lms}/api/auth/sign-in/username`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', origin: E2E.lms, 'cf-connecting-ip': `203.0.113.${ip++}` },
-        body: JSON.stringify({ username: u.username, password: u.password }),
-      }),
-    );
-    if (res.status !== 200) throw new Error(`could not sign in ${u.username}: ${res.status}`);
-    const cookies = res.headers.getSetCookie().map((c) => {
-      const [pair] = c.split(';');
-      const i = pair!.indexOf('=');
-      return {
-        name: pair!.slice(0, i),
-        value: pair!.slice(i + 1),
-        domain: 'lms.localhost',
-        path: '/',
-        expires: -1,
-        httpOnly: true,
-        secure: false,
-        sameSite: 'Lax' as const,
-      };
-    });
-    writeFileSync(stateFile(file), JSON.stringify({ cookies, origins: [] }));
-  }
+  for (const [file, u] of states) await saveSignedInState(file, u.username, u.password, ip++);
   await appPool.end();
+}
+
+// Signs in through Better Auth's handler and saves the cookies as a Playwright storage state.
+export async function saveSignedInState(file: string, username: string, password: string, ip: number) {
+  const { auth } = await import('../../src/server/auth');
+  const res = await auth.handler(
+    new Request(`${E2E.lms}/api/auth/sign-in/username`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', origin: E2E.lms, 'cf-connecting-ip': `203.0.113.${ip}` },
+      body: JSON.stringify({ username, password }),
+    }),
+  );
+  if (res.status !== 200) throw new Error(`could not sign in ${username}: ${res.status}`);
+  const cookies = res.headers.getSetCookie().map((c) => {
+    const [pair] = c.split(';');
+    const i = pair!.indexOf('=');
+    return {
+      name: pair!.slice(0, i),
+      value: pair!.slice(i + 1),
+      domain: 'lms.localhost',
+      path: '/',
+      expires: -1,
+      httpOnly: true,
+      secure: false,
+      sameSite: 'Lax' as const,
+    };
+  });
+  mkdirSync('test-results/.auth', { recursive: true });
+  writeFileSync(stateFile(file), JSON.stringify({ cookies, origins: [] }));
 }

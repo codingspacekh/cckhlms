@@ -11,6 +11,7 @@ import type { Actor } from '@/server/actor';
 import { audit } from '@/server/audit';
 import { assertCan, ValidationError } from '@/server/errors';
 import { attachmentsOf, type AttachmentRow } from './attachments';
+import { reviewCounts } from './qa';
 import { lessonState, publishAtFor, type LessonState, type LessonStatus } from './rules';
 import { weeksOf } from './weeks';
 
@@ -48,6 +49,7 @@ export type WeekRow = {
   minutes: number;
   cancelled: boolean;
   lesson: { title: string; state: LessonState } | null;
+  toReview: number; // reported Q&A posts waiting for a teacher
 };
 
 // The teacher's list of weeks with each lesson's state.
@@ -66,6 +68,7 @@ export async function classWeeks(actor: Actor | null, classId: string, opts: Opt
         )
     : [];
   const now = opts.now ?? new Date();
+  const review = await reviewCounts(lessons.map((l) => l.id));
   return sessions.map((s) => {
     const l = lessons.find((x) => x.sessionId === s.id);
     return {
@@ -76,6 +79,7 @@ export async function classWeeks(actor: Actor | null, classId: string, opts: Opt
       minutes: s.minutes,
       cancelled: s.cancelled,
       lesson: l ? { title: l.title, state: lessonState(asLesson(l), now) } : null,
+      toReview: l ? (review.get(l.id) ?? 0) : 0,
     };
   });
 }

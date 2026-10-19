@@ -368,3 +368,68 @@ export const attendance = pgTable(
     check('attendance_status_known', sql`${t.status} in ('present', 'late', 'absent', 'excused')`),
   ],
 );
+
+// Q&A on a lesson (FR-STU-03/04, FR-TCH-03). A reported post is 'under_review' until a teacher restores it
+// ('visible') or removes it ('hidden') (BR-20).
+const qaVisibility = (col: AnyPgColumn) => sql`${col} in ('visible', 'under_review', 'hidden')`;
+
+export const question = pgTable(
+  'question',
+  {
+    id: text('id').primaryKey(),
+    lessonId: text('lesson_id')
+      .notNull()
+      .references(() => lesson.id, { onDelete: 'cascade' }),
+    authorId: text('author_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'restrict' }),
+    bodyMd: text('body_md').notNull(),
+    codeSnippet: text('code_snippet'),
+    acceptedReplyId: text('accepted_reply_id').references((): AnyPgColumn => reply.id, { onDelete: 'set null' }),
+    visibility: text('visibility').notNull().default('visible'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [index('question_lesson_idx').on(t.lessonId), check('question_visibility_known', qaVisibility(t.visibility))],
+);
+
+export const reply = pgTable(
+  'reply',
+  {
+    id: text('id').primaryKey(),
+    questionId: text('question_id')
+      .notNull()
+      .references((): AnyPgColumn => question.id, { onDelete: 'cascade' }),
+    authorId: text('author_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'restrict' }),
+    bodyMd: text('body_md').notNull(),
+    visibility: text('visibility').notNull().default('visible'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [index('reply_question_idx').on(t.questionId), check('reply_visibility_known', qaVisibility(t.visibility))],
+);
+
+export const postReport = pgTable(
+  'post_report',
+  {
+    id: text('id').primaryKey(),
+    postType: text('post_type').notNull(),
+    postId: text('post_id').notNull(),
+    reporterId: text('reporter_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'restrict' }),
+    reason: text('reason'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    resolvedBy: text('resolved_by').references(() => user.id, { onDelete: 'set null' }),
+    resolvedAt: ts('resolved_at'),
+    outcome: text('outcome'),
+  },
+  (t) => [
+    index('post_report_post_idx').on(t.postType, t.postId),
+    uniqueIndex('post_report_one_open_per_reporter')
+      .on(t.postType, t.postId, t.reporterId)
+      .where(sql`${t.resolvedAt} is null`),
+    check('post_report_type_known', sql`${t.postType} in ('question', 'reply')`),
+    check('post_report_outcome_known', sql`${t.outcome} is null or ${t.outcome} in ('restored', 'removed')`),
+  ],
+);

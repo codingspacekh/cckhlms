@@ -1,7 +1,10 @@
 // Data set-up for the teaching specs, written straight through the services (the M2 specs already cover
 // doing it through the screens). The class started three Saturdays ago, so weeks 1–3 have been held.
 import { E2E } from '../../playwright.config';
-import { USERS } from './global-setup';
+import { saveSignedInState, USERS } from './global-setup';
+
+// A classmate of the e2e student who can sign in (stateFile('classmate')), for Q&A between students.
+export const CLASSMATE = 'Borey Sam';
 
 export type TeachingClass = { classId: string; className: string; topics: string[]; students: string[] };
 // Bopha Lim (the e2e student account) plus 14 classmates: a full weekend class. None of these names is
@@ -63,6 +66,7 @@ export async function teachingClass(): Promise<TeachingClass> {
   for (const name of CLASSMATES) {
     const a = await createAccount(admin, { role: 'student', name });
     await enrolStudent(admin, r.classId, a.userId, { enrolledOn: iso(first) });
+    if (name === CLASSMATE) await saveSignedInState('classmate', a.username, a.password, 40);
   }
   return (cached = { classId: r.classId, className: 'Python Teaching · Sat 09:00', topics, students });
 }

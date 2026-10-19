@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 const TABS = [
   { path: '', label: 'Lesson note' },
   { path: '/attendance', label: 'Attendance' },
+  { path: '/questions', label: 'Questions' },
 ];
 
 export function WeekTabs({ base }: { base: string }) {
