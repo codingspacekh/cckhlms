@@ -1,5 +1,7 @@
 // FR-AUTH-01/05/10, ADR-10: sign-in, role areas, 403 for the wrong role, sign-out.
 import { expect, test } from '@playwright/test';
+import { Pool } from 'pg';
+import { E2E } from '../../playwright.config';
 import { stateFile, USERS } from './global-setup';
 import { expectAccessible, watchProblems } from './helpers';
 
@@ -69,9 +71,16 @@ test.describe('admin dashboard', () => {
   test('shows real numbers from the database', async ({ page }) => {
     await page.goto('/admin');
     const tile = (label: string) => page.locator('.tile', { has: page.getByText(label, { exact: true }) });
-    await expect(tile('Admins').locator('.v')).toHaveText('1');
-    await expect(tile('Teachers').locator('.v')).toHaveText('1');
-    await expect(tile('Students').locator('.v')).toHaveText('1');
+    // Other specs add people, so compare with the database rather than fixed numbers.
+    const pool = new Pool({ connectionString: E2E.databaseUrl });
+    const count = async (role: string) =>
+      String((await pool.query(`select count(*)::int as n from "user" where $1 = any(string_to_array(role, ','))`, [role])).rows[0].n);
+    const [admins, teachers, students] = [await count('admin'), await count('teacher'), await count('student')];
+    await pool.end();
+    expect(admins).toBe('1');
+    await expect(tile('Admins').locator('.v')).toHaveText(admins);
+    await expect(tile('Teachers').locator('.v')).toHaveText(teachers);
+    await expect(tile('Students').locator('.v')).toHaveText(students);
     await expect(tile('Club time zone').locator('.v')).toHaveText('Asia/Phnom_Penh');
   });
 });

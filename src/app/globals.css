@@ -956,3 +956,92 @@ input[type='file'] {
 .row:has(> .grow) {
   align-items: flex-end;
 }
+
+/* attendance (M3): one segmented control per student; the radio itself is hidden, its label is the button */
+.chead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 20px 20px 12px;
+}
+th.n,
+td.n {
+  text-align: right;
+}
+.seg.att label {
+  position: relative;
+  padding: 7px 11px;
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+.seg.att input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+.seg.att label:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.seg.att label[data-v='present']:has(input:checked) {
+  color: var(--good-text);
+}
+.seg.att label[data-v='late']:has(input:checked) {
+  color: var(--warn-text);
+}
+.seg.att label[data-v='absent']:has(input:checked) {
+  color: var(--bad-text);
+}
+@media (max-width: 640px) {
+  .seg.att label {
+    padding: 9px 8px;
+  }
+}
+@media (max-width: 640px) {
+  .att-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+  .att-table tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    border-bottom: 1px solid var(--line);
+  }
+  .att-table th,
+  .att-table td {
+    border-bottom: 0;
+    padding: 8px 12px;
+  }
+  .att-table tbody th {
+    grid-column: 1 / -1;
+    padding-bottom: 0;
+  }
+}
+
+/* row headers read as content, not as column labels; links inside tables look like links */
+tbody th {
+  font-size: inherit;
+  color: var(--ink);
+  white-space: normal;
+}
+tbody tr.off th {
+  color: var(--muted);
+}
+td a,
+th a {
+  color: var(--accent);
+  font-weight: 500;
+  text-decoration: none;
+}
+td a:hover,
+th a:hover {
+  text-decoration: underline;
+}

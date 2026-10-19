@@ -33,6 +33,7 @@ export const ACTIONS = {
   'enrolments.manage': hasRole('admin'),
   'lesson.write': teachesClass,
   'lesson.read': either(hasRole('admin'), teachesClass, studiesInClass),
+  'attendance.mark': teachesClass,
 } satisfies Record<string, Rule>;
 
 export type Action = keyof typeof ACTIONS;

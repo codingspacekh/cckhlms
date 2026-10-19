@@ -345,3 +345,26 @@ export const lessonAttachment = pgTable(
   },
   (t) => [index('lesson_attachment_lesson_idx').on(t.lessonId), check('lesson_attachment_size_positive', sql`${t.size} > 0`)],
 );
+
+// One student's attendance at one session (FR-TCH-06). Hangs off the enrolment, so it stays right when a
+// student moves class. A session with no rows hasn't had attendance taken yet.
+export const attendance = pgTable(
+  'attendance',
+  {
+    sessionId: text('session_id')
+      .notNull()
+      .references(() => classSession.id, { onDelete: 'cascade' }),
+    enrolmentId: text('enrolment_id')
+      .notNull()
+      .references(() => enrolment.id, { onDelete: 'cascade' }),
+    status: text('status').notNull(),
+    note: text('note'),
+    markedBy: text('marked_by').references(() => user.id, { onDelete: 'set null' }),
+    markedAt: ts('marked_at').notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.sessionId, t.enrolmentId] }),
+    index('attendance_enrolment_idx').on(t.enrolmentId),
+    check('attendance_status_known', sql`${t.status} in ('present', 'late', 'absent', 'excused')`),
+  ],
+);

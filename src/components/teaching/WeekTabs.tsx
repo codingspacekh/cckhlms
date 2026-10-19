@@ -3,7 +3,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 // The sections of a teacher's week. Each milestone adds its tab here (M3: attendance, questions, report).
-const TABS = [{ path: '', label: 'Lesson note' }];
+const TABS = [
+  { path: '', label: 'Lesson note' },
+  { path: '/attendance', label: 'Attendance' },
+];
 
 export function WeekTabs({ base }: { base: string }) {
   const pathname = usePathname();
