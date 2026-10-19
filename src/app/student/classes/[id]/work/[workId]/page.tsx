@@ -11,6 +11,7 @@ import { formatDue, KIND_LABEL, WORK_LANGUAGE_LABEL, zipNameFor } from '@/module
 import { readAssessment } from '@/modules/assessments/service';
 import { getClubSettings } from '@/modules/club/service';
 import { pageData, requireActor } from '@/server/guard';
+import { PREVIEW_ORIGIN } from '@/server/preview-origin';
 
 export const metadata: Metadata = { title: 'Classwork & homework' };
 
@@ -72,6 +73,7 @@ export default async function StudentWorkPage({ params }: { params: Promise<{ id
           username={actor.username}
           title={a.title}
           java={a.language === 'java'}
+          web={a.language === 'web'}
           latePenaltyPct={a.latePenaltyPct}
           timeZone={timeZone}
         />
@@ -86,6 +88,7 @@ async function Workspace(props: {
   username: string;
   title: string;
   java: boolean;
+  web: boolean;
   latePenaltyPct: number;
   timeZone: string;
 }) {
@@ -103,6 +106,7 @@ async function Workspace(props: {
       savedAt={savedAt?.toISOString() ?? null}
       nonce={nonce}
       java={props.java}
+      previewOrigin={props.web ? PREVIEW_ORIGIN : undefined}
       zipName={zipNameFor(props.title, props.username)}
       timeZone={props.timeZone}
       submit={{
