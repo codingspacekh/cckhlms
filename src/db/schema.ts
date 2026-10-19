@@ -433,3 +433,29 @@ export const postReport = pgTable(
     check('post_report_outcome_known', sql`${t.outcome} is null or ${t.outcome} in ('restored', 'removed')`),
   ],
 );
+
+// The teacher's weekly class report (FR-TCH-14). The attendance summary isn't stored: it's worked out from
+// the attendance rows when read, so it never goes stale. Its topics drive syllabus coverage (FR-TCH-20).
+export const classReport = pgTable('class_report', {
+  id: text('id').primaryKey(),
+  sessionId: text('session_id')
+    .notNull()
+    .unique()
+    .references(() => classSession.id, { onDelete: 'cascade' }),
+  comment: text('comment').notNull().default(''),
+  authorId: text('author_id').references(() => user.id, { onDelete: 'set null' }),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+});
+
+export const classReportTopic = pgTable(
+  'class_report_topic',
+  {
+    reportId: text('report_id')
+      .notNull()
+      .references(() => classReport.id, { onDelete: 'cascade' }),
+    topicId: text('topic_id')
+      .notNull()
+      .references(() => syllabusTopic.id, { onDelete: 'cascade' }),
+  },
+  (t) => [primaryKey({ columns: [t.reportId, t.topicId] })],
+);

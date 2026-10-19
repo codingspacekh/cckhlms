@@ -35,11 +35,17 @@ test('a term that overlaps another is refused with a clear message', async ({ pa
 test('Admin adds a course and writes its syllabus', async ({ page }) => {
   await page.goto('/admin/courses');
   await expectAccessible(page);
-  const form = page.getByRole('form', { name: 'Add a course' });
+  await page.getByRole('button', { name: 'Add a course' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Add a course' });
+  await expect(dialog).toBeVisible();
+  await expectAccessible(page);
+  const form = dialog.getByRole('form', { name: 'Add a course' });
   await form.getByLabel('Code').fill('py1');
   await form.getByLabel('Course name').fill('Python Level 1');
   await form.getByLabel('Language').selectOption('python');
   await form.getByRole('button', { name: 'Add course' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole('status')).toHaveText('PY1 added.');
 
   const row = page.getByRole('row', { name: /PY1/ });
   await expect(row).toContainText('Python Level 1');
@@ -60,6 +66,7 @@ test('Admin adds a course and writes its syllabus', async ({ page }) => {
 
 test('course weights must add up to 100', async ({ page }) => {
   await page.goto('/admin/courses');
+  await page.getByRole('button', { name: 'Add a course' }).click();
   const form = page.getByRole('form', { name: 'Add a course' });
   await form.getByLabel('Code').fill('WEB');
   await form.getByLabel('Course name').fill('Web Basics');

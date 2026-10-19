@@ -2,6 +2,7 @@
 import { useActionState } from 'react';
 import { createCourseAction, updateCourseAction } from '@/modules/academics/actions';
 import { LANGUAGE_LABEL, LANGUAGES } from '@/modules/academics/rules';
+import type { FormResult } from '@/server/action-result';
 
 type Values = {
   id?: string;
@@ -16,14 +17,25 @@ type Values = {
   nextCourseId?: string | null;
 };
 
+type Props = {
+  course?: Values;
+  others?: { id: string; code: string; name: string }[];
+  onSaved?: (message: string) => void; // in a dialog: close it after a successful save
+  onCancel?: () => void;
+};
+
 // Add a course (no `course`) or edit one (with `course`; then the next level can be chosen).
-export function CourseForm({ course, others = [] }: { course?: Values; others?: { id: string; code: string; name: string }[] }) {
+export function CourseForm({ course, others = [], onSaved, onCancel }: Props) {
   const editing = !!course?.id;
-  const [result, formAction, saving] = useActionState(editing ? updateCourseAction : createCourseAction, null);
+  const [result, formAction, saving] = useActionState(async (prev: FormResult | null, form: FormData) => {
+    const r = await (editing ? updateCourseAction : createCourseAction)(prev, form);
+    if (r.ok) onSaved?.(r.message ?? 'Saved.');
+    return r;
+  }, null);
   const v = course ?? {};
   return (
-    <form className="card stack" action={formAction} aria-label={editing ? 'Course details' : 'Add a course'}>
-      <h2>{editing ? 'Course details' : 'Add a course'}</h2>
+    <form className={onCancel ? 'stack' : 'card stack'} action={formAction} aria-label={editing ? 'Course details' : 'Add a course'}>
+      <h2 id="course-form-title">{editing ? 'Course details' : 'Add a course'}</h2>
       {editing && <input type="hidden" name="courseId" value={v.id} />}
       <div className="grid g2">
         <label className="f">
@@ -90,7 +102,12 @@ export function CourseForm({ course, others = [] }: { course?: Values; others?: 
           {result.message}
         </p>
       )}
-      <div>
+      <div className={onCancel ? 'row end' : undefined}>
+        {onCancel && (
+          <button type="button" className="btn ghost" onClick={onCancel}>
+            Cancel
+          </button>
+        )}
         <button type="submit" className="btn primary" disabled={saving}>
           {saving ? 'Saving…' : editing ? 'Save course' : 'Add course'}
         </button>

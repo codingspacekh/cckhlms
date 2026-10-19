@@ -18,6 +18,7 @@ const row = (over: object) => ({
   cancelled: false,
   lesson: null,
   toReview: 0,
+  report: 'upcoming' as const,
   ...over,
 });
 
@@ -27,9 +28,9 @@ describe('WeeksTable', () => {
       <WeeksTable
         classId="c1"
         weeks={[
-          row({ sessionId: 's1', week: 1, lesson: { title: 'print()', state: 'published' }, toReview: 2 }),
+          row({ sessionId: 's1', week: 1, lesson: { title: 'print()', state: 'published' }, toReview: 2, report: 'done' }),
           row({ sessionId: 's2', week: null, date: '2027-01-16', cancelled: true }),
-          row({ sessionId: 's3', week: 2, date: '2027-01-23', lesson: { title: 'Variables', state: 'scheduled' } }),
+          row({ sessionId: 's3', week: 2, date: '2027-01-23', lesson: { title: 'Variables', state: 'scheduled' }, report: 'missing' }),
           row({ sessionId: 's4', week: 3, date: '2027-01-30' }),
         ]}
       />,
@@ -38,13 +39,14 @@ describe('WeeksTable', () => {
       .getAllByRole('row')
       .slice(1);
     expect(rows.map((r) => r.textContent)).toEqual([
-      'Week 1Sat 9 Jan 2027print()Published2 to review',
+      'Week 1Sat 9 Jan 2027print()Published2 to reviewDone',
       'No classSat 16 Jan 2027Cancelled',
-      'Week 2Sat 23 Jan 2027VariablesScheduled',
-      'Week 3Sat 30 Jan 2027Not written yet',
+      'Week 2Sat 23 Jan 2027VariablesScheduledMissing',
+      'Week 3Sat 30 Jan 2027Not written yet—',
     ]);
     expect(screen.getByRole('link', { name: 'Week 2' }).getAttribute('href')).toBe('/teacher/classes/c1/weeks/2');
     expect(within(rows[1]!).queryByRole('link')).toBeNull();
+    expect(within(rows[2]!).getByRole('link', { name: 'Missing' }).getAttribute('href')).toBe('/teacher/classes/c1/weeks/2/report');
   });
 });
 

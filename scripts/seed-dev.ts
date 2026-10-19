@@ -1,14 +1,19 @@
 // Local demo data for trying the LMS on your own machine (never on the server). Fills an EMPTY development
-// database with the people, terms, courses and classes from the P0 prototype.
+// database with the people, terms, courses and classes from the P0 prototype, plus M3 teaching data for
+// Python Level 1: lessons, attendance, Q&A (one post waiting for review) and weekly reports.
 //   npm run db:up && npm run seed:dev && npm run dev   → http://lms.localhost:3000
 import { sql } from 'drizzle-orm';
 import { db, pool } from '../src/db/client';
 import { term as termTable } from '../src/db/schema';
 import { createClass } from '../src/modules/academics/classes';
-import { createCourse, setSyllabus } from '../src/modules/academics/courses';
+import { createCourse, getCourse, setSyllabus } from '../src/modules/academics/courses';
 import { enrolStudent } from '../src/modules/academics/enrolments';
 import { createTerm, setTermStatus } from '../src/modules/academics/terms';
+import { markAttendance } from '../src/modules/attendance/attendance';
 import { insertAccount } from '../src/modules/identity/service';
+import { classWeeks, saveLesson } from '../src/modules/teaching/lessons';
+import { acceptReply, askQuestion, replyToQuestion, reportPost } from '../src/modules/teaching/qa';
+import { saveWeeklyReport } from '../src/modules/teaching/reports';
 import type { Actor } from '../src/server/actor';
 import { startup } from '../src/server/startup';
 
@@ -52,7 +57,7 @@ const names = [
   'Vanna Ros',
   'Lina Sok',
 ];
-const students = [];
+const students: Awaited<ReturnType<typeof person>>[] = [];
 for (const name of names) {
   const [first, last] = name.toLowerCase().split(' ') as [string, string];
   students.push(await person(`${first}.${last[0]}`, name, 'student'));
@@ -122,10 +127,60 @@ const c3 = await mk({
 
 const enrol = (classId: string, s: { id: string }, enrolledOn = '2026-10-01') =>
   enrolStudent(admin, classId, s.id, { enrolledOn, confirmClashes: true });
-for (const s of students.slice(0, 9)) await enrol(c1, s);
+const c1Enrolments: string[] = [];
+for (const s of students.slice(0, 9)) {
+  const e = await enrol(c1, s);
+  if (e.status === 'enrolled') c1Enrolments.push(e.enrolmentId);
+}
 await enrol(c1, students[9]!, '2026-10-12'); // Lina joined late (BR-17)
 for (const i of [2, 4, 6]) await enrol(c2, students[i]!);
 for (const i of [1, 2, 3, 5, 7, 8]) await enrol(c3, students[i]!);
+
+// M3 teaching data for Python Level 1 (weeks 1–3 have been held by the prototype's "today", 18 Oct 2026).
+const teacher = actor(sophea, 'sophea');
+const as = (i: number) => actor(students[i]!, students[i]!.username);
+const topics = (await getCourse(admin, py1.id)).topics.map((t) => t.id);
+const sessionOf = async (week: number) => (await classWeeks(teacher, c1)).find((w) => w.week === week)!.sessionId;
+const lessons: [number, string, string, number[], 'publish' | 'draft'][] = [
+  [1, 'Talking to the computer with print()', 'We wrote our first programs.\n\n```python\nprint("Hello, club!")\n```', [0], 'publish'],
+  [
+    2,
+    'Making decisions with if / else',
+    'Programs can choose what to do.\n\n```python\nif age >= 12:\n    print("Welcome")\n```',
+    [1, 2],
+    'publish',
+  ],
+  [
+    3,
+    'Repeating things with for loops',
+    '## What we did today\nWe used **for loops** to repeat code without copying it.\n\n- `range(5)` gives the numbers 0, 1, 2, 3, 4\n- the code inside the loop must be **indented**\n\n```python\nfor i in range(5):\n    print("Lap", i + 1)\n```\n\n## Try at home\nChange the program so it counts **down** from 10 to 1, then prints "Lift off!".',
+    [3],
+    'publish',
+  ],
+  [4, 'While loops and guessing games', 'Draft: plan the guessing game.', [4], 'draft'],
+];
+for (const [week, title, contentMd, t, intent] of lessons)
+  await saveLesson(teacher, await sessionOf(week), { title, contentMd, topicIds: t.map((i) => topics[i]!), intent });
+const marks: [number, number, 'late' | 'absent' | 'excused'][] = [
+  [1, 6, 'absent'],
+  [2, 3, 'late'],
+  [2, 6, 'absent'],
+  [3, 6, 'excused'],
+  [3, 1, 'late'],
+];
+for (const [week, i, status] of marks) await markAttendance(teacher, await sessionOf(week), c1Enrolments[i]!, status);
+await saveWeeklyReport(teacher, await sessionOf(1), { comment: 'Everyone ran their first program.', topicIds: [topics[0]!] });
+await saveWeeklyReport(teacher, await sessionOf(2), {
+  comment: 'Good progress. Piseth missed the class; Chenda needs help with indentation.',
+  topicIds: [topics[1]!, topics[2]!],
+});
+const q1 = await askQuestion(as(1), c1, 3, { body: 'Why does `range(5)` stop at 4 and not 5?', code: '' });
+const r1 = await replyToQuestion(as(2), q1.id, 'It starts at 0, so 0, 1, 2, 3, 4 is five numbers.');
+await replyToQuestion(teacher, q1.id, 'Bopha is right. `range(1, 6)` gives 1 to 5 if you want to start at 1.');
+await acceptReply(teacher, q1.id, r1.id);
+await askQuestion(as(3), c1, 3, { body: 'Can I print my name 10 times with a loop?', code: 'for i in range(10):\nprint("Chenda")' });
+const rude = await askQuestion(as(6), c1, 3, { body: 'this lesson is so boring lol', code: '' });
+await reportPost(as(0), { type: 'question', id: rude.id }, 'Not a question');
 
 console.log(`Demo data added. Every account uses the password "${PASSWORD}":
   admin · sophea, dara, vibol (teachers) · ${students.map((s) => s.username).join(', ')} (students)

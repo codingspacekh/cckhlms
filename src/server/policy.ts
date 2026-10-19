@@ -36,6 +36,7 @@ export const ACTIONS = {
   'attendance.mark': teachesClass,
   'qa.post': either(teachesClass, studiesInClass),
   'qa.moderate': teachesClass,
+  'report.write': teachesClass,
 } satisfies Record<string, Rule>;
 
 export type Action = keyof typeof ACTIONS;

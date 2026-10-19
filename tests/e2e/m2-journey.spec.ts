@@ -22,6 +22,7 @@ test.describe('admin', () => {
     await expect(page.getByRole('row', { name: /Term 2 · 2028/ })).toBeVisible();
 
     await page.goto('/admin/courses');
+    await page.getByRole('button', { name: 'Add a course' }).click();
     const c = page.getByRole('form', { name: 'Add a course' });
     await c.getByLabel('Code').fill('PY2');
     await c.getByLabel('Course name').fill('Python Level 2');
@@ -43,6 +44,7 @@ test.describe('admin', () => {
   test('adds two students and enrols them in the class', async ({ page }) => {
     for (const name of ['Kosal Meas', 'Nita Keo']) {
       await page.goto('/admin/people');
+      await page.getByRole('button', { name: 'Add a person' }).click();
       const form = page.getByRole('form', { name: 'Add a person' });
       await form.getByLabel('Full name').fill(name);
       await form.getByRole('button', { name: 'Create account' }).click();
@@ -110,7 +112,13 @@ test.describe('teacher', () => {
     await expect(card).toContainText('1 student');
     await expect(card).toContainText('Next: Sat 15 Apr 2028 · 09:00–10:30 · Week 1');
     await card.getByRole('link', { name: 'Open class' }).click();
+    // the class's sections are in the sidebar
+    const sections = page.getByRole('group', { name: 'Python Level 2 · Sat 09:00 sections' });
+    await expect(sections.getByRole('link', { name: 'Weeks' })).toHaveAttribute('aria-current', 'page');
+    await sections.getByRole('link', { name: 'Students' }).click();
     await expect(page.getByRole('table', { name: 'Students' })).toContainText('Kosal Meas');
+    await expectAccessible(page);
+    await sections.getByRole('link', { name: 'Schedule' }).click();
     await expect(page.getByRole('table', { name: 'Sessions' })).toBeVisible();
     await expectAccessible(page);
   });

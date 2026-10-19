@@ -1,7 +1,7 @@
 'use client';
 import { useRef, useState, useTransition, type FormEvent, type ReactNode } from 'react';
 import { Pill } from '@/components/ui/Pill';
-import { formatDate, toClubTime } from '@/modules/academics/schedule';
+import { formatDate, formatDayMonth, toClubTime } from '@/modules/academics/schedule';
 import { acceptReplyAction, askQuestionAction, moderatePostAction, replyAction, reportPostAction } from '@/modules/teaching/qa-actions';
 import type { PostRef, QuestionView, ReplyView } from '@/modules/teaching/qa';
 import type { FormResult } from '@/server/action-result';
@@ -66,9 +66,14 @@ export function QaBoard({ classId, week, role, open, questions, timeZone }: Prop
     );
   }
 
+  // Short in the post header ('30 Jan, 10:15') so it fits on one line; the full date shows on hover.
   const when = (d: Date) => {
     const t = toClubTime(new Date(d), timeZone);
-    return `${formatDate(t.date)}, ${t.time}`;
+    return (
+      <time dateTime={new Date(d).toISOString()} title={`${formatDate(t.date)}, ${t.time}`}>
+        {formatDayMonth(t.date)}, {t.time}
+      </time>
+    );
   };
 
   // Report / restore / remove, depending on who is looking and the post's state.

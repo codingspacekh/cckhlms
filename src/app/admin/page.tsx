@@ -35,7 +35,7 @@ export default async function AdminDashboard() {
       </div>
       <section className="card">
         <h2>Coming next</h2>
-        <p className="small muted">Classes, people and terms arrive in M2. Lessons, attendance and homework follow in M3 and M4.</p>
+        <p className="small muted">Classwork, homework and exams with the code editor arrive in M4; term reports and charts in M5.</p>
       </section>
     </>
   );

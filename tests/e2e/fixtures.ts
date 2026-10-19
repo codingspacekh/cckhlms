@@ -70,3 +70,43 @@ export async function teachingClass(): Promise<TeachingClass> {
   }
   return (cached = { classId: r.classId, className: 'Python Teaching · Sat 09:00', topics, students });
 }
+
+// A second, smaller class for the M3 exit journey: Sunday mornings, the e2e student and the classmate.
+export async function rehearsalClass(): Promise<TeachingClass> {
+  const main = await teachingClass(); // creates the classmate account
+  const { db } = await import('../../src/db/client');
+  const { user, klass, term } = await import('../../src/db/schema');
+  const { eq } = await import('drizzle-orm');
+  const { createCourse, setSyllabus } = await import('../../src/modules/academics/courses');
+  const { createClass } = await import('../../src/modules/academics/classes');
+  const { enrolStudent } = await import('../../src/modules/academics/enrolments');
+
+  const topics = ['HTML tags', 'Links and images', 'CSS colours', 'Flexbox'];
+  const existing = await db.select({ id: klass.id, name: klass.name }).from(klass).where(eq(klass.room, 'Rehearsal room'));
+  if (existing[0]) return { classId: existing[0].id, className: existing[0].name, topics, students: [USERS.student.name, CLASSMATE] };
+
+  const idOfName = async (name: string) => (await db.select({ id: user.id }).from(user).where(eq(user.name, name)))[0]!.id;
+  const adminId = (await db.select({ id: user.id }).from(user).where(eq(user.username, USERS.admin.username)))[0]!.id;
+  const admin = { userId: adminId, username: 'admin', name: 'Admin', role: 'admin', sessionId: 'e2e' };
+  const [k] = await db.select({ termId: klass.termId, firstDate: klass.firstDate }).from(klass).where(eq(klass.id, main.classId));
+  const [t] = await db.select({ id: term.id }).from(term).where(eq(term.id, k!.termId));
+  const sunday = new Date(new Date(`${k!.firstDate}T00:00:00Z`).getTime() + 86_400_000).toISOString().slice(0, 10);
+  const course = await createCourse(admin, { code: 'WBR', name: 'Web Rehearsal', defaultLanguage: 'web' });
+  await setSyllabus(admin, course.id, topics.join('\n'));
+  const r = await createClass(admin, {
+    courseId: course.id,
+    termId: t!.id,
+    day: 'sun',
+    startTime: '10:00',
+    minutes: 90,
+    firstDate: sunday,
+    weeks: 10,
+    room: 'Rehearsal room',
+    leadTeacherId: await idOfName(USERS.teacher.name),
+    confirmClashes: true,
+  });
+  if (r.status !== 'created') throw new Error('rehearsal class not created');
+  for (const name of [USERS.student.name, CLASSMATE])
+    await enrolStudent(admin, r.classId, await idOfName(name), { enrolledOn: sunday, confirmClashes: true });
+  return { classId: r.classId, className: 'Web Rehearsal · Sun 10:00', topics, students: [USERS.student.name, CLASSMATE] };
+}

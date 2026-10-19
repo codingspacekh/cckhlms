@@ -106,6 +106,8 @@ export const formatDay = (date: string) => {
   const d = toUtcMidnight(date);
   return `${d.getUTCDate()} ${MON[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 };
+// '22 Jan' (where the year is obvious, e.g. posts inside a class)
+export const formatDayMonth = (date: string) => formatDay(date).replace(/ \d+$/, '');
 // 'Sat 22 Jan 2028'
 export const formatDate = (date: string) => `${WD[toUtcMidnight(date).getUTCDay()]} ${formatDay(date)}`;
 

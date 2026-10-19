@@ -1,12 +1,15 @@
 import type { ReactNode } from 'react';
 import { db } from '@/db/client';
 import { clubSettings } from '@/db/schema';
-import type { Role } from './nav';
+import type { ClassLink, Role } from './nav';
+import { ScrollReset } from './ScrollReset';
 import { Sidebar } from './Sidebar';
 
 const ROLE_LABEL: Record<Role, string> = { admin: 'Admin', teacher: 'Teacher', student: 'Student' };
 
-export async function AppShell({ role, name, crumb, children }: { role: Role; name: string; crumb: string; children: ReactNode }) {
+type Props = { role: Role; name: string; crumb: string; classes?: ClassLink[]; children: ReactNode };
+
+export async function AppShell({ role, name, crumb, classes, children }: Props) {
   const [settings] = await db.select({ timeZone: clubSettings.timeZone, clubName: clubSettings.clubName }).from(clubSettings).limit(1);
   const today = new Intl.DateTimeFormat('en-GB', {
     weekday: 'short',
@@ -17,10 +20,11 @@ export async function AppShell({ role, name, crumb, children }: { role: Role; na
   }).format(new Date());
   return (
     <div className="app">
+      <ScrollReset />
       <a className="skip" href="#main">
         Skip to content
       </a>
-      <Sidebar role={role} user={{ name, roleLabel: ROLE_LABEL[role] }} />
+      <Sidebar role={role} user={{ name, roleLabel: ROLE_LABEL[role] }} classes={classes} />
       <div className="wrap">
         <header className="top">
           <div className="crumb">

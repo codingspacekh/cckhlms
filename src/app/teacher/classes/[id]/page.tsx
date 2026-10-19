@@ -1,31 +1,20 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import { SessionsManager } from '@/app/admin/classes/[id]/SessionsManager';
-import { RosterTable } from '@/components/academics/RosterTable';
 import { WeeksTable } from '@/components/teaching/WeeksTable';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { getClass } from '@/modules/academics/classes';
 import { listRoster } from '@/modules/academics/enrolments';
 import { scheduleLabel } from '@/modules/academics/schedule';
-import { classAttendance } from '@/modules/attendance/attendance';
 import { classWeeks } from '@/modules/teaching/lessons';
-import { ValidationError } from '@/server/errors';
-import { requireActor } from '@/server/guard';
+import { ClassHeader, teacherClass } from './class-page';
 
-export const metadata: Metadata = { title: 'Class' };
+export const metadata: Metadata = { title: 'Weeks' };
 
-// A teacher's own class: its weeks (lessons), the students, and the sessions (they may cancel, move or add one).
-export default async function TeacherClassPage({ params }: { params: Promise<{ id: string }> }) {
-  const actor = await requireActor('teacher.area');
-  const { id } = await params;
-  const c = await getClass(actor, id).catch((e) => (e instanceof ValidationError ? null : Promise.reject(e)));
-  if (!c) notFound();
-  const [roster, weeks, rates] = await Promise.all([listRoster(actor, id), classWeeks(actor, id), classAttendance(actor, id)]);
-  const attendance = new Map([...rates].map(([enrolmentId, r]) => [enrolmentId, r.percent]));
+// A teacher's class opens on its weeks: open one to write the lesson, take attendance, answer questions and
+// write the report. Students, syllabus coverage and the schedule are the other sections in the sidebar.
+export default async function ClassWeeksPage({ params }: { params: Promise<{ id: string }> }) {
+  const { actor, c } = await teacherClass(params);
+  const [roster, weeks] = await Promise.all([listRoster(actor, c.id), classWeeks(actor, c.id)]);
   return (
     <>
-      <PageHeader eyebrow={<Link href="/teacher">My classes</Link>} title={c.name} />
+      <ClassHeader name={c.name} />
       <section className="card summary" aria-label="Class summary">
         <div>
           <span className="k">Schedule</span>
@@ -46,19 +35,11 @@ export default async function TeacherClassPage({ params }: { params: Promise<{ i
       </section>
       <section className="stack" aria-labelledby="weeks-title">
         <h2 id="weeks-title">Weeks</h2>
-        <p className="small muted">Open a week to write its lesson note.</p>
+        <p className="small muted">Open a week to write the lesson, take attendance, answer questions and write the report.</p>
         <div className="card flush">
           <WeeksTable classId={c.id} weeks={weeks} />
         </div>
       </section>
-      <section className="stack" aria-labelledby="students-title">
-        <h2 id="students-title">Students</h2>
-        <div className="card flush">
-          <RosterTable rows={roster} attendance={attendance} />
-        </div>
-      </section>
-      <h2>Schedule changes</h2>
-      <SessionsManager classId={c.id} weeks={c.weeks} defaultStart={c.startTime} defaultMinutes={c.minutes} sessions={c.sessions} />
     </>
   );
 }

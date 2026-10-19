@@ -24,16 +24,21 @@ async function signInFresh(browser: Browser, username: string, password: string,
 
 async function addPerson(page: import('@playwright/test').Page, role: 'Student' | 'Teacher', name: string) {
   await page.goto('/admin/people');
+  await page.getByRole('button', { name: 'Add a person' }).click();
   const form = page.getByRole('form', { name: 'Add a person' });
   await form.getByLabel('Role').selectOption(role.toLowerCase());
   await form.getByLabel('Full name').fill(name);
   await form.getByRole('button', { name: 'Create account' }).click();
-  const slip = page.getByRole('region', { name: 'Login slip' });
-  await expect(slip).toBeVisible();
-  return {
+  const slip = page.getByRole('dialog').getByRole('region', { name: 'Login slip' });
+  await expect(slip.getByText('Shown once')).toBeVisible();
+  await expectAccessible(page);
+  const values = {
     username: (await slip.getByTestId('slip-username').textContent())!,
     password: (await slip.getByTestId('slip-password').textContent())!,
   };
+  await slip.getByRole('button', { name: 'Done' }).click();
+  await expect(page.getByRole('dialog')).toBeHidden();
+  return values;
 }
 
 test('the People page passes an accessibility check', async ({ page }) => {
@@ -45,7 +50,6 @@ test('the People page passes an accessibility check', async ({ page }) => {
 test('Admin adds a student, and the student signs in with the login slip', async ({ page, browser }) => {
   const { username, password } = await addPerson(page, 'Student', 'Dalin Prak');
   expect(username).toBe('dalin.p');
-  await expect(page.getByText('Shown once')).toBeVisible();
   await expect(page.getByRole('row', { name: /Dalin Prak/ })).toBeVisible();
 
   const { page: kid, ctx } = await signInFresh(browser, username, password, '198.18.0.11');
@@ -61,7 +65,7 @@ test('Admin resets a password: the old one stops working, the new one works', as
     .getByRole('button', { name: 'Reset password' })
     .click();
   const slip = page.getByRole('region', { name: 'Login slip' });
-  await expect(slip.getByRole('heading')).toHaveText('New password for Dara Kim'); // the creation slip was showing before
+  await expect(slip.getByRole('heading')).toHaveText('New password for Dara Kim'); // opens in the dialog
   await expect(slip.getByTestId('slip-username')).toHaveText(first.username);
   const newPassword = (await slip.getByTestId('slip-password').textContent())!;
   expect(newPassword).not.toBe(first.password);

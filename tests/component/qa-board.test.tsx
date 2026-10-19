@@ -58,7 +58,8 @@ describe('QaBoard for a student', () => {
     render(<QaBoard {...base} role="student" questions={[q({ acceptedReplyId: 'r1' })]} />);
     expect(article().querySelector('code')?.textContent).toBe('range(5)');
     expect(article().querySelector('pre code')?.textContent).toBe('for i in range(5):\n    print(i)');
-    expect(within(article()).getAllByText(/Sat 30 Jan 2027, 10:15/)).toHaveLength(3);
+    expect(within(article()).getAllByText(/30 Jan, 10:15/)).toHaveLength(3);
+    expect(article().querySelector('time')?.getAttribute('title')).toBe('Sat 30 Jan 2027, 10:15');
     expect(within(screen.getByRole('listitem', { name: 'Reply from Sophea Chan' })).getByText(/teacher/)).toBeTruthy();
     expect(within(screen.getByRole('listitem', { name: 'Reply from Bopha Lim' })).getByText('Answer')).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Mark as answer|Restore|Remove/ })).toBeNull();
