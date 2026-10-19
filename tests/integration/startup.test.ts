@@ -25,6 +25,8 @@ describe('startup', () => {
       'attendance',
       'audit_log',
       'class',
+      'class_report',
+      'class_report_topic',
       'class_session',
       'class_teacher',
       'club_settings',

@@ -36,7 +36,7 @@ flowchart LR
 | **M0** ✅ | Spikes | Go/no-go with measurements for the preview origin + CSP, the editor on low-end devices, and Better Auth username/roles/sessions | ADR-03, 04, 09 | 4 days |
 | **M1** ✅ | Walking skeleton (code; server set-up in G1) | Public repo + required CI checks, Docker Compose, VPS + Cloudflare Tunnel, automatic deploys with rollback, sign-in, dashboard shell, backups + first restore drill | NFR-04, 05, 10 | 5 days |
 | **M2** ✅ | Academics | Club settings, accounts and passwords, terms, courses + syllabus, weekend classes with weekly sessions, enrolments, transfers | FR-AUTH-01…07, 10, 11 · FR-ADM-01…08, 16 · FR-TCH-05 | 6 days |
-| **M3** | Teaching | Weekly lessons, Q&A with reporting, attendance, weekly class report, syllabus coverage | FR-TCH-01…06, 14, 20 · FR-STU-02…04, 10 | 5 days |
+| **M3** ✅ | Teaching | Weekly lessons, Q&A with reporting, attendance, weekly class report, syllabus coverage | FR-TCH-01…06, 14, 20 · FR-STU-02…04, 10 | 5 days |
 | **M4** | Assessments | Classwork/homework/exams, multi-file editor, Web preview, submissions, grading, gradebook | FR-TCH-07…12, 19 · FR-STU-05, 06 · FR-CODE-01…06 | 8 days |
 | **G1** ⏳ | Go live | Owner's server and Cloudflare set-up (runbook §2); first deploy, restore drill, uptime alert | NFR-04 | 1–2 hours |
 | — | **R1: Pilot** | One real class uses the LMS on production for at least 4 weeks | | |
@@ -173,7 +173,7 @@ The next milestone does not start until all four are true.
 
 **Exit criteria:** a pull request with a failing test cannot merge; a merged one deploys to `lms.cckh.dev` on its own; the first **restore drill** from R2 is done and recorded in the runbook; the uptime alert reaches the owner.
 
-### M2 — Academics (6 days) — ✅ BUILT 2026-10-19 · waiting for owner sign-off
+### M2 — Academics (6 days) — ✅ DONE 2026-10-19 (owner signed off)
 > **Result** (PRs #4–#7):
 > - **People (FR-ADM-01/02, FR-AUTH-02/03/04/07/10):**
 >   - create students, teachers and admins with a suggested username and a one-time password on a login slip;
@@ -219,7 +219,35 @@ The next milestone does not start until all four are true.
 
 **Exit criteria:** on production, the owner sets up the pilot class for real (or a full demo term) without help, and the generated sessions match the club calendar.
 
-### M3 — Teaching (5 days)
+### M3 — Teaching (5 days) — ✅ BUILT 2026-10-19 · waiting for owner sign-off
+> **Result** (PRs #9–#13, stacked: merge in order):
+> - **Lesson notes (FR-TCH-01/02, FR-STU-02, ADR-08):**
+>   - each week has a lesson: title, Markdown note and syllabus topics, with a live preview from the same server-side renderer students get;
+>   - publish now, save as draft, or schedule in club time; whether a scheduled lesson is visible is worked out at read time, so there's no background job;
+>   - students see only published lessons of classes they're in now.
+> - **Attachments (FR-TCH-01, NFR-05):**
+>   - up to 10 files of 10 MB per lesson, stored under random ids on the backed-up uploads volume;
+>   - the served type comes from our allowlist; only PNG, JPEG, GIF and WebP show inline, everything else downloads with `default-src 'none'; sandbox`;
+>   - uploads go through a route handler that checks Origin, caller and size before reading the body; downloads need the lesson's read permission (drafts give others a 404).
+> - **Attendance (FR-TCH-06, BR-09, BR-17):**
+>   - everyone starts present; one tap or arrow key per change, saved at once, with a note per student;
+>   - opens on the day of the session; late joiners can't be marked for weeks before they joined;
+>   - attendance % = (present + late) / (sessions held − excused), shown per student on the class page.
+> - **Q&A (FR-STU-03/04/10, FR-TCH-03, BR-11, BR-20):**
+>   - students ask (text + code) and reply; teachers reply, mark or unmark the answer, remove and restore;
+>   - **Report** hides a post from classmates at once, its author sees "Under review"; restore/remove resolves every open report with an audit row; the weeks table shows "N to review".
+> - **Weekly report and coverage (FR-TCH-14, FR-TCH-20):**
+>   - a **Weekly report** tab per week: topics covered (suggested from the lesson's topics) and a comment; the attendance summary is worked out from the attendance rows, so it never goes stale;
+>   - the weeks table shows each held week's report as done or missing;
+>   - a **Syllabus coverage** card on the teacher's and the admin's class pages lists every topic with the weeks that covered it.
+> - **Permissions:** `lesson.write`, `attendance.mark`, `qa.moderate` and `report.write` are for the class's own teachers; `lesson.read` and `qa.post` also for students enrolled now. "Own" for students means enrolled, tested both ways round.
+> - **Migrations 0005–0009:** lesson + topics; attachment; attendance; Q&A posts + reports; class report + topics.
+> - **Tests:** 270 unit/component (including a 33-case **XSS corpus** for the Markdown renderer: loosening it on purpose failed 26 cases), 141 integration (98 % lines), 50 e2e including the **M3 exit journey** (`m3-journey.spec.ts`: the teacher publishes a lesson and takes attendance → the student reads and asks → a classmate answers → the teacher marks the answer and writes the weekly report → coverage matches for the teacher and the admin), attendance for 15 students by keyboard and by touch, and axe on every new page with no CSP violations.
+> - **Found and fixed by the tests:** table row headers inherited the small grey column-label style (M2 tables too); the admin dashboard test assumed it ran first.
+> - **Left for later:** copying a lesson from a previous class (FR-TCH-04, "if time allows").
+> - **Local demo data:** `npm run seed:dev` now adds M3 data for Python Level 1 (lessons, attendance, Q&A with one post to review, weekly reports).
+> - **Exit criterion:** until G1 the owner checks it on a local production build (or `npm run seed:dev` + `npm run dev`). The e2e journey already runs a rehearsal week end to end.
+
 **Goal:** a teacher can run a week: lesson note, attendance, questions and a weekly report.
 
 **Build:**

@@ -1,12 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { CoverageCard } from '@/components/teaching/CoverageCard';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { getClass, listClasses } from '@/modules/academics/classes';
 import { listRoster } from '@/modules/academics/enrolments';
 import { scheduleLabel, todayIn } from '@/modules/academics/schedule';
 import { getClubSettings } from '@/modules/club/service';
 import { listPeople } from '@/modules/identity/service';
+import { syllabusCoverage } from '@/modules/teaching/reports';
 import { ValidationError } from '@/server/errors';
 import { requireActor } from '@/server/guard';
 import { RosterManager } from './RosterManager';
@@ -19,11 +21,12 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
   const { id } = await params;
   const c = await getClass(actor, id).catch((e) => (e instanceof ValidationError ? null : Promise.reject(e)));
   if (!c) notFound();
-  const [roster, students, termClasses, settings] = await Promise.all([
+  const [roster, students, termClasses, settings, coverage] = await Promise.all([
     listRoster(actor, id),
     listPeople(actor, 'student'),
     listClasses(actor, { termId: c.termId }),
     getClubSettings(),
+    syllabusCoverage(actor, id),
   ]);
   const inClass = new Set(roster.filter((r) => r.status === 'active').map((r) => r.studentId));
   const lead = c.teachers.find((t) => t.role === 'lead');
@@ -68,6 +71,7 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
         otherClasses={termClasses.filter((k) => k.id !== c.id).map((k) => ({ id: k.id, name: k.name }))}
         today={todayIn(settings.timeZone)}
       />
+      <CoverageCard coverage={coverage} />
       <h2>Sessions</h2>
       <SessionsManager classId={c.id} weeks={c.weeks} defaultStart={c.startTime} defaultMinutes={c.minutes} sessions={c.sessions} />
     </>

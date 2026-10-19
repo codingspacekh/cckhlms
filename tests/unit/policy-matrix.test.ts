@@ -27,6 +27,7 @@ const MATRIX: Record<Action, Record<Role, Rule>> = {
   'attendance.mark': { admin: false, teacher: 'own', student: false },
   'qa.post': { admin: false, teacher: 'own', student: 'own' },
   'qa.moderate': { admin: false, teacher: 'own', student: false },
+  'report.write': { admin: false, teacher: 'own', student: false },
 };
 
 const actor = (role: string): Actor => ({ userId: 'u1', username: 'x', name: 'X', role, sessionId: 's1' });

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { SessionsManager } from '@/app/admin/classes/[id]/SessionsManager';
 import { RosterTable } from '@/components/academics/RosterTable';
+import { CoverageCard } from '@/components/teaching/CoverageCard';
 import { WeeksTable } from '@/components/teaching/WeeksTable';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { getClass } from '@/modules/academics/classes';
@@ -10,6 +11,7 @@ import { listRoster } from '@/modules/academics/enrolments';
 import { scheduleLabel } from '@/modules/academics/schedule';
 import { classAttendance } from '@/modules/attendance/attendance';
 import { classWeeks } from '@/modules/teaching/lessons';
+import { syllabusCoverage } from '@/modules/teaching/reports';
 import { ValidationError } from '@/server/errors';
 import { requireActor } from '@/server/guard';
 
@@ -21,7 +23,12 @@ export default async function TeacherClassPage({ params }: { params: Promise<{ i
   const { id } = await params;
   const c = await getClass(actor, id).catch((e) => (e instanceof ValidationError ? null : Promise.reject(e)));
   if (!c) notFound();
-  const [roster, weeks, rates] = await Promise.all([listRoster(actor, id), classWeeks(actor, id), classAttendance(actor, id)]);
+  const [roster, weeks, rates, coverage] = await Promise.all([
+    listRoster(actor, id),
+    classWeeks(actor, id),
+    classAttendance(actor, id),
+    syllabusCoverage(actor, id),
+  ]);
   const attendance = new Map([...rates].map(([enrolmentId, r]) => [enrolmentId, r.percent]));
   return (
     <>
@@ -44,13 +51,16 @@ export default async function TeacherClassPage({ params }: { params: Promise<{ i
           <span>{roster.filter((r) => r.status === 'active').length}</span>
         </div>
       </section>
-      <section className="stack" aria-labelledby="weeks-title">
-        <h2 id="weeks-title">Weeks</h2>
-        <p className="small muted">Open a week to write its lesson note.</p>
-        <div className="card flush">
-          <WeeksTable classId={c.id} weeks={weeks} />
-        </div>
-      </section>
+      <div className="grid g21">
+        <section className="stack" aria-labelledby="weeks-title">
+          <h2 id="weeks-title">Weeks</h2>
+          <p className="small muted">Open a week to write the lesson, take attendance, answer questions and write the report.</p>
+          <div className="card flush">
+            <WeeksTable classId={c.id} weeks={weeks} />
+          </div>
+        </section>
+        <CoverageCard coverage={coverage} />
+      </div>
       <section className="stack" aria-labelledby="students-title">
         <h2 id="students-title">Students</h2>
         <div className="card flush">
