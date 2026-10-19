@@ -19,6 +19,8 @@ vi.mock('@/components/editor/ProjectEditor', () => ({
 }));
 const saveDraftAction = vi.fn();
 const saveStarterAction = vi.fn();
+const submitWorkAction = vi.fn();
+vi.mock('@/modules/assessments/submission-actions', () => ({ submitWorkAction: (...a: unknown[]) => submitWorkAction(...a) }));
 vi.mock('@/modules/assessments/project-actions', () => ({
   saveDraftAction: (...a: unknown[]) => saveDraftAction(...a),
   saveStarterAction: (...a: unknown[]) => saveStarterAction(...a),
@@ -26,7 +28,10 @@ vi.mock('@/modules/assessments/project-actions', () => ({
 const { StudentWorkspace } = await import('@/components/editor/StudentWorkspace');
 const { StarterEditor } = await import('@/components/editor/StarterEditor');
 
+const open = { canSubmit: true, reason: null, late: false, latePenaltyPct: 10, dueLabel: 'Sat 16 Jan 2027, 09:00', versions: [] };
 const props = {
+  classId: 'c1',
+  submit: open,
   assessmentId: 'a1',
   initial: [{ path: 'main.py', content: '' }],
   savedAt: null,
@@ -101,6 +106,57 @@ describe('StudentWorkspace', () => {
     await flush();
     expect(leave()).toBe(false);
     Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+  });
+});
+
+describe('handing it in (FR-STU-05)', () => {
+  it('saves the last change first, then submits', async () => {
+    const calls: string[] = [];
+    saveDraftAction.mockImplementation(async () => (calls.push('save'), { ok: true, data: { savedAt: '2027-01-16T01:00:00.000Z' } }));
+    submitWorkAction.mockImplementation(
+      async () => (calls.push('submit'), { ok: true, message: 'Submitted. Your teacher can see it now.' }),
+    );
+    render(<StudentWorkspace {...props} />);
+    expect(screen.getByTestId('submit-state').textContent).toBe('Not submitted yet. Due Sat 16 Jan 2027, 09:00.');
+    fireEvent.click(screen.getByRole('button', { name: 'type' })); // not saved yet: the typing pause hasn't passed
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    await flush();
+    expect(calls).toEqual(['save', 'submit']);
+    expect(submitWorkAction).toHaveBeenCalledWith('c1', 'a1');
+    expect(screen.getByText('Submitted. Your teacher can see it now.')).toBeTruthy();
+  });
+
+  it('submits nothing when the last change couldn’t be saved', async () => {
+    saveDraftAction.mockResolvedValue({ ok: false, error: 'Two files have the same name.' });
+    render(<StudentWorkspace {...props} />);
+    fireEvent.click(screen.getByRole('button', { name: 'type' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    await flush();
+    expect(submitWorkAction).not.toHaveBeenCalled();
+    expect(screen.getAllByRole('alert').map((a) => a.textContent)).toContain(
+      'Your last change couldn’t be saved, so nothing was submitted.',
+    );
+  });
+
+  it('shows what was handed in, says when it would be late, and when it is closed', () => {
+    const versions = [
+      { version: 2, at: 'Fri 15 Jan 2027, 17:00', late: false },
+      { version: 1, at: 'Thu 14 Jan 2027, 18:00', late: false },
+    ];
+    const { rerender } = render(<StudentWorkspace {...props} submit={{ ...open, versions }} />);
+    expect(screen.getByTestId('submit-state').textContent).toBe(
+      'Version 2 submitted Fri 15 Jan 2027, 17:00. You can submit again until Sat 16 Jan 2027, 09:00.',
+    );
+    expect(screen.getByRole('button', { name: 'Submit again' })).toBeTruthy();
+    expect(screen.getByRole('list', { name: 'Versions you submitted' }).textContent).toBe(
+      'Version 2Fri 15 Jan 2027, 17:00Version 1Thu 14 Jan 2027, 18:00',
+    );
+    rerender(<StudentWorkspace {...props} submit={{ ...open, late: true }} />);
+    expect(screen.getByText('The due time has passed, so this will be marked late and 10% comes off the score.')).toBeTruthy();
+    const reason = 'The due time has passed and late work isn’t accepted for this.';
+    rerender(<StudentWorkspace {...props} submit={{ ...open, canSubmit: false, reason }} />);
+    expect((screen.getByRole('button', { name: 'Submit' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText(reason)).toBeTruthy();
   });
 });
 

@@ -6,6 +6,7 @@ import { StudentWorkspace } from '@/components/editor/StudentWorkspace';
 import { Pill } from '@/components/ui/Pill';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { studentProject } from '@/modules/assessments/projects';
+import { mySubmissions } from '@/modules/assessments/submissions';
 import { formatDue, KIND_LABEL, WORK_LANGUAGE_LABEL, zipNameFor } from '@/modules/assessments/rules';
 import { readAssessment } from '@/modules/assessments/service';
 import { getClubSettings } from '@/modules/club/service';
@@ -65,20 +66,38 @@ export default async function StudentWorkPage({ params }: { params: Promise<{ id
       {a.language === 'paper' ? (
         <p className="card small muted">This work is done on paper or in class. Your teacher enters the score.</p>
       ) : (
-        <Workspace assessmentId={workId} username={actor.username} title={a.title} java={a.language === 'java'} timeZone={timeZone} />
+        <Workspace
+          classId={id}
+          assessmentId={workId}
+          username={actor.username}
+          title={a.title}
+          java={a.language === 'java'}
+          latePenaltyPct={a.latePenaltyPct}
+          timeZone={timeZone}
+        />
       )}
     </>
   );
 }
 
-async function Workspace(props: { assessmentId: string; username: string; title: string; java: boolean; timeZone: string }) {
+async function Workspace(props: {
+  classId: string;
+  assessmentId: string;
+  username: string;
+  title: string;
+  java: boolean;
+  latePenaltyPct: number;
+  timeZone: string;
+}) {
   const actor = await requireActor('student.area');
-  const [{ files, savedAt }, nonce] = await Promise.all([
+  const [{ files, savedAt }, mine, nonce] = await Promise.all([
     pageData(studentProject(actor, props.assessmentId)),
+    pageData(mySubmissions(actor, props.assessmentId)),
     headers().then((h) => h.get('x-nonce') ?? ''),
   ]);
   return (
     <StudentWorkspace
+      classId={props.classId}
       assessmentId={props.assessmentId}
       initial={files}
       savedAt={savedAt?.toISOString() ?? null}
@@ -86,6 +105,14 @@ async function Workspace(props: { assessmentId: string; username: string; title:
       java={props.java}
       zipName={zipNameFor(props.title, props.username)}
       timeZone={props.timeZone}
+      submit={{
+        canSubmit: mine.next.ok,
+        reason: mine.next.ok ? null : mine.next.reason,
+        late: mine.next.ok && mine.next.late,
+        latePenaltyPct: props.latePenaltyPct,
+        dueLabel: formatDue(mine.due, props.timeZone),
+        versions: mine.versions.map((v) => ({ version: v.version, at: formatDue(v.submittedAt, props.timeZone), late: v.late })),
+      }}
     />
   );
 }

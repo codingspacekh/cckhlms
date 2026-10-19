@@ -2,21 +2,24 @@ import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { SubmissionsTable } from '@/components/assessments/SubmissionsTable';
 import { StarterEditor } from '@/components/editor/StarterEditor';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { formatDue, KIND_LABEL, WORK_LANGUAGE_LABEL, zipNameFor } from '@/modules/assessments/rules';
 import { teacherProject } from '@/modules/assessments/projects';
+import { submissionList } from '@/modules/assessments/submissions';
 import { getClubSettings } from '@/modules/club/service';
 import { pageData, requireActor } from '@/server/guard';
 
 export const metadata: Metadata = { title: 'Classwork & homework' };
 
-// One piece of code work, for its teacher: the starter files (FR-CODE-06). Submissions arrive in M4 PR 3.
+// One piece of code work, for its teacher: who has handed it in (FR-TCH-10) and the starter files (FR-CODE-06).
 export default async function TeacherWorkPage({ params }: { params: Promise<{ id: string; workId: string }> }) {
   const actor = await requireActor('teacher.area');
   const { id, workId } = await params;
-  const [{ view: a, files }, { timeZone }, nonce] = await Promise.all([
+  const [{ view: a, files }, subs, { timeZone }, nonce] = await Promise.all([
     pageData(teacherProject(actor, workId)),
+    pageData(submissionList(actor, workId)),
     getClubSettings(),
     headers().then((h) => h.get('x-nonce') ?? ''),
   ]);
@@ -59,6 +62,16 @@ export default async function TeacherWorkPage({ params }: { params: Promise<{ id
           <span>{a.status === 'published' ? 'Published' : 'Draft'}</span>
         </div>
       </section>
+      <SubmissionsTable
+        counts={subs.counts}
+        rows={subs.rows.map((r) => ({
+          studentId: r.studentId,
+          name: r.name,
+          status: r.status,
+          versions: r.versions,
+          submittedLabel: r.latest ? formatDue(r.latest.submittedAt, timeZone) : null,
+        }))}
+      />
       <StarterEditor
         classId={id}
         assessmentId={workId}

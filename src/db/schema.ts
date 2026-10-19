@@ -518,3 +518,27 @@ export const workDraft = pgTable(
   },
   (t) => [unique('work_draft_one_per_student').on(t.assessmentId, t.studentId)],
 );
+
+// A student's handed-in work (FR-STU-05): a snapshot of their project, one row per version. Only the latest
+// counts (BR-04); earlier versions stay as history. "Late" is fixed when it's submitted (BR-03).
+export const submission = pgTable(
+  'submission',
+  {
+    id: text('id').primaryKey(),
+    assessmentId: text('assessment_id')
+      .notNull()
+      .references(() => assessment.id, { onDelete: 'cascade' }),
+    studentId: text('student_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    version: integer('version').notNull(),
+    files: jsonb('files').$type<{ path: string; content: string }[]>().notNull(),
+    late: boolean('late').notNull().default(false),
+    submittedAt: ts('submitted_at').notNull().defaultNow(),
+  },
+  (t) => [
+    unique('submission_version_unique').on(t.assessmentId, t.studentId, t.version),
+    index('submission_assessment_idx').on(t.assessmentId),
+    check('submission_version_positive', sql`${t.version} >= 1`),
+  ],
+);

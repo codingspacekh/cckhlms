@@ -111,33 +111,46 @@ export async function rehearsalClass(): Promise<TeachingClass> {
   return { classId: r.classId, className: 'Web Rehearsal · Sun 10:00', topics, students: [USERS.student.name, CLASSMATE] };
 }
 
-// A published Java homework in week 9 of the teaching class, for the editor specs (M4).
-export async function javaHomework(): Promise<{ classId: string; workId: string; title: string }> {
+// Published homework in the teaching class, made through the services (M4 specs).
+type HomeworkSpec = { title: string; language: 'python' | 'java' | 'web'; week: number; instructionsMd: string };
+async function publishedHomework(spec: HomeworkSpec): Promise<{ classId: string; workId: string; title: string }> {
   const c = await teachingClass();
   const { db } = await import('../../src/db/client');
   const { assessment, user } = await import('../../src/db/schema');
   const { and, eq } = await import('drizzle-orm');
   const { saveAssessment } = await import('../../src/modules/assessments/service');
   const { weeksOf } = await import('../../src/modules/teaching/weeks');
-  const title = 'Shapes with packages';
   const [found] = await db
     .select({ id: assessment.id })
     .from(assessment)
-    .where(and(eq(assessment.classId, c.classId), eq(assessment.title, title)));
-  if (found) return { classId: c.classId, workId: found.id, title };
+    .where(and(eq(assessment.classId, c.classId), eq(assessment.title, spec.title)));
+  if (found) return { classId: c.classId, workId: found.id, title: spec.title };
   const teacherId = (await db.select({ id: user.id }).from(user).where(eq(user.username, USERS.teacher.username)))[0]!.id;
   const teacher = { userId: teacherId, username: USERS.teacher.username, name: USERS.teacher.name, role: 'teacher', sessionId: 'e2e' };
-  const week9 = (await weeksOf(c.classId)).find((s) => s.week === 9)!.id;
-  const { id } = await saveAssessment(teacher, week9, {
+  const sessionId = (await weeksOf(c.classId)).find((s) => s.week === spec.week)!.id;
+  const { id } = await saveAssessment(teacher, sessionId, {
     kind: 'homework',
-    title,
-    instructionsMd: 'Add a **Square** class in the `com.club.shapes` package.',
-    language: 'java',
+    title: spec.title,
+    instructionsMd: spec.instructionsMd,
+    language: spec.language,
     maxScore: 10,
     dueMode: 'next_session',
     allowLate: true,
     latePenaltyPct: 10,
     intent: 'publish',
   });
-  return { classId: c.classId, workId: id, title };
+  return { classId: c.classId, workId: id, title: spec.title };
 }
+
+// Java homework in week 9, for the editor spec.
+export const javaHomework = () =>
+  publishedHomework({
+    title: 'Shapes with packages',
+    language: 'java',
+    week: 9,
+    instructionsMd: 'Add a **Square** class in the `com.club.shapes` package.',
+  });
+
+// Python homework in week 10, for the submissions spec.
+export const pythonHomework = () =>
+  publishedHomework({ title: 'Times tables', language: 'python', week: 10, instructionsMd: 'Print the 7 times table.' });
