@@ -219,7 +219,7 @@ The next milestone does not start until all four are true.
 
 **Exit criteria:** on production, the owner sets up the pilot class for real (or a full demo term) without help, and the generated sessions match the club calendar.
 
-### M3 — Teaching (5 days) — ✅ BUILT 2026-10-19 · waiting for owner sign-off
+### M3 — Teaching (5 days) — ✅ DONE 2026-10-19 (owner signed off)
 > **Result** (PRs #9–#13, stacked: merge in order):
 > - **Lesson notes (FR-TCH-01/02, FR-STU-02, ADR-08):**
 >   - each week has a lesson: title, Markdown note and syllabus topics, with a live preview from the same server-side renderer students get;
@@ -264,7 +264,9 @@ The next milestone does not start until all four are true.
 
 **Exit criteria:** on production, a teacher runs one real or rehearsal week end to end (lesson, attendance, Q&A, weekly report), and the syllabus coverage view matches.
 
-### M4 — Assessments (8 days)
+### M4 — Assessments (8 days) — 🚧 IN PROGRESS (started 2026-10-19)
+> **Plan** (stacked PRs, like M3): 1 assessments (set work per week, due rules, BR-16) · 2 editor + starter files + drafts · 3 submissions (late, resubmit, versions, submitted/late/missing list) · 4 Web preview on the preview origin · 5 grading + feedback + return for redo · 6 gradebook + M4 exit journey.
+
 **Goal:** students write and submit code; teachers grade it quickly, including paper work in the gradebook.
 
 **Build:**

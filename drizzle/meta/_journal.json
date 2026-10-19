@@ -71,6 +71,13 @@
       "when": 1792399020372,
       "tag": "0009_class_reports",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792426342615,
+      "tag": "0010_assessments",
+      "breakpoints": true
     }
   ]
 }
