@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { startTransition, useActionState, useRef, useState, useTransition, type FormEvent } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
@@ -90,7 +91,9 @@ export function WorkManager({ classId, sessionId, choices, items }: Props) {
             <tbody>
               {items.map((a) => (
                 <tr key={a.id}>
-                  <th scope="row">{a.title}</th>
+                  <th scope="row">
+                    {a.language === 'paper' ? a.title : <Link href={`/teacher/classes/${classId}/work/${a.id}`}>{a.title}</Link>}
+                  </th>
                   <td>{KIND_LABEL[a.kind]}</td>
                   <td>{WORK_LANGUAGE_LABEL[a.language]}</td>
                   <td className="n tnum">{a.maxScore}</td>

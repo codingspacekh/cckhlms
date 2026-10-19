@@ -67,3 +67,37 @@ export function formatDue(due: Date | null, tz: string): string {
   const t = toClubTime(due, tz);
   return `${formatDate(t.date)}, ${t.time}`;
 }
+
+// The project a student starts from when the teacher hasn't saved starter files (FR-CODE-06).
+export function defaultStarter(language: WorkLanguage): { path: string; content: string }[] {
+  if (language === 'python') return [{ path: 'main.py', content: '# Write your program here\n' }];
+  if (language === 'java')
+    return [
+      {
+        path: 'src/Main.java',
+        content: 'public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello!");\n    }\n}\n',
+      },
+    ];
+  if (language === 'web')
+    return [
+      {
+        path: 'index.html',
+        content:
+          '<!doctype html>\n<html>\n  <head>\n    <meta charset="utf-8">\n    <title>My page</title>\n    <link rel="stylesheet" href="style.css">\n  </head>\n  <body>\n    <h1>Hello!</h1>\n    <script src="script.js"></script>\n  </body>\n</html>\n',
+      },
+      { path: 'script.js', content: 'console.log("Hello from script.js");\n' },
+      { path: 'style.css', content: 'body {\n  font-family: sans-serif;\n}\n' },
+    ];
+  return [];
+}
+
+// 'countdown-to-lift-off-bopha.l': the name of a downloaded project, without .zip.
+export function zipNameFor(title: string, username?: string): string {
+  const slug =
+    title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 60) || 'project';
+  return username ? `${slug}-${username}` : slug;
+}

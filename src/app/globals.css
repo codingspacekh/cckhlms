@@ -29,6 +29,15 @@
   --f-mono: var(--font-geist-mono), ui-monospace, Menlo, Consolas, monospace;
   --r: 12px;
   --r-sm: 8px;
+  /* code highlighting in the editor (FR-CODE-01), readable on --surface in both themes */
+  --code-keyword: #8b2bb9;
+  --code-string: #0a7a3e;
+  --code-number: #9a4f00;
+  --code-comment: #5f6977;
+  --code-def: #1c5cab;
+  --code-type: #9a4f00;
+  --code-tag: #a72a2a;
+  --code-attr: #875800;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -52,6 +61,14 @@
     --warn-soft: #33280f;
     --bad-text: #f28484;
     --bad-soft: #3a1717;
+    --code-keyword: #c99bf0;
+    --code-string: #8fd18a;
+    --code-number: #f5a96b;
+    --code-comment: #8f99aa;
+    --code-def: #7fb2f0;
+    --code-type: #f2c04f;
+    --code-tag: #f28484;
+    --code-attr: #f2c04f;
     color-scheme: dark;
   }
 }
@@ -1206,4 +1223,125 @@ td.text {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* the multi-file editor (M4): file tree beside the code; stacked on phones */
+.project {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.project-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.bad-text {
+  color: var(--bad-text);
+}
+.ide {
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr);
+  height: min(560px, 70vh);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  overflow: hidden;
+  background: var(--surface);
+}
+.tree {
+  border-right: 1px solid var(--line);
+  background: var(--surface-2);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.tree-actions {
+  display: flex;
+  gap: 2px;
+  padding: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.tree-form {
+  padding: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.tree nav ul {
+  padding: 6px 0;
+}
+.tree li {
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+.tree li.folder {
+  color: var(--muted);
+  padding: 4px 10px;
+  font-family: var(--f-mono);
+  font-size: 0.78rem;
+}
+.tree button.file {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 5px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font-family: var(--f-mono);
+  font-size: 0.8rem;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tree button.file:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+.tree button.file[aria-current='true'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 500;
+}
+.tree li[data-depth='1'] > *,
+.tree li.folder[data-depth='1'] {
+  padding-left: 22px;
+}
+.tree li[data-depth='2'] > *,
+.tree li.folder[data-depth='2'] {
+  padding-left: 34px;
+}
+.tree li[data-depth='3'] > *,
+.tree li.folder[data-depth='3'] {
+  padding-left: 46px;
+}
+.tree li[data-depth='4'] > *,
+.tree li.folder[data-depth='4'] {
+  padding-left: 58px;
+}
+.tree li[data-depth='5'] > *,
+.tree li.folder[data-depth='5'],
+.tree li[data-depth='6'] > *,
+.tree li.folder[data-depth='6'] {
+  padding-left: 70px;
+}
+.code-area {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.code-area .cm-editor {
+  height: 100%;
+}
+@media (max-width: 700px) {
+  .ide {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(320px, 1fr);
+    height: auto;
+  }
+  .tree {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    max-height: 180px;
+  }
 }

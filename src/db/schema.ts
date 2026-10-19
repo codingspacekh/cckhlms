@@ -482,6 +482,8 @@ export const assessment = pgTable(
     dueAt: ts('due_at'),
     allowLate: boolean('allow_late').notNull().default(true),
     latePenaltyPct: integer('late_penalty_pct').notNull().default(10),
+    // FR-CODE-06: the template project copied into each student's draft. [] = the language's default template.
+    starterFiles: jsonb('starter_files').$type<{ path: string; content: string }[]>().notNull().default([]),
     status: text('status').notNull().default('draft'),
     authorId: text('author_id').references(() => user.id, { onDelete: 'set null' }),
     createdAt: ts('created_at').notNull().defaultNow(),
@@ -497,4 +499,22 @@ export const assessment = pgTable(
     check('assessment_due_mode_known', sql`${t.dueMode} in ('next_session', 'session_end', 'fixed')`),
     check('assessment_due_at_when_fixed', sql`(${t.dueMode} = 'fixed') = (${t.dueAt} is not null)`),
   ],
+);
+
+// A student's work in progress on one piece of work (FR-CODE-05), autosaved while they type. It starts as a copy
+// of the starter files; submitting (M4 PR 3) snapshots it. Checked against the project limits on every save.
+export const workDraft = pgTable(
+  'work_draft',
+  {
+    id: text('id').primaryKey(),
+    assessmentId: text('assessment_id')
+      .notNull()
+      .references(() => assessment.id, { onDelete: 'cascade' }),
+    studentId: text('student_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    files: jsonb('files').$type<{ path: string; content: string }[]>().notNull(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [unique('work_draft_one_per_student').on(t.assessmentId, t.studentId)],
 );

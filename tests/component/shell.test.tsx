@@ -5,8 +5,12 @@ import { Sidebar } from '@/components/shell/Sidebar';
 import { Pill } from '@/components/ui/Pill';
 import { NAV } from '@/components/shell/nav';
 
-vi.mock('next/navigation', () => ({ usePathname: () => '/admin' }));
-afterEach(cleanup);
+let pathname = '/admin';
+vi.mock('next/navigation', () => ({ usePathname: () => pathname }));
+afterEach(() => {
+  cleanup();
+  pathname = '/admin';
+});
 
 describe('Sidebar', () => {
   it('shows the navigation for the role and marks the current page', () => {
@@ -15,6 +19,29 @@ describe('Sidebar', () => {
     for (const section of NAV.admin)
       for (const item of section.items) expect(within(nav).getByRole('link', { name: item.label })).toBeTruthy();
     expect(within(nav).getByRole('link', { name: 'Dashboard' }).getAttribute('aria-current')).toBe('page');
+  });
+
+  it('lists a teacher’s classes; the open class shows its sections with the current one marked', () => {
+    pathname = '/teacher/classes/c1/students';
+    const classes = [
+      { id: 'c1', name: 'Python Level 1 · Sat 09:00' },
+      { id: 'c2', name: 'Java Level 2 · Sat 14:00' },
+    ];
+    render(<Sidebar role="teacher" user={{ name: 'Sophea Chan', roleLabel: 'Teacher' }} classes={classes} />);
+    const nav = screen.getByRole('navigation', { name: 'Sections' });
+    expect(within(nav).getByRole('link', { name: 'Java Level 2 · Sat 14:00' }).getAttribute('href')).toBe('/teacher/classes/c2');
+    const open = within(nav).getByRole('group', { name: 'Python Level 1 · Sat 09:00 sections' });
+    expect(
+      within(open)
+        .getAllByRole('link')
+        .map((a) => [a.textContent, a.getAttribute('href'), a.getAttribute('aria-current')]),
+    ).toEqual([
+      ['Weeks', '/teacher/classes/c1', null],
+      ['Students', '/teacher/classes/c1/students', 'page'],
+      ['Syllabus', '/teacher/classes/c1/syllabus', null],
+      ['Schedule', '/teacher/classes/c1/schedule', null],
+    ]);
+    expect(within(nav).queryByRole('group', { name: 'Java Level 2 · Sat 14:00 sections' })).toBeNull();
   });
 
   it('shows who is signed in and a sign-out button', () => {

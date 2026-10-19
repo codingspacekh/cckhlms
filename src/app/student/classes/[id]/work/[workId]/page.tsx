@@ -1,16 +1,19 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { StudentWorkspace } from '@/components/editor/StudentWorkspace';
 import { Pill } from '@/components/ui/Pill';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { formatDue, KIND_LABEL, WORK_LANGUAGE_LABEL } from '@/modules/assessments/rules';
+import { studentProject } from '@/modules/assessments/projects';
+import { formatDue, KIND_LABEL, WORK_LANGUAGE_LABEL, zipNameFor } from '@/modules/assessments/rules';
 import { readAssessment } from '@/modules/assessments/service';
 import { getClubSettings } from '@/modules/club/service';
 import { pageData, requireActor } from '@/server/guard';
 
 export const metadata: Metadata = { title: 'Classwork & homework' };
 
-// One piece of work for a student: what to do, and when it's due (FR-STU-05).
+// One piece of work for a student: what to do, when it's due, and their project in the editor (FR-STU-05).
 export default async function StudentWorkPage({ params }: { params: Promise<{ id: string; workId: string }> }) {
   const actor = await requireActor('student.area');
   const { id, workId } = await params;
@@ -59,6 +62,30 @@ export default async function StudentWorkPage({ params }: { params: Promise<{ id
         aria-label="Instructions"
         dangerouslySetInnerHTML={{ __html: a.instructionsHtml || '<p>No instructions.</p>' }}
       />
+      {a.language === 'paper' ? (
+        <p className="card small muted">This work is done on paper or in class. Your teacher enters the score.</p>
+      ) : (
+        <Workspace assessmentId={workId} username={actor.username} title={a.title} java={a.language === 'java'} timeZone={timeZone} />
+      )}
     </>
+  );
+}
+
+async function Workspace(props: { assessmentId: string; username: string; title: string; java: boolean; timeZone: string }) {
+  const actor = await requireActor('student.area');
+  const [{ files, savedAt }, nonce] = await Promise.all([
+    pageData(studentProject(actor, props.assessmentId)),
+    headers().then((h) => h.get('x-nonce') ?? ''),
+  ]);
+  return (
+    <StudentWorkspace
+      assessmentId={props.assessmentId}
+      initial={files}
+      savedAt={savedAt?.toISOString() ?? null}
+      nonce={nonce}
+      java={props.java}
+      zipName={zipNameFor(props.title, props.username)}
+      timeZone={props.timeZone}
+    />
   );
 }

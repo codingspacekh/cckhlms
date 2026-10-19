@@ -30,6 +30,7 @@ const MATRIX: Record<Action, Record<Role, Rule>> = {
   'report.write': { admin: false, teacher: 'own', student: false },
   'assessment.write': { admin: false, teacher: 'own', student: false },
   'assessment.read': { admin: true, teacher: 'own', student: 'own' },
+  'work.save': { admin: false, teacher: false, student: 'own' },
 };
 
 const actor = (role: string): Actor => ({ userId: 'u1', username: 'x', name: 'X', role, sessionId: 's1' });

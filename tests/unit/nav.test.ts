@@ -13,8 +13,9 @@ describe('classSectionActive', () => {
     expect(active(`${base}/schedule`)).toEqual(['Schedule']);
   });
 
-  it('counts every week page as Weeks', () => {
+  it('counts every week page, and each piece of work, as Weeks', () => {
     expect(active(`${base}/weeks/3`)).toEqual(['Weeks']);
+    expect(active(`${base}/work/a1`)).toEqual(['Weeks']);
     expect(active(`${base}/weeks/3/attendance`)).toEqual(['Weeks']);
   });
 

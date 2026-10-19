@@ -24,7 +24,7 @@ export const NAV: Record<Role, NavSection[]> = {
 };
 
 // A teacher's class opens in the sidebar as these sections (owner, 2026-10-19: sub-tabs instead of one long page).
-// The week pages (lesson, attendance, questions, report) belong to Weeks.
+// The week pages (lesson, attendance, questions, report) and each piece of work belong to Weeks.
 export type ClassLink = { id: string; name: string };
 export const CLASS_SECTIONS = [
   { path: '', label: 'Weeks' },
@@ -34,6 +34,6 @@ export const CLASS_SECTIONS = [
 ] as const;
 
 export function classSectionActive(pathname: string, base: string, path: string) {
-  if (path === '') return pathname === base || pathname.startsWith(`${base}/weeks`);
+  if (path === '') return pathname === base || pathname.startsWith(`${base}/weeks`) || pathname.startsWith(`${base}/work/`);
   return pathname === base + path || pathname.startsWith(`${base + path}/`);
 }

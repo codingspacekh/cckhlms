@@ -110,3 +110,34 @@ export async function rehearsalClass(): Promise<TeachingClass> {
     await enrolStudent(admin, r.classId, await idOfName(name), { enrolledOn: sunday, confirmClashes: true });
   return { classId: r.classId, className: 'Web Rehearsal · Sun 10:00', topics, students: [USERS.student.name, CLASSMATE] };
 }
+
+// A published Java homework in week 9 of the teaching class, for the editor specs (M4).
+export async function javaHomework(): Promise<{ classId: string; workId: string; title: string }> {
+  const c = await teachingClass();
+  const { db } = await import('../../src/db/client');
+  const { assessment, user } = await import('../../src/db/schema');
+  const { and, eq } = await import('drizzle-orm');
+  const { saveAssessment } = await import('../../src/modules/assessments/service');
+  const { weeksOf } = await import('../../src/modules/teaching/weeks');
+  const title = 'Shapes with packages';
+  const [found] = await db
+    .select({ id: assessment.id })
+    .from(assessment)
+    .where(and(eq(assessment.classId, c.classId), eq(assessment.title, title)));
+  if (found) return { classId: c.classId, workId: found.id, title };
+  const teacherId = (await db.select({ id: user.id }).from(user).where(eq(user.username, USERS.teacher.username)))[0]!.id;
+  const teacher = { userId: teacherId, username: USERS.teacher.username, name: USERS.teacher.name, role: 'teacher', sessionId: 'e2e' };
+  const week9 = (await weeksOf(c.classId)).find((s) => s.week === 9)!.id;
+  const { id } = await saveAssessment(teacher, week9, {
+    kind: 'homework',
+    title,
+    instructionsMd: 'Add a **Square** class in the `com.club.shapes` package.',
+    language: 'java',
+    maxScore: 10,
+    dueMode: 'next_session',
+    allowLate: true,
+    latePenaltyPct: 10,
+    intent: 'publish',
+  });
+  return { classId: c.classId, workId: id, title };
+}
