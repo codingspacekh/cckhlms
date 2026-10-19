@@ -47,6 +47,7 @@ describe('startup', () => {
       'term',
       'user',
       'verification',
+      'work_draft',
     ]);
   });
 

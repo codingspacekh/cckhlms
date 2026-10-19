@@ -1,7 +1,7 @@
 // FR-TCH-07/08 · BR-16 · BR-19: when classwork, homework and exams are due, worked out from the class's
 // sessions in club time each time they're read.
 import { describe, expect, it } from 'vitest';
-import { defaultDueMode, dueChoices, formatDue, nextHeldSession, resolveDue } from '@/modules/assessments/rules';
+import { defaultDueMode, dueChoices, formatDue, nextHeldSession, resolveDue, zipNameFor } from '@/modules/assessments/rules';
 
 const TZ = 'Asia/Phnom_Penh'; // UTC+7, no daylight saving
 const s = (id: string, date: string, cancelled = false) => ({ id, date, startTime: '09:00', minutes: 90, cancelled });
@@ -77,5 +77,13 @@ describe('formatDue', () => {
     expect(formatDue(new Date('2027-01-16T02:00:00Z'), TZ)).toBe('Sat 16 Jan 2027, 09:00');
     expect(formatDue(new Date('2027-01-16T17:30:00Z'), TZ)).toBe('Sun 17 Jan 2027, 00:30'); // the date changes at local midnight
     expect(formatDue(null, TZ)).toBe('No due date');
+  });
+});
+
+describe('zipNameFor', () => {
+  it('names a downloaded project after the work (and the student), safe for any computer', () => {
+    expect(zipNameFor('Countdown to lift off!')).toBe('countdown-to-lift-off');
+    expect(zipNameFor('Shapes: part 2', 'bopha.l')).toBe('shapes-part-2-bopha.l');
+    expect(zipNameFor('???')).toBe('project');
   });
 });
