@@ -3,7 +3,14 @@
 import { E2E } from '../../playwright.config';
 import { USERS } from './global-setup';
 
-export type TeachingClass = { classId: string; className: string; topics: string[] };
+export type TeachingClass = { classId: string; className: string; topics: string[]; students: string[] };
+// Bopha Lim (the e2e student account) plus 14 classmates: a full weekend class. None of these names is
+// used by the M2 specs, which look people up by name.
+// prettier-ignore
+const CLASSMATES = [
+  'Borey Sam', 'Dara Pen', 'Kanha Mao', 'Lina Sok', 'Malis Hem', 'Mony Ly', 'Piseth Long',
+  'Rithy Som', 'Sokha Pich', 'Sreyleak Chea', 'Theara Nhem', 'Vanna Ros', 'Vichea Tan', 'Visal Chhay',
+];
 let cached: TeachingClass | null = null;
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
@@ -18,6 +25,7 @@ export async function teachingClass(): Promise<TeachingClass> {
   const { createCourse, setSyllabus } = await import('../../src/modules/academics/courses');
   const { createClass } = await import('../../src/modules/academics/classes');
   const { enrolStudent } = await import('../../src/modules/academics/enrolments');
+  const { createAccount } = await import('../../src/modules/identity/service');
   const { todayIn } = await import('../../src/modules/academics/schedule');
 
   const idOf = async (username: string) => (await db.select({ id: user.id }).from(user).where(eq(user.username, username)))[0]!.id;
@@ -25,7 +33,8 @@ export async function teachingClass(): Promise<TeachingClass> {
   const existing = await db.select({ id: klass.id, name: klass.name }).from(klass).where(eq(klass.room, 'Teaching lab'));
 
   const topics = ['Output with print()', 'Variables & input()', 'Conditions', 'for loops & range()', 'while loops'];
-  if (existing[0]) return (cached = { classId: existing[0].id, className: existing[0].name, topics });
+  const students = [USERS.student.name, ...CLASSMATES].sort();
+  if (existing[0]) return (cached = { classId: existing[0].id, className: existing[0].name, topics, students });
 
   const today = new Date(`${todayIn('Asia/Phnom_Penh')}T00:00:00Z`);
   const first = new Date(today.getTime() - (((today.getUTCDay() + 1) % 7) + 21) * 86_400_000); // Saturday, 3+ weeks ago
@@ -51,5 +60,9 @@ export async function teachingClass(): Promise<TeachingClass> {
   });
   if (r.status !== 'created') throw new Error('fixture class not created');
   await enrolStudent(admin, r.classId, await idOf(USERS.student.username), { enrolledOn: iso(first) });
-  return (cached = { classId: r.classId, className: 'Python Teaching · Sat 09:00', topics });
+  for (const name of CLASSMATES) {
+    const a = await createAccount(admin, { role: 'student', name });
+    await enrolStudent(admin, r.classId, a.userId, { enrolledOn: iso(first) });
+  }
+  return (cached = { classId: r.classId, className: 'Python Teaching · Sat 09:00', topics, students });
 }

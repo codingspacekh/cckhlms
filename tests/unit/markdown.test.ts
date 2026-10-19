@@ -4,10 +4,11 @@ import { JSDOM } from 'jsdom';
 import { describe, expect, it } from 'vitest';
 import { renderMarkdown } from '@/lib/markdown';
 
+// prettier-ignore
 const ALLOWED_TAGS = new Set([
   'p', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong', 'em', 's', 'code', 'pre', 'blockquote', 'ul', 'ol', 'li', 'a', 'img',
   'hr', 'br', 'table', 'thead', 'tbody', 'tr', 'th', 'td',
-]); // prettier-ignore
+]);
 const SAFE_URL = /^(https?:\/\/|mailto:|\/(?!\/)|#)/i;
 
 // Parses the output and fails on anything outside a small allowlist of tags, attributes and URL schemes.

@@ -22,6 +22,7 @@ describe('startup', () => {
     await startup({ bootstrapAdmin: null });
     expect(await tables()).toEqual([
       'account',
+      'attendance',
       'audit_log',
       'class',
       'class_session',

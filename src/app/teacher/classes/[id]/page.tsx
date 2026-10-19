@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { getClass } from '@/modules/academics/classes';
 import { listRoster } from '@/modules/academics/enrolments';
 import { scheduleLabel } from '@/modules/academics/schedule';
+import { classAttendance } from '@/modules/attendance/attendance';
 import { classWeeks } from '@/modules/teaching/lessons';
 import { ValidationError } from '@/server/errors';
 import { requireActor } from '@/server/guard';
@@ -20,7 +21,8 @@ export default async function TeacherClassPage({ params }: { params: Promise<{ i
   const { id } = await params;
   const c = await getClass(actor, id).catch((e) => (e instanceof ValidationError ? null : Promise.reject(e)));
   if (!c) notFound();
-  const [roster, weeks] = await Promise.all([listRoster(actor, id), classWeeks(actor, id)]);
+  const [roster, weeks, rates] = await Promise.all([listRoster(actor, id), classWeeks(actor, id), classAttendance(actor, id)]);
+  const attendance = new Map([...rates].map(([enrolmentId, r]) => [enrolmentId, r.percent]));
   return (
     <>
       <PageHeader eyebrow={<Link href="/teacher">My classes</Link>} title={c.name} />
@@ -52,7 +54,7 @@ export default async function TeacherClassPage({ params }: { params: Promise<{ i
       <section className="stack" aria-labelledby="students-title">
         <h2 id="students-title">Students</h2>
         <div className="card flush">
-          <RosterTable rows={roster} />
+          <RosterTable rows={roster} attendance={attendance} />
         </div>
       </section>
       <h2>Schedule changes</h2>

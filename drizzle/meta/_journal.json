@@ -50,6 +50,13 @@
       "when": 1792397108766,
       "tag": "0006_lesson_attachments",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792397612478,
+      "tag": "0007_attendance",
+      "breakpoints": true
     }
   ]
 }
