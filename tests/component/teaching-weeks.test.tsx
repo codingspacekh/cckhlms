@@ -17,6 +17,7 @@ const row = (over: object) => ({
   minutes: 90,
   cancelled: false,
   lesson: null,
+  toReview: 0,
   ...over,
 });
 
@@ -26,7 +27,7 @@ describe('WeeksTable', () => {
       <WeeksTable
         classId="c1"
         weeks={[
-          row({ sessionId: 's1', week: 1, lesson: { title: 'print()', state: 'published' } }),
+          row({ sessionId: 's1', week: 1, lesson: { title: 'print()', state: 'published' }, toReview: 2 }),
           row({ sessionId: 's2', week: null, date: '2027-01-16', cancelled: true }),
           row({ sessionId: 's3', week: 2, date: '2027-01-23', lesson: { title: 'Variables', state: 'scheduled' } }),
           row({ sessionId: 's4', week: 3, date: '2027-01-30' }),
@@ -37,7 +38,7 @@ describe('WeeksTable', () => {
       .getAllByRole('row')
       .slice(1);
     expect(rows.map((r) => r.textContent)).toEqual([
-      'Week 1Sat 9 Jan 2027print()Published',
+      'Week 1Sat 9 Jan 2027print()Published2 to review',
       'No classSat 16 Jan 2027Cancelled',
       'Week 2Sat 23 Jan 2027VariablesScheduled',
       'Week 3Sat 30 Jan 2027Not written yet',

@@ -1045,3 +1045,54 @@ td a:hover,
 th a:hover {
   text-decoration: underline;
 }
+
+/* Q&A (M3) */
+.lesson-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 1000px) {
+  .lesson-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.q {
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 14px 16px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.q.review {
+  border-style: dashed;
+}
+.q .md p {
+  margin: 4px 0;
+}
+.qa-head {
+  flex-wrap: wrap;
+}
+.reply {
+  margin-left: 14px;
+  padding-left: 12px;
+  border-left: 2px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.reply.accepted {
+  border-left-color: var(--good);
+}
+pre.code {
+  background: var(--surface-2);
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+  overflow: auto;
+  font-family: var(--f-mono);
+  font-size: 0.82rem;
+  margin: 0;
+}
