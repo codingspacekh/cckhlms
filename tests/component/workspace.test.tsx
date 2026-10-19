@@ -47,6 +47,7 @@ const v = (version: number, at: string, more: Partial<SubmitPanel['versions'][nu
   counts: null,
   feedbackHtml: '',
   returned: false,
+  byTeacher: false,
   ...more,
 });
 const props = {
@@ -189,6 +190,16 @@ describe('handing it in (FR-STU-05)', () => {
     expect(mark.querySelector('.md')!.innerHTML).toBe('<p>Good <strong>loop</strong>.</p>');
     expect(screen.getByRole('list', { name: 'Versions you submitted' }).textContent).toBe(
       'Version 2Sat 16 Jan 2027, 12:00Late8 / 10Version 1Thu 14 Jan 2027, 18:00Returned',
+    );
+  });
+
+  it('FR-TCH-19: a mark the teacher entered in the gradebook isn’t shown as something they handed in', () => {
+    const versions = [v(1, 'Sun 17 Jan 2027, 10:00', { byTeacher: true, score: 0, counts: 0 })];
+    const reason = 'Your teacher has marked this, so it can’t be changed.';
+    render(<StudentWorkspace {...props} submit={{ ...open, canSubmit: false, reason, mark: 'graded', versions }} />);
+    expect(screen.getByTestId('submit-state').textContent).toBe('Your teacher entered a mark without a hand-in.');
+    expect(screen.getByRole('list', { name: 'Versions you submitted' }).textContent).toBe(
+      'Mark from your teacherSun 17 Jan 2027, 10:000 / 10',
     );
   });
 

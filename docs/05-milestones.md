@@ -264,8 +264,43 @@ The next milestone does not start until all four are true.
 
 **Exit criteria:** on production, a teacher runs one real or rehearsal week end to end (lesson, attendance, Q&A, weekly report), and the syllabus coverage view matches.
 
-### M4 — Assessments (8 days) — 🚧 IN PROGRESS (started 2026-10-19)
-> **Plan** (stacked PRs, like M3): 1 assessments (set work per week, due rules, BR-16) · 2 editor + starter files + drafts · 3 submissions (late, resubmit, versions, submitted/late/missing list) · 4 Web preview on the preview origin · 5 grading + feedback + return for redo · 6 gradebook + M4 exit journey.
+### M4 — Assessments (8 days) — ✅ CODE DONE 2026-10-20 · waiting for the owner's review
+> **Result** (PRs #14–#19, stacked: merge in order):
+> - **Setting work (FR-TCH-07/08, BR-01, BR-16):**
+>   - each week has a **Classwork & homework** tab: classwork, homework or exam; Python, Java, Web or paper / in class; out of; late policy; draft or published;
+>   - homework is due at the start of the next session by default, classwork at the end of its own session, or a fixed time;
+>   - the due time is worked out when read, so cancelling or moving a session moves it (BR-16) with no job to run.
+> - **Editor (FR-CODE-01/02/03/05/06, ADR 0002):**
+>   - CodeMirror 6 with a file tree (add, rename, delete), up to 30 files / 200 KB;
+>   - upload files or a .zip (an IDE's top folder is stripped; unsafe paths refused), download a .zip;
+>   - the Java package check with a one-click fix;
+>   - teachers set starter files; students' drafts autosave a second after typing, at once for whole-file changes, and before the tab closes;
+>   - the editor page's JavaScript is 306 KB gzipped (measured 2026-10-20): inside the 450 KB budget, but 6 KB over M0's ≤ 300 KB target.
+> - **Web preview (FR-CODE-04, NFR-05/06, ADR 0001):** the student's page runs on the preview origin in a sandboxed frame, with a console panel. Spike A's isolation tests run against the real app: the page can't read LMS cookies, the LMS page, its storage or LMS pages, and LMS actions refuse requests from it.
+> - **Submissions (FR-STU-05, FR-TCH-10, BR-03, BR-04, BR-17):**
+>   - **Submit** saves first, so the last change is always in it;
+>   - resubmit until the due time, every version kept; after it, late if allowed, otherwise refused;
+>   - the teacher's list shows submitted / late / missing / not due / joined after it was due, with counts; "missing" is worked out when read.
+> - **Marking (FR-TCH-11/12, FR-STU-06, BR-04, BR-14):**
+>   - each student's work opens read-only (with the preview for Web), downloads as a .zip, and shows older versions as history;
+>   - score + feedback go on the latest version only: a newer hand-in since the page loaded is never overwritten;
+>   - **Return for redo** needs a note; the student can hand it in again, even after the due time;
+>   - students see their mark, the feedback, and what late work counts as after the penalty; their work lists say *Marked 8.5 / 10*, *Returned for redo*, *Handed in* or *Missing*.
+> - **Gradebook (FR-TCH-19, BR-12, BR-13, BR-17):**
+>   - a **Gradebook** tab per class: students × published work; type a score, `ex` to excuse, or nothing to clear;
+>   - Tab moves across, Enter / Shift+Enter down / up; each cell saves by itself; errors keep what was typed;
+>   - scores for paper work (or for code work never handed in) become submissions without files;
+>   - each student's current overall score: 60 % exams + 30 % classwork + 10 % homework from work that's marked or missing (late penalty taken off, excused and not-yet-due left out), shown against the course's pass mark;
+>   - a comment per cell, which the student sees with their mark.
+> - **Permissions:** `assessment.write` and `work.grade` are for the class's own teachers; `work.save` and `work.submit` for students enrolled now, who only ever see their own work and marks (BR-11).
+> - **Migrations 0010–0014:** assessments; drafts; submissions; marks on submissions; excusals and teacher-entered scores.
+> - **Tests:** 415 unit/component (98 % lines), 181 integration (98 % lines), 82 e2e. They include the **M4 exit journey** (`m4-journey.spec.ts`): the teacher sets Java homework → the student writes two files, fixes the package warning and submits → the teacher downloads the .zip and marks it → the student sees the score and feedback. They also include the Web preview and isolation tests (`preview.spec.ts`) and a class's paper-quiz scores typed into the gradebook by keyboard (`gradebook.spec.ts`: 15 students in about 3 seconds, against the 2-minute exit criterion).
+> - **Found and fixed by the tests:** reloading within a second of an upload lost it (now saved at once); React 19 cleared the Set-work form after an error (now submitted by hand); the mark form lost its confirmation when the page refreshed.
+> - **Left for later:**
+>   - inline line comments (FR-TCH-11, "C");
+>   - the older Courses / People / Lesson forms still clear what was typed after an error (the same React 19 behaviour, fixed in M4's new forms).
+> - **Local demo data:** `npm run seed:dev` now adds M4 data for Python Level 1: a homework with one marked and one to-mark hand-in, a Web homework, and week 2's paper quiz in the gradebook.
+> - **Exit criterion:** until G1 the owner checks it on a local production build (or `npm run seed:dev` + `npm run dev`).
 
 **Goal:** students write and submit code; teachers grade it quickly, including paper work in the gradebook.
 

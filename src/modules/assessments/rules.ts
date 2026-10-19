@@ -171,3 +171,77 @@ export function afterPenalty(score: number, a: { late: boolean; latePenaltyPct: 
   if (!a.late || a.latePenaltyPct <= 0) return score;
   return Math.round(score * (100 - a.latePenaltyPct)) / 100;
 }
+
+// FR-TCH-19: one gradebook cell, worked out when read like "missing" (ADR-08). Excused (by the teacher, or
+// joined after it was due, BR-17) wins over everything else.
+export type CellState = 'graded' | 'to_mark' | 'returned' | 'missing' | 'not_due' | 'excused';
+export const CELL_LABEL: Record<CellState, string> = {
+  graded: 'Marked',
+  to_mark: 'To mark',
+  returned: 'Returned',
+  missing: 'Missing',
+  not_due: 'Not due yet',
+  excused: 'Excused',
+};
+
+export function cellOf(a: {
+  latest: { late: boolean; score: number | null; returnedAt: Date | null } | null;
+  excused: boolean;
+  due: Date | null;
+  now: Date;
+  enrolledOn: string;
+  tz: string;
+}): { state: CellState; late: boolean } {
+  const late = a.latest?.late ?? false;
+  if (a.excused) return { state: 'excused', late };
+  const mark = markOf(a.latest);
+  if (mark) return { state: mark, late };
+  const status = workStatus({ latest: null, due: a.due, now: a.now, enrolledOn: a.enrolledOn, tz: a.tz });
+  return { state: status === 'excused' ? 'excused' : status === 'missing' ? 'missing' : 'not_due', late };
+}
+
+// What a cell adds to the overall score (BR-12): the mark after any late penalty (BR-14); missing work is 0;
+// anything not marked yet, or excused, is left out.
+export function pointsOf(cell: { state: CellState; late: boolean }, score: number | null, latePenaltyPct: number): number | null {
+  if (cell.state === 'missing') return 0;
+  if (cell.state !== 'graded' || score === null) return null;
+  return afterPenalty(score, { late: cell.late, latePenaltyPct });
+}
+
+// What the teacher typed in a gradebook cell.
+export function parseCell(raw: string, maxScore: number): { kind: 'score'; score: number } | { kind: 'excuse' } | { kind: 'clear' } {
+  const text = raw.trim();
+  if (!text) return { kind: 'clear' };
+  if (text.toLowerCase() === 'ex') return { kind: 'excuse' };
+  try {
+    return { kind: 'score', score: checkScore(text, maxScore) };
+  } catch {
+    throw new ValidationError(`Enter a score from 0 to ${maxScore}, in steps of 0.5, or ex to excuse.`);
+  }
+}
+
+// BR-12: overall out of 100 = 60 × exam + 30 × classwork + 10 × homework, each as total points over total
+// maximum of the work that counts. A category with nothing counted shares its weight among the others.
+export const KIND_WEIGHT: Record<Kind, number> = { exam: 60, classwork: 30, homework: 10 };
+const round1 = (n: number) => Math.round(n * 10) / 10;
+
+export function overallScore(items: { kind: Kind; maxScore: number; points: number | null }[]): {
+  overall: number | null;
+} & Record<Kind, number | null> {
+  const pct = {} as Record<Kind, number | null>;
+  let sum = 0;
+  let weights = 0;
+  for (const kind of KINDS) {
+    const counted = items.filter((i) => i.kind === kind && i.points !== null);
+    const max = counted.reduce((n, i) => n + i.maxScore, 0);
+    if (!max) {
+      pct[kind] = null;
+      continue;
+    }
+    const fraction = counted.reduce((n, i) => n + i.points!, 0) / max;
+    pct[kind] = round1(fraction * 100);
+    sum += KIND_WEIGHT[kind] * fraction;
+    weights += KIND_WEIGHT[kind];
+  }
+  return { overall: weights ? round1((sum / weights) * 100) : null, ...pct };
+}

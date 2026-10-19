@@ -3,7 +3,7 @@
 // "missing" is worked out when read. Marks live on the version they were given to (grading.ts).
 import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { enrolment, submission, user, workDraft } from '@/db/schema';
+import { enrolment, excusal, submission, user, workDraft } from '@/db/schema';
 import type { ProjectFile } from '@/lib/project/files';
 import { renderMarkdown } from '@/lib/markdown';
 import { classAccess } from '@/modules/academics/access';
@@ -70,6 +70,7 @@ export type MyVersion = {
   counts: number | null; // the score after any late penalty (BR-14)
   feedbackHtml: string;
   returned: boolean;
+  byTeacher: boolean; // a mark the teacher entered in the gradebook, with no files
 };
 export type MySubmissions = {
   due: Date | null;
@@ -105,6 +106,7 @@ export async function mySubmissions(actor: Actor | null, assessmentId: string, o
       counts: r.score === null ? null : afterPenalty(r.score, { late: r.late, latePenaltyPct: a.latePenaltyPct }),
       feedbackHtml: r.feedbackMd ? renderMarkdown(r.feedbackMd) : '',
       returned: !!r.returnedAt,
+      byTeacher: r.byTeacher,
     })),
   };
 }
@@ -140,6 +142,7 @@ export async function submissionList(actor: Actor | null, assessmentId: string, 
         late: submission.late,
         score: submission.score,
         returnedAt: submission.returnedAt,
+        byTeacher: submission.byTeacher,
       })
       .from(submission)
       .where(eq(submission.assessmentId, assessmentId))
@@ -148,12 +151,13 @@ export async function submissionList(actor: Actor | null, assessmentId: string, 
   const rows: SubmissionRow[] = students.map((s) => {
     const mine = subs.filter((x) => x.studentId === s.id);
     const top = mine[0];
-    const latest = top ? { version: top.version, submittedAt: top.submittedAt, late: top.late } : null;
+    // A mark entered in the gradebook for work never handed in isn't a hand-in.
+    const latest = top && !top.byTeacher ? { version: top.version, submittedAt: top.submittedAt, late: top.late } : null;
     const mark = markOf(top ?? null);
     return {
       studentId: s.id,
       name: s.name,
-      versions: mine.length,
+      versions: mine.filter((x) => !x.byTeacher).length,
       latest,
       mark,
       score: mark === 'graded' ? top!.score : null,
@@ -178,7 +182,7 @@ export async function myStanding(
   assertCan(actor, 'work.submit', await classAccess(classId));
   const now = opts.now ?? new Date();
   const ids = items.map((i) => i.id);
-  const [{ timeZone: tz }, [enrolled], subs] = await Promise.all([
+  const [{ timeZone: tz }, [enrolled], subs, excused] = await Promise.all([
     getClubSettings(),
     db
       .select({ enrolledOn: enrolment.enrolledOn })
@@ -196,9 +200,20 @@ export async function myStanding(
           .where(and(eq(submission.studentId, actor.userId), inArray(submission.assessmentId, ids)))
           .orderBy(desc(submission.version))
       : [],
+    ids.length
+      ? db
+          .select({ assessmentId: excusal.assessmentId })
+          .from(excusal)
+          .where(and(eq(excusal.studentId, actor.userId), inArray(excusal.assessmentId, ids)))
+      : [],
   ]);
+  const isExcused = new Set(excused.map((e) => e.assessmentId));
   const out = new Map<string, MyStanding>();
   for (const item of items) {
+    if (isExcused.has(item.id)) {
+      out.set(item.id, { status: 'excused', mark: null, score: null });
+      continue;
+    }
     const top = subs.find((x) => x.assessmentId === item.id);
     const mark = markOf(top ?? null);
     out.set(item.id, {

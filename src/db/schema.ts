@@ -542,6 +542,8 @@ export const submission = pgTable(
     gradedBy: text('graded_by').references(() => user.id, { onDelete: 'set null' }),
     gradedAt: ts('graded_at'),
     returnedAt: ts('returned_at'),
+    // Entered by the teacher in the gradebook (paper work, or a score for work not handed in): no files.
+    byTeacher: boolean('by_teacher').notNull().default(false),
   },
   (t) => [
     unique('submission_version_unique').on(t.assessmentId, t.studentId, t.version),
@@ -549,4 +551,20 @@ export const submission = pgTable(
     check('submission_version_positive', sql`${t.version} >= 1`),
     check('submission_score_positive', sql`${t.score} >= 0`),
   ],
+);
+
+// A student excused from one piece of work by the teacher (FR-TCH-19): it's left out of their overall score.
+export const excusal = pgTable(
+  'excusal',
+  {
+    assessmentId: text('assessment_id')
+      .notNull()
+      .references(() => assessment.id, { onDelete: 'cascade' }),
+    studentId: text('student_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    excusedBy: text('excused_by').references(() => user.id, { onDelete: 'set null' }),
+    excusedAt: ts('excused_at').notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.assessmentId, t.studentId] })],
 );

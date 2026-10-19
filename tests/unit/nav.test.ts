@@ -8,6 +8,7 @@ const active = (pathname: string) => CLASS_SECTIONS.filter((s) => classSectionAc
 describe('classSectionActive', () => {
   it('highlights exactly one section per class page', () => {
     expect(active(base)).toEqual(['Weeks']);
+    expect(active(`${base}/gradebook`)).toEqual(['Gradebook']);
     expect(active(`${base}/students`)).toEqual(['Students']);
     expect(active(`${base}/syllabus`)).toEqual(['Syllabus']);
     expect(active(`${base}/schedule`)).toEqual(['Schedule']);

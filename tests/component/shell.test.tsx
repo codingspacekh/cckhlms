@@ -37,6 +37,7 @@ describe('Sidebar', () => {
         .map((a) => [a.textContent, a.getAttribute('href'), a.getAttribute('aria-current')]),
     ).toEqual([
       ['Weeks', '/teacher/classes/c1', null],
+      ['Gradebook', '/teacher/classes/c1/gradebook', null],
       ['Students', '/teacher/classes/c1/students', 'page'],
       ['Syllabus', '/teacher/classes/c1/syllabus', null],
       ['Schedule', '/teacher/classes/c1/schedule', null],

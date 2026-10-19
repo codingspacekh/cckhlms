@@ -111,17 +111,22 @@ export default async function MarkPage({
           )}
           <section className="stack" aria-labelledby="files-title">
             <h2 id="files-title">
-              Version {shown.version} · handed in {formatDue(shown.submittedAt, timeZone)}
-              {shown.late ? ', late' : ''}
+              {shown.byTeacher
+                ? `Entered in the gradebook ${formatDue(shown.submittedAt, timeZone)}`
+                : `Version ${shown.version} · handed in ${formatDue(shown.submittedAt, timeZone)}${shown.late ? ', late' : ''}`}
             </h2>
-            <ProjectEditor
-              key={shown.version}
-              initial={shown.files}
-              nonce={nonce}
-              readOnly
-              previewOrigin={g.work.language === 'web' ? PREVIEW_ORIGIN : undefined}
-              zipName={`${zipNameFor(g.work.title, g.student.username)}-v${shown.version}`}
-            />
+            {shown.byTeacher ? (
+              <p className="card small muted">No files: this mark was entered in the gradebook, without a hand-in.</p>
+            ) : (
+              <ProjectEditor
+                key={shown.version}
+                initial={shown.files}
+                nonce={nonce}
+                readOnly
+                previewOrigin={g.work.language === 'web' ? PREVIEW_ORIGIN : undefined}
+                zipName={`${zipNameFor(g.work.title, g.student.username)}-v${shown.version}`}
+              />
+            )}
           </section>
           {isLatest ? (
             <GradeForm
