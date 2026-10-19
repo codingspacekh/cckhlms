@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Pill } from '@/components/ui/Pill';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { formatDate } from '@/modules/academics/schedule';
+import { formatSize } from '@/modules/teaching/attachment-rules';
 import { classLessons, readLesson } from '@/modules/teaching/lessons';
 import { pageData, requireActor } from '@/server/guard';
 
@@ -61,6 +62,21 @@ export default async function StudentLessonPage({ params }: { params: Promise<{ 
         aria-label="Lesson note"
         dangerouslySetInnerHTML={{ __html: l.html || '<p>No notes for this week.</p>' }}
       />
+      {l.attachments.length > 0 && (
+        <section className="card stack" aria-labelledby="files-title">
+          <h2 id="files-title">Files</h2>
+          <ul className="plain list" aria-label="Lesson files">
+            {l.attachments.map((a) => (
+              <li key={a.id} className="spread">
+                <a href={`/api/files/${a.id}`} target="_blank" rel="noopener">
+                  {a.filename}
+                </a>
+                <span className="xs muted tnum">{formatSize(a.size)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </>
   );
 }

@@ -72,7 +72,9 @@ test.describe('student', () => {
     await page.goto('/student');
     await page.getByRole('link', { name: c.className }).click();
     const list = page.getByRole('list', { name: 'Lessons' });
-    await expect(list.getByRole('listitem')).toHaveCount(1);
+    await expect(list.getByRole('link', { name: 'Week 3: Repeating things with for loops' })).toBeVisible();
+    await expect(list.getByRole('link', { name: /Week 4/ })).toHaveCount(0); // scheduled for later
+    await expect(list.getByRole('link', { name: /Week 5/ })).toHaveCount(0); // draft
     await expect(list).toContainText('for loops & range()');
     await expectAccessible(page);
 

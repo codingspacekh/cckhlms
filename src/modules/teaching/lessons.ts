@@ -10,6 +10,7 @@ import { renderMarkdown } from '@/lib/markdown';
 import type { Actor } from '@/server/actor';
 import { audit } from '@/server/audit';
 import { assertCan, ValidationError } from '@/server/errors';
+import { attachmentsOf, type AttachmentRow } from './attachments';
 import { lessonState, publishAtFor, type LessonState, type LessonStatus } from './rules';
 import { weeksOf } from './weeks';
 
@@ -94,6 +95,7 @@ export type LessonEditor = {
     topicIds: string[];
   } | null;
   syllabus: { id: string; title: string }[];
+  attachments: AttachmentRow[];
   timeZone: string;
 };
 
@@ -110,6 +112,7 @@ export async function lessonForEdit(actor: Actor | null, classId: string, week: 
     .where(eq(syllabusTopic.courseId, c.courseId))
     .orderBy(asc(syllabusTopic.position));
   const topicIds = l ? (await topicsOf([l.id])).map((t) => t.id) : [];
+  const attachments = l ? (await attachmentsOf([l.id])).map(({ lessonId: _, ...a }) => a) : [];
   return {
     classId,
     className: c.name,
@@ -127,6 +130,7 @@ export async function lessonForEdit(actor: Actor | null, classId: string, week: 
         }
       : null,
     syllabus,
+    attachments,
     timeZone: (await getClubSettings()).timeZone,
   };
 }
@@ -255,6 +259,7 @@ export type LessonView = {
   title: string;
   html: string;
   topics: string[];
+  attachments: AttachmentRow[];
   weeks: number[];
 };
 
@@ -272,6 +277,7 @@ export async function readLesson(actor: Actor | null, classId: string, week: num
     title: l.lesson.title,
     html: renderMarkdown(l.lesson.contentMd),
     topics: l.topics,
+    attachments: (await attachmentsOf([l.lesson.id])).map(({ lessonId: _, ...a }) => a),
     weeks: lessons.map((x) => x.week),
   };
 }

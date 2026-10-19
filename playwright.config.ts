@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 
 // E2E runs against a production build on lms.localhost:3100 (own database lms_e2e) and the preview
@@ -22,7 +23,13 @@ export default defineConfig({
       url: 'http://localhost:3100/api/health',
       reuseExistingServer: !process.env.CI,
       timeout: 90_000,
-      env: { DATABASE_URL: E2E.databaseUrl, BETTER_AUTH_URL: E2E.lms, BETTER_AUTH_SECRET: E2E.secret, PREVIEW_ORIGIN: E2E.preview },
+      env: {
+        DATABASE_URL: E2E.databaseUrl,
+        BETTER_AUTH_URL: E2E.lms,
+        BETTER_AUTH_SECRET: E2E.secret,
+        PREVIEW_ORIGIN: E2E.preview,
+        UPLOADS_DIR: path.resolve('test-results/uploads-e2e'),
+      },
     },
     {
       command: 'node preview/server.mjs',

@@ -328,3 +328,20 @@ export const lessonTopic = pgTable(
   },
   (t) => [primaryKey({ columns: [t.lessonId, t.topicId] })],
 );
+
+// Files attached to a lesson (FR-TCH-01). The bytes live in FileStorage under the row's id.
+export const lessonAttachment = pgTable(
+  'lesson_attachment',
+  {
+    id: text('id').primaryKey(),
+    lessonId: text('lesson_id')
+      .notNull()
+      .references(() => lesson.id, { onDelete: 'cascade' }),
+    filename: text('filename').notNull(),
+    contentType: text('content_type').notNull(),
+    size: integer('size').notNull(),
+    uploadedBy: text('uploaded_by').references(() => user.id, { onDelete: 'set null' }),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [index('lesson_attachment_lesson_idx').on(t.lessonId), check('lesson_attachment_size_positive', sql`${t.size} > 0`)],
+);

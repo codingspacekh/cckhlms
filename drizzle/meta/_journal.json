@@ -43,6 +43,13 @@
       "when": 1792396120426,
       "tag": "0005_lessons",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792397108766,
+      "tag": "0006_lesson_attachments",
+      "breakpoints": true
     }
   ]
 }
