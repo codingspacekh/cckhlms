@@ -4,9 +4,22 @@ import { NextResponse, type NextRequest } from 'next/server';
 const PREVIEW_ORIGIN = process.env.PREVIEW_ORIGIN ?? 'http://preview.localhost:3102';
 const HTTPS = (process.env.BETTER_AUTH_URL ?? '').startsWith('https://');
 
+// Development only: `next dev` prints http://localhost:3000, but sign-in accepts only BETTER_AUTH_URL's origin
+// (lms.localhost), so send localhost there instead of letting sign-in fail.
+export function devRedirect(url: URL, authUrl: string | undefined): URL | null {
+  if (!authUrl) return null;
+  const lms = new URL(authUrl);
+  if (url.host === lms.host || !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)) return null;
+  return new URL(url.pathname + url.search, lms.origin);
+}
+
 export function proxy(request: NextRequest) {
-  const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
   const dev = process.env.NODE_ENV === 'development';
+  // `next dev` reports request.url as localhost whatever the browser asked for, so use the Host header.
+  const asked = () => new URL(request.nextUrl.pathname + request.nextUrl.search, `http://${request.headers.get('host')}`);
+  const redirect = dev ? devRedirect(asked(), process.env.BETTER_AUTH_URL) : null;
+  if (redirect) return NextResponse.redirect(redirect, 307);
+  const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
   const csp = [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${dev ? " 'unsafe-eval'" : ''}`,
