@@ -1,5 +1,5 @@
 // FR-TCH-14 · FR-TCH-20: the weekly report form and the syllabus coverage card.
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { WeeklyReport } from '@/modules/teaching/reports';
 
@@ -58,9 +58,11 @@ describe('ReportForm', () => {
     render(<ReportForm classId="c1" report={base} />);
     fireEvent.click(screen.getByRole('checkbox', { name: 'Output with print()' }));
     fireEvent.change(screen.getByLabelText('Comment on the session'), { target: { value: 'Most got it.' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save weekly report' }));
+    const save = screen.getByRole('button', { name: 'Save weekly report' }) as HTMLButtonElement;
+    fireEvent.click(save);
     expect((await screen.findByRole('alert')).textContent).toMatch(/4,000/);
-    fireEvent.click(screen.getByRole('button', { name: 'Save weekly report' }));
+    await waitFor(() => expect(save.disabled).toBe(false)); // the button waits for the action
+    fireEvent.click(save);
     expect((await screen.findByRole('status')).textContent).toBe('Weekly report saved.');
     expect(saveWeeklyReportAction).toHaveBeenLastCalledWith('c1', 's2', 'Most got it.', ['t1', 't2']);
   });
