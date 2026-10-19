@@ -30,6 +30,7 @@ describe('startup', () => {
       'course',
       'enrolment',
       'lesson',
+      'lesson_attachment',
       'lesson_topic',
       'rate_limit',
       'session',

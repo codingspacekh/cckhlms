@@ -34,6 +34,7 @@ export default defineConfig({
             DATABASE_URL: testDb,
             BETTER_AUTH_SECRET: 'test-secret-0123456789-abcdefghijklmnopq',
             BETTER_AUTH_URL: 'http://lms.localhost:3000',
+            UPLOADS_DIR: fileURLToPath(new URL('./test-results/uploads-int', import.meta.url)),
           },
         },
       },

@@ -4,6 +4,7 @@ import { renderMarkdown } from '@/lib/markdown';
 import { formatDate } from '@/modules/academics/schedule';
 import { formText as t, toResult, type FormResult } from '@/server/action-result';
 import { currentActor } from '@/server/guard';
+import { removeAttachment } from './attachments';
 import { MAX_LESSON_CHARS, saveLesson, type LessonInput } from './lessons';
 
 export async function saveLessonAction(_prev: FormResult | null, form: FormData): Promise<FormResult> {
@@ -34,4 +35,13 @@ export async function saveLessonAction(_prev: FormResult | null, form: FormData)
 export async function previewMarkdownAction(source: string): Promise<string> {
   if (!(await currentActor())) return '';
   return renderMarkdown(String(source).slice(0, MAX_LESSON_CHARS));
+}
+
+export async function removeAttachmentAction(classId: string, attachmentId: string): Promise<FormResult> {
+  return toResult(async () => {
+    await removeAttachment(await currentActor(), attachmentId);
+    revalidatePath(`/teacher/classes/${classId}`, 'layout');
+    revalidatePath(`/student/classes/${classId}`, 'layout');
+    return { ok: true, message: 'File removed.' };
+  });
 }

@@ -932,3 +932,27 @@ article h3 {
   flex-direction: column;
   gap: 4px;
 }
+.spread {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.spread > :first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.grow {
+  flex: 1;
+  min-width: min(240px, 100%);
+}
+input[type='file'] {
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--ink-2);
+}
+.row:has(> .grow) {
+  align-items: flex-end;
+}
