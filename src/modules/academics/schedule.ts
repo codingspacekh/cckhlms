@@ -118,3 +118,13 @@ export function todayIn(tz: string, now: Date = new Date()): string {
   );
   return `${p.year}-${p.month}-${p.day}`;
 }
+
+// An instant as a club date and time, e.g. to show when a scheduled lesson appears (BR-19).
+export function toClubTime(at: Date, tz: string): { date: string; time: string } {
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', hour: '2-digit', minute: '2-digit' })
+      .formatToParts(at)
+      .map((x) => [x.type, x.value]),
+  );
+  return { date: todayIn(tz, at), time: `${p.hour}:${p.minute}` };
+}

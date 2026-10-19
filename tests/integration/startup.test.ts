@@ -29,6 +29,8 @@ describe('startup', () => {
       'club_settings',
       'course',
       'enrolment',
+      'lesson',
+      'lesson_topic',
       'rate_limit',
       'session',
       'student_profile',

@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   addMinutes,
+  toClubTime,
   formatDate,
   formatDay,
   generateSessions,
@@ -108,5 +109,12 @@ describe('todayIn (BR-19)', () => {
   it('changes date at midnight in club time, not at midnight UTC', () => {
     expect(todayIn('Asia/Phnom_Penh', new Date('2027-01-08T16:59:00Z'))).toBe('2027-01-08'); // 23:59 in Phnom Penh
     expect(todayIn('Asia/Phnom_Penh', new Date('2027-01-08T17:00:00Z'))).toBe('2027-01-09'); // 00:00 next day
+  });
+});
+
+describe('toClubTime', () => {
+  it('shows an instant as a club date and time, the reverse of zonedToUtc', () => {
+    expect(toClubTime(new Date('2027-01-08T23:00:00Z'), 'Asia/Phnom_Penh')).toEqual({ date: '2027-01-09', time: '06:00' });
+    expect(toClubTime(zonedToUtc('2027-07-10', '10:00', 'Europe/London'), 'Europe/London')).toEqual({ date: '2027-07-10', time: '10:00' });
   });
 });

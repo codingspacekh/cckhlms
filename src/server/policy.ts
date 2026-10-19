@@ -2,8 +2,9 @@
 // row for each entry, so a permission can't be added without its role × action tests.
 import type { Actor } from './actor';
 
-// Optional facts about the thing being acted on, for "own class" rules.
-export type PolicyContext = { classTeacherIds?: readonly string[] };
+// Optional facts about the thing being acted on, for "own class" rules: who teaches the class, and which
+// students are enrolled in it now.
+export type PolicyContext = { classTeacherIds?: readonly string[]; classStudentIds?: readonly string[] };
 type Rule = (actor: Actor, ctx: PolicyContext) => boolean;
 
 const rolesOf = (a: Actor) => a.role.split(',').map((r) => r.trim());
@@ -12,6 +13,7 @@ const hasRole =
   (a) =>
     rolesOf(a).includes(role);
 const teachesClass: Rule = (a, ctx) => rolesOf(a).includes('teacher') && (ctx.classTeacherIds ?? []).includes(a.userId);
+const studiesInClass: Rule = (a, ctx) => rolesOf(a).includes('student') && (ctx.classStudentIds ?? []).includes(a.userId);
 const either =
   (...rules: Rule[]): Rule =>
   (a, ctx) =>
@@ -29,6 +31,8 @@ export const ACTIONS = {
   'class.schedule': either(hasRole('admin'), teachesClass),
   'class.view': either(hasRole('admin'), teachesClass),
   'enrolments.manage': hasRole('admin'),
+  'lesson.write': teachesClass,
+  'lesson.read': either(hasRole('admin'), teachesClass, studiesInClass),
 } satisfies Record<string, Rule>;
 
 export type Action = keyof typeof ACTIONS;

@@ -294,3 +294,37 @@ export const enrolment = pgTable(
     check('enrolment_end_after_start', sql`${t.endedOn} is null or ${t.endedOn} >= ${t.enrolledOn}`),
   ],
 );
+
+// The lesson note for one weekly session (FR-TCH-01/02). A lesson is visible to students when it's published
+// and publish_at (if set) has passed; that's worked out at read time (ADR-08).
+export const lesson = pgTable(
+  'lesson',
+  {
+    id: text('id').primaryKey(),
+    sessionId: text('session_id')
+      .notNull()
+      .unique()
+      .references(() => classSession.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    contentMd: text('content_md').notNull().default(''),
+    status: text('status').notNull().default('draft'),
+    publishAt: ts('publish_at'),
+    authorId: text('author_id').references(() => user.id, { onDelete: 'set null' }),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [check('lesson_status_known', sql`${t.status} in ('draft', 'published')`)],
+);
+
+export const lessonTopic = pgTable(
+  'lesson_topic',
+  {
+    lessonId: text('lesson_id')
+      .notNull()
+      .references(() => lesson.id, { onDelete: 'cascade' }),
+    topicId: text('topic_id')
+      .notNull()
+      .references(() => syllabusTopic.id, { onDelete: 'cascade' }),
+  },
+  (t) => [primaryKey({ columns: [t.lessonId, t.topicId] })],
+);
