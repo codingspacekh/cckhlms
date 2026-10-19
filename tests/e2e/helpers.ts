@@ -2,6 +2,9 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page } from '@playwright/test';
 
 export async function expectAccessible(page: Page) {
+  // After a Server Action the router re-renders the page and React briefly swaps the <title>; wait it out
+  // so axe doesn't catch the gap (a page with no title still fails here, by timing out).
+  await expect(page).toHaveTitle(/\S/);
   // @axe-core/playwright ships its own (slightly older) Playwright Page type.
   const results = await new AxeBuilder({ page } as unknown as ConstructorParameters<typeof AxeBuilder>[0]).analyze();
   expect(results.violations.map((v) => `${v.id}: ${v.help} → ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
