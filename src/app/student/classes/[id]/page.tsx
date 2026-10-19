@@ -2,17 +2,25 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Pill } from '@/components/ui/Pill';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { WorkList } from '@/components/assessments/WorkList';
 import { formatDate } from '@/modules/academics/schedule';
+import { formatDue } from '@/modules/assessments/rules';
+import { studentClassWork } from '@/modules/assessments/service';
+import { getClubSettings } from '@/modules/club/service';
 import { classLessons } from '@/modules/teaching/lessons';
 import { pageData, requireActor } from '@/server/guard';
 
 export const metadata: Metadata = { title: 'Lessons' };
 
-// A student's class: its published lessons, by week (FR-STU-02).
+// A student's class: its published lessons, by week (FR-STU-02), and its classwork and homework (FR-STU-05).
 export default async function StudentClassPage({ params }: { params: Promise<{ id: string }> }) {
   const actor = await requireActor('student.area');
   const { id } = await params;
-  const { className, lessons } = await pageData(classLessons(actor, id));
+  const [{ className, lessons }, work, { timeZone }] = await Promise.all([
+    pageData(classLessons(actor, id)),
+    pageData(studentClassWork(actor, id)),
+    getClubSettings(),
+  ]);
   return (
     <>
       <PageHeader eyebrow={<Link href="/student">My week</Link>} title={className} />
@@ -38,6 +46,14 @@ export default async function StudentClassPage({ params }: { params: Promise<{ i
               </li>
             ))}
           </ul>
+        )}
+      </section>
+      <section className="card stack" aria-labelledby="work-title">
+        <h2 id="work-title">Classwork & homework</h2>
+        {work.length === 0 ? (
+          <p className="small muted">Nothing set yet. Work your teacher sets appears here.</p>
+        ) : (
+          <WorkList classId={id} showWeek items={work.map((a) => ({ ...a, dueLabel: formatDue(a.due, timeZone) }))} />
         )}
       </section>
     </>

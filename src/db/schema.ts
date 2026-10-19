@@ -459,3 +459,42 @@ export const classReportTopic = pgTable(
   },
   (t) => [primaryKey({ columns: [t.reportId, t.topicId] })],
 );
+
+// Classwork, homework and exams set in a week of a class (FR-TCH-07/08). An exam with several parts (theory,
+// practical) is one row per part: BR-12 adds up exam scores and maxes. When it's due is worked out from the
+// sessions (due_mode), except for a day and time the teacher chose (due_at), so BR-16 needs no job.
+export const assessment = pgTable(
+  'assessment',
+  {
+    id: text('id').primaryKey(),
+    classId: text('class_id')
+      .notNull()
+      .references(() => klass.id, { onDelete: 'cascade' }),
+    sessionId: text('session_id')
+      .notNull()
+      .references(() => classSession.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(),
+    title: text('title').notNull(),
+    instructionsMd: text('instructions_md').notNull().default(''),
+    language: text('language').notNull(),
+    maxScore: integer('max_score').notNull(),
+    dueMode: text('due_mode').notNull(),
+    dueAt: ts('due_at'),
+    allowLate: boolean('allow_late').notNull().default(true),
+    latePenaltyPct: integer('late_penalty_pct').notNull().default(10),
+    status: text('status').notNull().default('draft'),
+    authorId: text('author_id').references(() => user.id, { onDelete: 'set null' }),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [
+    index('assessment_class_idx').on(t.classId),
+    check('assessment_kind_known', sql`${t.kind} in ('classwork', 'homework', 'exam')`),
+    check('assessment_language_known', sql`${t.language} in ('python', 'java', 'web', 'paper')`),
+    check('assessment_status_known', sql`${t.status} in ('draft', 'published')`),
+    check('assessment_max_score_range', sql`${t.maxScore} between 1 and 1000`),
+    check('assessment_penalty_range', sql`${t.latePenaltyPct} between 0 and 100`),
+    check('assessment_due_mode_known', sql`${t.dueMode} in ('next_session', 'session_end', 'fixed')`),
+    check('assessment_due_at_when_fixed', sql`(${t.dueMode} = 'fixed') = (${t.dueAt} is not null)`),
+  ],
+);

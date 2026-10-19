@@ -1,8 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { WorkList } from '@/components/assessments/WorkList';
 import { Pill } from '@/components/ui/Pill';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { formatDate } from '@/modules/academics/schedule';
+import { formatDue } from '@/modules/assessments/rules';
+import { studentWeekWork } from '@/modules/assessments/service';
 import { formatSize } from '@/modules/teaching/attachment-rules';
 import { getClubSettings } from '@/modules/club/service';
 import { QaBoard } from '@/components/teaching/QaBoard';
@@ -17,15 +20,29 @@ export default async function StudentLessonPage({ params }: { params: Promise<{ 
   const { id, week } = await params;
   const l = await pageData(readLesson(actor, id, Number(week)));
   if (!l) {
-    const { className } = await pageData(classLessons(actor, id));
+    const [{ className }, work, { timeZone }] = await Promise.all([
+      pageData(classLessons(actor, id)),
+      pageData(studentWeekWork(actor, id, Number(week))),
+      getClubSettings(),
+    ]);
     return (
       <>
         <PageHeader eyebrow={<Link href={`/student/classes/${id}`}>{className}</Link>} title={`Week ${week}`} />
         <p className="card small muted">This lesson isn’t published yet.</p>
+        {work.length > 0 && (
+          <section className="card stack" aria-labelledby="week-work-title">
+            <h2 id="week-work-title">Classwork & homework</h2>
+            <WorkList classId={id} items={work.map((a) => ({ ...a, dueLabel: formatDue(a.due, timeZone) }))} />
+          </section>
+        )}
       </>
     );
   }
-  const [qa, { timeZone }] = await Promise.all([lessonQuestions(actor, id, l.week), getClubSettings()]);
+  const [qa, work, { timeZone }] = await Promise.all([
+    lessonQuestions(actor, id, l.week),
+    studentWeekWork(actor, id, l.week),
+    getClubSettings(),
+  ]);
   const i = l.weeks.indexOf(l.week);
   const prev = l.weeks[i - 1];
   const next = l.weeks[i + 1];
@@ -68,6 +85,12 @@ export default async function StudentLessonPage({ params }: { params: Promise<{ 
             aria-label="Lesson note"
             dangerouslySetInnerHTML={{ __html: l.html || '<p>No notes for this week.</p>' }}
           />
+          {work.length > 0 && (
+            <section className="card stack" aria-labelledby="week-work-title">
+              <h2 id="week-work-title">Classwork & homework</h2>
+              <WorkList classId={id} items={work.map((a) => ({ ...a, dueLabel: formatDue(a.due, timeZone) }))} />
+            </section>
+          )}
           {l.attachments.length > 0 && (
             <section className="card stack" aria-labelledby="files-title">
               <h2 id="files-title">Files</h2>

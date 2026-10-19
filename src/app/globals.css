@@ -838,6 +838,14 @@ tbody th {
 .dialog::backdrop {
   background: rgb(16 24 40 / 0.45);
 }
+label.f.inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+label.f.inline input {
+  width: 84px;
+}
 label.check {
   display: flex;
   gap: 8px;
