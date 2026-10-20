@@ -17,7 +17,7 @@ import { weeksOf } from '@/modules/teaching/weeks';
 import type { Actor } from '@/server/actor';
 import { ForbiddenError, ValidationError } from '@/server/errors';
 import { startup } from '@/server/startup';
-import { emptyDatabase } from './db';
+import { emptyDatabase, untilBlocked } from './db';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const admin: Actor = { userId: '', username: 'admin', name: 'Admin', role: 'admin', sessionId: 's' };
@@ -259,17 +259,6 @@ describe('changing a published report (BR-08)', () => {
   });
 });
 
-// Waits until another query is waiting for a row lock (what a second teacher's save does mid-publish).
-async function untilBlocked() {
-  for (let i = 0; i < 50; i++) {
-    const { rows } = await pool.query(
-      `select count(*)::int as n from pg_stat_activity where datname = current_database() and wait_event_type = 'Lock'`,
-    );
-    if (rows[0].n > 0) return;
-    await new Promise((r) => setTimeout(r, 20));
-  }
-}
-
 describe('a report published while a teacher is editing it (BR-08)', () => {
   it('the draft save doesn’t overwrite it', async () => {
     const e = enrolmentOf[chenda.userId]!;
@@ -287,7 +276,7 @@ describe('a report published while a teacher is editing it (BR-08)', () => {
       () => 'saved',
       (err: Error) => err,
     );
-    await untilBlocked();
+    await untilBlocked(pool);
     await publishing.query('commit');
     publishing.release();
 
@@ -308,7 +297,7 @@ describe('a report published while a teacher is editing it (BR-08)', () => {
       () => 'published',
       (err: Error) => err,
     );
-    await untilBlocked();
+    await untilBlocked(pool);
     await publishing.query('commit');
     publishing.release();
 

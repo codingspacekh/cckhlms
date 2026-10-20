@@ -11,7 +11,7 @@ import { getClubSettings } from '@/modules/club/service';
 import { weeksOf } from '@/modules/teaching/weeks';
 import type { Actor } from '@/server/actor';
 import { audit } from '@/server/audit';
-import { assertCan, ValidationError } from '@/server/errors';
+import { assertCan, isUniqueViolation, ValidationError } from '@/server/errors';
 import { codeWork, starterOf, validFiles } from './projects';
 import { afterPenalty, canSubmit, markOf, resolveDue, workStatus, type DueMode, type Mark, type WorkStatus } from './rules';
 
@@ -50,19 +50,27 @@ export async function submitWork(actor: Actor | null, assessmentId: string, opts
   const files = validFiles(draft?.files ?? starterOf(a));
   const version = previous + 1;
   const id = crypto.randomUUID();
-  await db.transaction(async (tx) => {
-    await tx.insert(submission).values({ id, assessmentId, studentId: actor.userId, version, files, late: allowed.late, submittedAt: now });
-    await audit(
-      {
-        actorId: actor.userId,
-        action: 'submission.submit',
-        entity: 'submission',
-        entityId: id,
-        detail: { assessmentId, version, late: allowed.late },
-      },
-      tx,
-    );
-  });
+  await db
+    .transaction(async (tx) => {
+      await tx
+        .insert(submission)
+        .values({ id, assessmentId, studentId: actor.userId, version, files, late: allowed.late, submittedAt: now });
+      await audit(
+        {
+          actorId: actor.userId,
+          action: 'submission.submit',
+          entity: 'submission',
+          entityId: id,
+          detail: { assessmentId, version, late: allowed.late },
+        },
+        tx,
+      );
+    })
+    .catch((err) => {
+      // Another click handed in this version first.
+      if (isUniqueViolation(err, 'submission_version_unique')) throw new ValidationError('This was just handed in. Reload to see it.');
+      throw err;
+    });
   return { version, late: allowed.late };
 }
 
