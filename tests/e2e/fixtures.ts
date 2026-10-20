@@ -430,3 +430,109 @@ export async function dueSoonWork(): Promise<{ classId: string; title: string }>
   });
   return { classId: main.classId, title };
 }
+
+// For the M6 exit journey: a Sunday class with two students of its own, its exam marked (Sophy Kim 85, Tola Prum 38)
+// and draft term reports written but not published, plus the classes they can move to in Term 2 · 2029.
+export async function m6JourneyClass(): Promise<{
+  classId: string;
+  className: string;
+  next: string;
+  repeat: string;
+  passed: string;
+  failed: string;
+}> {
+  const main = await teachingClass();
+  const { db } = await import('../../src/db/client');
+  const { user, klass } = await import('../../src/db/schema');
+  const { eq } = await import('drizzle-orm');
+  const { createTerm } = await import('../../src/modules/academics/terms');
+  const { createCourse } = await import('../../src/modules/academics/courses');
+  const { createClass } = await import('../../src/modules/academics/classes');
+  const { enrolStudent } = await import('../../src/modules/academics/enrolments');
+  const { saveAssessment } = await import('../../src/modules/assessments/service');
+  const { saveCell } = await import('../../src/modules/assessments/gradebook');
+  const { createAccount } = await import('../../src/modules/identity/service');
+  const { saveTermReport } = await import('../../src/modules/reporting/term-reports');
+  const { weeksOf } = await import('../../src/modules/teaching/weeks');
+
+  const out = {
+    className: 'Python Finale · Sun 15:00',
+    next: 'Python Finale 2 · Sat 13:00',
+    repeat: 'Python Finale · Sat 15:00',
+    passed: 'Sophy Kim',
+    failed: 'Tola Prum',
+  };
+  const existing = await db.select({ id: klass.id }).from(klass).where(eq(klass.room, 'Finale room'));
+  if (existing[0]) return { classId: existing[0].id, ...out };
+
+  const idOf = async (username: string) => (await db.select({ id: user.id }).from(user).where(eq(user.username, username)))[0]!.id;
+  const admin = { userId: await idOf(USERS.admin.username), username: 'admin', name: 'Admin', role: 'admin', sessionId: 'e2e' };
+  const teacher = { userId: await idOf(USERS.teacher.username), username: '', name: USERS.teacher.name, role: 'teacher', sessionId: 'e2e' };
+  // Next term's classes go to another teacher, so the e2e teacher's own class list doesn't change.
+  const nextTeacher = (await createAccount(admin, { role: 'teacher', name: 'Mealea Sok' })).userId;
+  const weekend = async (
+    courseId: string,
+    termId: string,
+    day: 'sat' | 'sun',
+    startTime: string,
+    firstDate: string,
+    room: string,
+    lead: string,
+  ) => {
+    const r = await createClass(admin, {
+      courseId,
+      termId,
+      day,
+      startTime,
+      minutes: 90,
+      firstDate,
+      weeks: 10,
+      room,
+      leadTeacherId: lead,
+      confirmClashes: true,
+    });
+    if (r.status !== 'created') throw new Error(`${room} class not created`);
+    return r.classId;
+  };
+
+  const [k] = await db.select({ termId: klass.termId, firstDate: klass.firstDate }).from(klass).where(eq(klass.id, main.classId));
+  const sunday = new Date(new Date(`${k!.firstDate}T00:00:00Z`).getTime() + 86_400_000).toISOString().slice(0, 10);
+  const level2 = await createCourse(admin, { code: 'PFB', name: 'Python Finale 2', defaultLanguage: 'python' });
+  const level1 = await createCourse(admin, { code: 'PFA', name: 'Python Finale', defaultLanguage: 'python', nextCourseId: level2.id });
+  const classId = await weekend(level1.id, k!.termId, 'sun', '15:00', sunday, 'Finale room', teacher.userId);
+  const later = await createTerm(admin, { year: 2029, number: 2, startDate: '2029-04-14', endDate: '2029-06-24' });
+  await weekend(level2.id, later.id, 'sat', '13:00', '2029-04-14', 'Finale next room', nextTeacher);
+  await weekend(level1.id, later.id, 'sat', '15:00', '2029-04-14', 'Finale repeat room', nextTeacher);
+
+  const week2 = (await weeksOf(classId)).find((s) => s.week === 2)!.id;
+  const { id: exam } = await saveAssessment(teacher, week2, {
+    kind: 'exam',
+    title: 'End-term exam',
+    instructionsMd: '',
+    language: 'paper',
+    maxScore: 100,
+    dueMode: 'session_end',
+    allowLate: false,
+    latePenaltyPct: 0,
+    intent: 'publish',
+  });
+  for (const [name, score, rating, result] of [
+    [out.passed, '85', 'excellent', 'pass'],
+    [out.failed, '38', 'needs_work', 'fail'],
+  ] as const) {
+    const a = await createAccount(admin, { role: 'student', name });
+    const e = await enrolStudent(admin, classId, a.userId, { enrolledOn: sunday, confirmClashes: true });
+    if (e.status !== 'enrolled') throw new Error(`${name} not enrolled`);
+    await saveCell(teacher, exam, a.userId, { value: score, version: null });
+    await saveTermReport(teacher, e.enrolmentId, {
+      rating,
+      comment: '',
+      needsSupport: false,
+      supportNote: '',
+      finalScore: '',
+      result,
+      reason: '',
+    });
+  }
+  return { classId, ...out };
+}

@@ -400,6 +400,56 @@ The next milestone does not start until all four are true.
 **Exit criteria:** the owner checks the pilot class's standings against a spreadsheet with **zero differences**, and the teacher can explain every number on the term report.
 
 ### M6 — Term operations (6 days)
+> **Result** (PRs #26–#30, stacked: merge in order). Built before G1 and R1, like M4 and M5: running the pilot class's real end of term on production (the exit criterion) happens at the end of R1.
+> - **Archive and promotion (FR-ADM-13/14, BR-07), #26:**
+>   - closing a term archives its classes: they can be read but not changed (`whileOpen()` in the policy), and teachers find them under Past classes;
+>   - the **promotion wizard** pre-selects the next level's class for passed students and a repeat class for the others, and moves everyone in **one transaction** with one audit row listing every move;
+>   - it waits until every term report is published.
+>   - *Changed from the plan:* the wizard moves students into next term's classes that already exist rather than creating them, and the link is per student (`enrolment.promoted_from_id`).
+> - **Certificates (FR-ADM-11/12, FR-STU-08, BR-05/06), #27:**
+>   - issued to everyone who passed in one click, or to another student with a reason;
+>   - each has a 130-bit code (Crockford base32, read back however it's typed) and a QR code to the public **`/verify/{code}`** page;
+>   - reissuing revokes the old code;
+>   - students download their own PDF from My progress;
+>   - Khmer names print correctly (embedded Noto Sans and Noto Sans Khmer).
+>   - **Still needed from the club:** the certificate design. The PDF uses the prototype's placeholder (template v1); the club's design becomes v2 without changing issued certificates.
+> - **Accounts (FR-AUTH-08/09), #28:**
+>   - **CSV import** of students: every problem named by line; all-or-nothing in one transaction; optional enrolment into a class;
+>   - **login slips** for a class, with new passwords;
+>   - both end on a sheet of slips that prints two to a row.
+> - **Notifications (FR-SYS-01, FR-STU-09), #29:**
+>   - a bell with the count of new ones, and a Notifications page for each area;
+>   - students hear about new lessons and work, work due within 48 hours, marks, redo requests and replies;
+>   - teachers hear about questions, reported posts and hand-ins to mark.
+>   - *Changed from the plan:* nothing is stored per notification. Each feed is worked out when it's read (ADR-08), so a scheduled lesson or "due soon" turns up on time without a background job.
+> - **Audit log (FR-SYS-02, NFR-11), #30:**
+>   - **Club → Audit log** for Admin: newest first, 50 at a time, in words (who, what, about whom, and details such as a score before → after or a reason);
+>   - filters for the kind of action (sensitive kinds first), a person (what they did and what was done to them), and dates in the club's time zone;
+>   - sign-ins are left out unless asked for;
+>   - a unit test reads the source, so no action can be recorded without a name in the viewer.
+> - **Playground (FR-CODE-07), #30:**
+>   - a student's own Python, Java or Web projects, outside any class: up to 10, autosaved, with the live preview for Web;
+>   - same project limits as work; found by their owner only.
+> - **Found by looking at the screens:**
+>   - the code editor lost its styles when opened from a link inside the app (homework pages too): its `<style>` carried a later request's CSP nonce. It now uses the page's own;
+>   - an "Actions" heading hidden for screen readers made several tables widen the page on a phone;
+>   - the audit table's details ran off the right edge.
+> - **Migrations 0016–0019.**
+> - **Tests:** 652 unit/component, 315 integration, 114 e2e. They include:
+>   - promotion all-or-nothing (a failure midway leaves nothing changed);
+>   - a certificate refused for a failed student without a reason;
+>   - a revoked code shows "revoked";
+>   - CSV errors with line numbers, importing nothing;
+>   - codes of at least 128 bits;
+>   - an **audit row for every sensitive action** of FR-SYS-02 (`audit-log.test.ts`);
+>   - the QR code read back out of a real certificate PDF.
+> - **The M6 exit journey** (`m6-journey.spec.ts`):
+>   - the teacher publishes the term reports;
+>   - Admin promotes the class and issues the certificate;
+>   - **a phone scans the QR code** (decoded from the downloaded PDF), opens the link signed out and sees **"Valid"**;
+>   - the audit log shows each step.
+> - **Exit criterion:** until G1 and the pilot (R1), the owner checks it on a local production build (or `npm run seed:dev` + `npm run dev`). Running the pilot class's end of term fully in the LMS on production is done at the end of R1.
+
 **Goal:** the end of term runs inside the LMS.
 
 **Build:**

@@ -39,6 +39,7 @@ describe('startup', () => {
       'lesson_attachment',
       'lesson_topic',
       'notification_seen',
+      'playground_project',
       'post_report',
       'question',
       'rate_limit',

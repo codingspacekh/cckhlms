@@ -657,3 +657,24 @@ export const notificationSeen = pgTable(
   },
   (t) => [primaryKey({ columns: [t.userId, t.area] }), check('notification_seen_area_known', sql`${t.area} in ('student', 'teacher')`)],
 );
+
+// A student's own project in the Playground (FR-CODE-07), outside any class: autosaved like a draft and checked
+// against the same project limits. At most 10 per student (playground.ts); names are unique per student.
+export const playgroundProject = pgTable(
+  'playground_project',
+  {
+    id: text('id').primaryKey(),
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    language: text('language').notNull(),
+    files: jsonb('files').$type<{ path: string; content: string }[]>().notNull(),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('playground_project_name_unique').on(t.ownerId, sql`lower(${t.name})`),
+    check('playground_project_language_known', sql`${t.language} in ('python', 'java', 'web')`),
+  ],
+);

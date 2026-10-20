@@ -63,6 +63,10 @@ export const ACTIONS = {
   // Certificates (FR-ADM-11, FR-STU-08): Admin issues them; a student downloads their own.
   'certificates.manage': hasRole('admin'),
   'certificate.download': either(hasRole('admin'), ownsIt),
+  // The audit log (FR-SYS-02) is read by Admin only; nobody can change it.
+  'audit.view': hasRole('admin'),
+  // The playground (FR-CODE-07): students' own projects, outside any class. Each one is found by its owner only.
+  'playground.use': hasRole('student'),
 } satisfies Record<string, Rule>;
 
 export type Action = keyof typeof ACTIONS;

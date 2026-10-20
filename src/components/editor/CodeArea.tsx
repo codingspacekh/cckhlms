@@ -43,6 +43,14 @@ const theme = EditorView.theme({
   '&.cm-focused': { outline: 'none' },
 });
 
+// The nonce this document's CSP allows: the one its first scripts were served with. After a client-side navigation
+// the `nonce` prop comes from a later request, and a <style> with that nonce would be blocked, leaving the editor
+// unstyled. Browsers hide the attribute's value but keep the `nonce` property.
+export function documentNonce(fallback: string): string {
+  if (typeof document === 'undefined') return fallback;
+  return document.querySelector<HTMLScriptElement>('script[nonce]')?.nonce || fallback;
+}
+
 export type CodeAreaHandle = { replaceDoc: (text: string) => void };
 type Props = {
   path: string;
@@ -73,7 +81,7 @@ export const CodeArea = forwardRef<CodeAreaHandle, Props>(function CodeArea(
         theme,
         syntaxHighlighting(highlight),
         language.of([]),
-        EditorView.cspNonce.of(nonce), // CodeMirror injects <style>; the nonce keeps the strict CSP happy
+        EditorView.cspNonce.of(documentNonce(nonce)), // CodeMirror injects <style>; the nonce keeps the strict CSP happy
         EditorState.readOnly.of(readOnly),
         EditorView.editable.of(!readOnly),
         EditorView.contentAttributes.of({ 'aria-label': `Code for ${p}` }),

@@ -3,6 +3,8 @@
 import QRCode from 'qrcode';
 import { describe, expect, it } from 'vitest';
 import { CODE_ALPHABET, formatCode, newCode, normaliseCode, verifyUrl } from '@/modules/certificates/rules';
+import { renderCertificate } from '@/modules/certificates/template';
+import { readQrCode } from '../qr';
 
 describe('verification codes', () => {
   it('carry at least 128 random bits in URL-safe characters', () => {
@@ -53,5 +55,19 @@ describe('the QR code', () => {
     expect(url).toBe('https://lms.cckh.dev/verify/ABCD2345EFGH6789JKMNPQRSTV');
     const qr = QRCode.create(url, { errorCorrectionLevel: 'M' });
     expect(qr.segments.map((s) => (typeof s.data === 'string' ? s.data : new TextDecoder().decode(s.data))).join('')).toBe(url);
+  });
+
+  it('printed on the certificate PDF, reads back as the verify link', async () => {
+    const pdf = await renderCertificate(1, {
+      clubName: 'CCKH Coding Club',
+      studentName: 'Nita Ung',
+      courseName: 'Python Level 1',
+      termName: 'Term 1 · 2027',
+      issuedOn: '10 Apr 2027',
+      signer: 'Club Director',
+      code: 'ABCD2345EFGH6789JKMNPQRSTV',
+      origin: 'https://lms.cckh.dev',
+    });
+    expect(readQrCode(pdf)).toBe('https://lms.cckh.dev/verify/ABCD2345EFGH6789JKMNPQRSTV');
   });
 });

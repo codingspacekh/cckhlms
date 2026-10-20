@@ -16,6 +16,7 @@ export const NAV: Record<Role, NavSection[]> = {
         { href: '/admin/terms', label: 'Terms', icon: 'calendar' },
         { href: '/admin/courses', label: 'Courses', icon: 'book' },
         { href: '/admin/settings', label: 'Settings', icon: 'settings' },
+        { href: '/admin/audit', label: 'Audit log', icon: 'shield' },
       ],
     },
     {
@@ -33,6 +34,7 @@ export const NAV: Record<Role, NavSection[]> = {
       items: [
         { href: '/student', label: 'My week', icon: 'home' },
         { href: '/student/progress', label: 'My progress', icon: 'trend' },
+        { href: '/student/playground', label: 'Playground', icon: 'code' },
       ],
     },
   ],
