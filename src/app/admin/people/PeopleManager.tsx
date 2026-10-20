@@ -42,7 +42,7 @@ export function PeopleManager({ people, role, selfId, tabs }: { people: Person[]
       const r = await fn();
       if (!r.ok) setStatus({ ok: false, text: r.error });
       else {
-        if (r.slip) showSlip(r.slip);
+        if (r.data) showSlip(r.data);
         setStatus(r.message ? { ok: true, text: r.message } : null);
       }
     });
@@ -169,7 +169,7 @@ function AddPersonForm({
   const [newRole, setNewRole] = useState<Role>(defaultRole);
   const [created, formAction, creating] = useActionState(async (prev: ActionResult | null, form: FormData) => {
     const r = await createAccountAction(prev, form);
-    if (r.ok && r.slip) onCreated(r.slip, String(form.get('role')) as Role);
+    if (r.ok && r.data) onCreated(r.data, String(form.get('role')) as Role);
     return r;
   }, null);
 
