@@ -19,3 +19,9 @@ export async function classAccess(classId: string): Promise<PolicyContext> {
     classStudentIds: students.map((r) => r.id),
   };
 }
+
+// Just its teachers, for the rules that only ask whether someone teaches the class.
+export async function classTeacherIds(classId: string): Promise<string[]> {
+  const rows = await db.select({ id: classTeacher.userId }).from(classTeacher).where(eq(classTeacher.classId, classId));
+  return rows.map((r) => r.id);
+}

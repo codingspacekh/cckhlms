@@ -6,6 +6,7 @@ import { classSession, classTeacher, course, klass, term, user } from '@/db/sche
 import type { Actor } from '@/server/actor';
 import { audit } from '@/server/audit';
 import { assertCan, ValidationError } from '@/server/errors';
+import { classTeacherIds } from './access';
 import { addDays, DAY_NAME, formatDate, generateSessions, numberWeeks, overlaps, scheduleLabel, weekdayOf, type Day } from './schedule';
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Choose a date.');
@@ -36,10 +37,6 @@ export type CreateClassResult =
 
 const shortDay = (d: Day) => (d === 'sat' ? 'Sat' : 'Sun');
 const isTeacher = sql`'teacher' = any(string_to_array(${user.role}, ','))`;
-
-async function teacherIdsOf(classId: string) {
-  return (await db.select({ id: classTeacher.userId }).from(classTeacher).where(eq(classTeacher.classId, classId))).map((r) => r.id);
-}
 
 async function findClashes(c: {
   termId: string;
@@ -75,12 +72,24 @@ async function findClashes(c: {
       ? (await db.select({ id: user.id, name: user.name }).from(user).where(inArray(user.id, c.teacherIds))).map((u) => [u.id, u.name])
       : [],
   );
+  const overlapping = others.filter((o) =>
+    overlaps({ start: c.startTime, minutes: c.minutes }, { start: o.startTime, minutes: o.minutes }),
+  );
+  // One query for every overlapping class, not one per class.
+  const overlappingIds = overlapping.map((o) => o.id);
+  const busy =
+    overlappingIds.length && c.teacherIds.length
+      ? await db
+          .select({ classId: classTeacher.classId, userId: classTeacher.userId })
+          .from(classTeacher)
+          .where(and(inArray(classTeacher.classId, overlappingIds), inArray(classTeacher.userId, c.teacherIds)))
+      : [];
   const roomWarnings: string[] = [];
-  for (const o of others) {
-    if (!overlaps({ start: c.startTime, minutes: c.minutes }, { start: o.startTime, minutes: o.minutes })) continue;
+  for (const o of overlapping) {
     const when = scheduleLabel({ day: o.day as Day, startTime: o.startTime, minutes: o.minutes, weeks: o.weeks }).split(' · ')[0];
-    for (const t of await teacherIdsOf(o.id)) {
-      if (teacherNames.has(t)) warnings.push(`${teacherNames.get(t)} already teaches ${o.name} on ${when}.`);
+    for (const t of busy) {
+      if (t.classId === o.id && teacherNames.has(t.userId))
+        warnings.push(`${teacherNames.get(t.userId)} already teaches ${o.name} on ${when}.`);
     }
     if (c.room && o.room && c.room.toLowerCase() === o.room.toLowerCase())
       roomWarnings.push(`${o.room} is booked for ${o.name} on ${when}.`);
@@ -237,7 +246,7 @@ export type ClassDetail = {
 };
 
 export async function getClass(actor: Actor | null, id: string): Promise<ClassDetail> {
-  assertCan(actor, 'class.schedule', { classTeacherIds: await teacherIdsOf(id) });
+  assertCan(actor, 'class.schedule', { classTeacherIds: await classTeacherIds(id) });
   const [c] = await db
     .select({ k: klass, courseCode: course.code, courseName: course.name, termName: term.name })
     .from(klass)
@@ -289,7 +298,7 @@ export async function getClass(actor: Actor | null, id: string): Promise<ClassDe
 async function sessionForChange(actor: Actor | null, sessionId: string) {
   const [s] = await db.select().from(classSession).where(eq(classSession.id, sessionId)).limit(1);
   if (!s) throw new ValidationError('That session no longer exists.');
-  assertCan(actor, 'class.schedule', { classTeacherIds: await teacherIdsOf(s.classId) });
+  assertCan(actor, 'class.schedule', { classTeacherIds: await classTeacherIds(s.classId) });
   return { s, actor };
 }
 
@@ -372,7 +381,7 @@ export async function addMakeUpSession(
   classId: string,
   input: { date: string; startTime: string; minutes: number | string },
 ) {
-  assertCan(actor, 'class.schedule', { classTeacherIds: await teacherIdsOf(classId) });
+  assertCan(actor, 'class.schedule', { classTeacherIds: await classTeacherIds(classId) });
   const parsed = z.object({ date: isoDate, startTime: time, minutes: classInputSchema.shape.minutes }).safeParse(input);
   if (!parsed.success) throw ValidationError.fromZod(parsed.error);
   await dateTaken(classId, parsed.data.date);

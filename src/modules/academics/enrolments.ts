@@ -8,14 +8,11 @@ import { getClubSettings } from '@/modules/club/service';
 import type { Actor } from '@/server/actor';
 import { audit } from '@/server/audit';
 import { assertCan, ValidationError } from '@/server/errors';
+import { classTeacherIds } from './access';
 import { formatDate, nextSession, numberWeeks, overlaps, scheduleLabel, todayIn, type Day } from './schedule';
 
 export type EnrolResult = { status: 'enrolled'; enrolmentId: string } | { status: 'needs-confirmation'; warnings: string[] };
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Choose a date.');
-
-async function teacherIdsOf(classId: string) {
-  return (await db.select({ id: classTeacher.userId }).from(classTeacher).where(eq(classTeacher.classId, classId))).map((r) => r.id);
-}
 
 async function openClass(classId: string) {
   const [c] = await db
@@ -177,7 +174,7 @@ export type RosterRow = {
 };
 
 export async function listRoster(actor: Actor | null, classId: string): Promise<RosterRow[]> {
-  assertCan(actor, 'class.view', { classTeacherIds: await teacherIdsOf(classId) });
+  assertCan(actor, 'class.view', { classTeacherIds: await classTeacherIds(classId) });
   const prev = alias(enrolment, 'prev');
   const prevClass = alias(klass, 'prev_class');
   const rows = await db
