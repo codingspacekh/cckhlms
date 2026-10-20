@@ -135,16 +135,21 @@ export async function gradeSubmission(actor: Actor | null, assessmentId: string,
   const score = checkScore(input.score, a.maxScore);
   const latest = await latestVersion(assessmentId, studentId, input.version);
   const now = new Date();
-  await db
-    .update(submission)
-    .set({ score, feedbackMd: input.feedbackMd.trim(), gradedBy: actor!.userId, gradedAt: now, returnedAt: null })
-    .where(eq(submission.id, latest.id));
-  await audit({
-    actorId: actor!.userId,
-    action: 'submission.grade',
-    entity: 'submission',
-    entityId: latest.id,
-    detail: { assessmentId, studentId, version: latest.version, score, previousScore: latest.score },
+  await db.transaction(async (tx) => {
+    await tx
+      .update(submission)
+      .set({ score, feedbackMd: input.feedbackMd.trim(), gradedBy: actor!.userId, gradedAt: now, returnedAt: null })
+      .where(eq(submission.id, latest.id));
+    await audit(
+      {
+        actorId: actor!.userId,
+        action: 'submission.grade',
+        entity: 'submission',
+        entityId: latest.id,
+        detail: { assessmentId, studentId, version: latest.version, score, previousScore: latest.score },
+      },
+      tx,
+    );
   });
 }
 
@@ -155,15 +160,20 @@ export async function returnSubmission(actor: Actor | null, assessmentId: string
   const note = input.feedbackMd.trim();
   if (!note) throw new ValidationError('Say what to change, so they know what to redo.', 'feedbackMd');
   const latest = await latestVersion(assessmentId, studentId, input.version);
-  await db
-    .update(submission)
-    .set({ score: null, feedbackMd: note, gradedBy: actor!.userId, gradedAt: sql`now()`, returnedAt: sql`now()` })
-    .where(eq(submission.id, latest.id));
-  await audit({
-    actorId: actor!.userId,
-    action: 'submission.return',
-    entity: 'submission',
-    entityId: latest.id,
-    detail: { assessmentId, studentId, version: latest.version, previousScore: latest.score },
+  await db.transaction(async (tx) => {
+    await tx
+      .update(submission)
+      .set({ score: null, feedbackMd: note, gradedBy: actor!.userId, gradedAt: sql`now()`, returnedAt: sql`now()` })
+      .where(eq(submission.id, latest.id));
+    await audit(
+      {
+        actorId: actor!.userId,
+        action: 'submission.return',
+        entity: 'submission',
+        entityId: latest.id,
+        detail: { assessmentId, studentId, version: latest.version, previousScore: latest.score },
+      },
+      tx,
+    );
   });
 }

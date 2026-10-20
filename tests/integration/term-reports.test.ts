@@ -17,7 +17,7 @@ import { weeksOf } from '@/modules/teaching/weeks';
 import type { Actor } from '@/server/actor';
 import { ForbiddenError, ValidationError } from '@/server/errors';
 import { startup } from '@/server/startup';
-import { emptyDatabase } from './db';
+import { emptyDatabase, untilBlocked } from './db';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const admin: Actor = { userId: '', username: 'admin', name: 'Admin', role: 'admin', sessionId: 's' };
@@ -256,5 +256,52 @@ describe('changing a published report (BR-08)', () => {
     await expect(
       saveTermReport(sophea, e(), report({ rating: 'great' as TermReportInput['rating'], changeReason: 'x' }), { now: NOW }),
     ).rejects.toBeInstanceOf(ValidationError);
+  });
+});
+
+describe('a report published while a teacher is editing it (BR-08)', () => {
+  it('the draft save doesn’t overwrite it', async () => {
+    const e = enrolmentOf[chenda.userId]!;
+    await pool.query('update student_report set published_at = null where enrolment_id = $1', [e]); // back to a draft
+    const before = (await pool.query('select comment from student_report where enrolment_id = $1', [e])).rows[0].comment;
+
+    // The lead teacher's publish is under way (not committed yet) when the assistant saves their draft.
+    const publishing = await pool.connect();
+    await publishing.query('begin');
+    await publishing.query('update student_report set published_at = now(), published_by = $2 where enrolment_id = $1', [e, sophea.userId]);
+    const save = saveTermReport(vibol, e, report({ rating: 'developing', result: 'fail', comment: 'Edited while publishing' }), {
+      now: NOW,
+    });
+    const settled = save.then(
+      () => 'saved',
+      (err: Error) => err,
+    );
+    await untilBlocked(pool);
+    await publishing.query('commit');
+    publishing.release();
+
+    expect(await settled).toEqual(new ValidationError('This report was published while you were editing it. Reload to see it.'));
+    expect((await pool.query('select comment from student_report where enrolment_id = $1', [e])).rows[0].comment).toBe(before);
+  });
+
+  it('two publishes at once: the second changes nothing', async () => {
+    const e = enrolmentOf[chenda.userId]!;
+    await pool.query('update student_report set published_at = null where enrolment_id = $1', [e]);
+    const audits = async () => (await pool.query(`select count(*)::int as n from audit_log where action = 'termreport.publish'`)).rows[0].n;
+    const before = await audits();
+
+    const publishing = await pool.connect();
+    await publishing.query('begin');
+    await publishing.query('update student_report set published_at = now(), published_by = $2 where enrolment_id = $1', [e, sophea.userId]);
+    const second = publishTermReports(sophea, classId, { now: NOW }).then(
+      () => 'published',
+      (err: Error) => err,
+    );
+    await untilBlocked(pool);
+    await publishing.query('commit');
+    publishing.release();
+
+    expect(await second).toEqual(new ValidationError('Someone published these reports a moment ago. Reload to see them.'));
+    expect(await audits()).toBe(before);
   });
 });

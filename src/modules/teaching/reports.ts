@@ -96,7 +96,7 @@ export async function saveWeeklyReport(
   const known = new Set((await syllabusOf(s.classId)).map((t) => t.id));
   if (topicIds.some((id) => !known.has(id))) throw new ValidationError('Choose topics from this course’s syllabus.', 'topicIds');
 
-  const reportId = await db.transaction(async (tx) => {
+  await db.transaction(async (tx) => {
     const [row] = await tx
       .insert(classReport)
       .values({ id: crypto.randomUUID(), sessionId, comment: parsed.data.comment, authorId: actor.userId })
@@ -107,14 +107,16 @@ export async function saveWeeklyReport(
       .returning({ id: classReport.id });
     await tx.delete(classReportTopic).where(eq(classReportTopic.reportId, row!.id));
     if (topicIds.length) await tx.insert(classReportTopic).values(topicIds.map((topicId) => ({ reportId: row!.id, topicId })));
-    return row!.id;
-  });
-  await audit({
-    actorId: actor.userId,
-    action: 'report.save',
-    entity: 'class_report',
-    entityId: reportId,
-    detail: { classId: s.classId, date: s.date, topics: topicIds.length },
+    await audit(
+      {
+        actorId: actor.userId,
+        action: 'report.save',
+        entity: 'class_report',
+        entityId: row!.id,
+        detail: { classId: s.classId, date: s.date, topics: topicIds.length },
+      },
+      tx,
+    );
   });
 }
 

@@ -2,7 +2,7 @@
 // confirm the result the score suggests (BR-13), then publish them all together. Publishing snapshots the
 // numbers (BR-12), so a published report doesn't move when a mark changes; after that only Admin or the lead
 // teacher may change one, with a reason, and the change takes the current numbers (BR-08).
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { enrolment, studentReport } from '@/db/schema';
 import { classAccess } from '@/modules/academics/access';
@@ -136,29 +136,45 @@ export async function saveTermReport(actor: Actor | null, enrolmentId: string, r
     if (missing.length) throw new ValidationError(`A published report needs ${missing.join(' and ')}.`);
   }
   const values = { ...fields, ...(published ? snapshot(standing) : {}), authorId: actor.userId, updatedAt: new Date() };
-  await db
-    .insert(studentReport)
-    .values({ id: crypto.randomUUID(), enrolmentId, ...values })
-    .onConflictDoUpdate({ target: studentReport.enrolmentId, set: values });
-
   const after = toRow(standing, { ...(existing ?? ({} as ReportRow)), ...values, enrolmentId } as ReportRow, standings.passMark);
   const detail = { classId: e.classId, studentId: e.studentId };
-  if (published)
-    await audit({
-      actorId: actor.userId,
-      action: 'termreport.amend',
-      entity: 'student_report',
-      entityId: enrolmentId,
-      detail: { ...detail, changeReason, reason: fields.reason, before: summary(before), after: summary(after) },
-    });
-  else if (fields.reason)
-    await audit({
-      actorId: actor.userId,
-      action: 'termreport.override',
-      entity: 'student_report',
-      entityId: enrolmentId,
-      detail: { ...detail, ...summary(after), suggested: after.suggested, calculated: after.calculated, reason: fields.reason },
-    });
+  await db.transaction(async (tx) => {
+    // Lock the report and check again: a publish that lands after the checks above must not be overwritten by a
+    // draft, which would skip the amend rules (BR-08).
+    const [current] = await tx
+      .select({ publishedAt: studentReport.publishedAt })
+      .from(studentReport)
+      .where(eq(studentReport.enrolmentId, enrolmentId))
+      .for('update');
+    if (!!current?.publishedAt !== published)
+      throw new ValidationError('This report was published while you were editing it. Reload to see it.');
+    await tx
+      .insert(studentReport)
+      .values({ id: crypto.randomUUID(), enrolmentId, ...values })
+      .onConflictDoUpdate({ target: studentReport.enrolmentId, set: values });
+    if (published)
+      await audit(
+        {
+          actorId: actor.userId,
+          action: 'termreport.amend',
+          entity: 'student_report',
+          entityId: enrolmentId,
+          detail: { ...detail, changeReason, reason: fields.reason, before: summary(before), after: summary(after) },
+        },
+        tx,
+      );
+    else if (fields.reason)
+      await audit(
+        {
+          actorId: actor.userId,
+          action: 'termreport.override',
+          entity: 'student_report',
+          entityId: enrolmentId,
+          detail: { ...detail, ...summary(after), suggested: after.suggested, calculated: after.calculated, reason: fields.reason },
+        },
+        tx,
+      );
+  });
 }
 
 // Publishes the class's draft reports together, or none of them: every student in the class needs a finished
@@ -177,19 +193,23 @@ export async function publishTermReports(actor: Actor | null, classId: string, o
   await db.transaction(async (tx) => {
     for (const r of toPublish) {
       const s = standings.students.find((x) => x.enrolmentId === r.enrolmentId)!;
-      await tx
+      const [updated] = await tx
         .update(studentReport)
         .set({ ...snapshot(s), publishedAt: now, publishedBy: actor.userId })
-        .where(eq(studentReport.enrolmentId, r.enrolmentId));
+        .where(and(eq(studentReport.enrolmentId, r.enrolmentId), isNull(studentReport.publishedAt)))
+        .returning({ id: studentReport.id });
+      if (!updated) throw new ValidationError('Someone published these reports a moment ago. Reload to see them.');
+      await audit(
+        {
+          actorId: actor.userId,
+          action: 'termreport.publish',
+          entity: 'student_report',
+          entityId: r.enrolmentId,
+          detail: { classId, studentId: r.studentId, score: r.score, result: r.result, finalScore: r.finalScore, calculated: r.calculated },
+        },
+        tx,
+      );
     }
   });
-  for (const r of toPublish)
-    await audit({
-      actorId: actor.userId,
-      action: 'termreport.publish',
-      entity: 'student_report',
-      entityId: r.enrolmentId,
-      detail: { classId, studentId: r.studentId, score: r.score, result: r.result, finalScore: r.finalScore, calculated: r.calculated },
-    });
   return { published: toPublish.length };
 }

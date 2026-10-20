@@ -15,7 +15,7 @@ import { weeksOf } from '@/modules/teaching/weeks';
 import type { Actor } from '@/server/actor';
 import { ForbiddenError, ValidationError } from '@/server/errors';
 import { startup } from '@/server/startup';
-import { emptyDatabase } from './db';
+import { emptyDatabase, untilBlocked } from './db';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const admin: Actor = { userId: '', username: 'admin', name: 'Admin', role: 'admin', sessionId: 's' };
@@ -116,6 +116,26 @@ describe('submitting', () => {
     const e = await submitWork(bopha, id, { now: AFTER }).catch((x) => x);
     expect(e).toBeInstanceOf(ValidationError);
     expect((e as Error).message).toBe('The due time has passed and late work isn’t accepted for this.');
+  });
+
+  it('a double click hands in once, and the second click gets a message, not an error page', async () => {
+    const id = await work();
+    // The first click's hand-in is being saved (not committed yet) when the second click arrives.
+    const first = await pool.connect();
+    await first.query('begin');
+    await first.query(
+      `insert into submission (id, assessment_id, student_id, version, files, late, submitted_at) values ($1, $2, $3, 1, '[]', false, now())`,
+      [crypto.randomUUID(), id, bopha.userId],
+    );
+    const second = submitWork(bopha, id, { now: BEFORE }).then(
+      () => 'handed in',
+      (err: Error) => err,
+    );
+    await untilBlocked(pool);
+    await first.query('commit');
+    first.release();
+    expect(await second).toEqual(new ValidationError('This was just handed in. Reload to see it.'));
+    expect((await mySubmissions(bopha, id, { now: BEFORE })).versions.length).toBe(1);
   });
 
   it('only students in the class, only published code work', async () => {

@@ -136,24 +136,28 @@ export async function saveAssessment(
     status: input.intent === 'publish' ? 'published' : 'draft',
     authorId: actor.userId,
   };
-  let id = assessmentId;
-  if (id) {
-    const updated = await db
-      .update(assessment)
-      .set({ ...values, updatedAt: new Date() })
-      .where(and(eq(assessment.id, id), eq(assessment.sessionId, sessionId)))
-      .returning({ id: assessment.id });
-    if (!updated.length) throw new ValidationError('That work no longer exists.');
-  } else {
-    id = crypto.randomUUID();
-    await db.insert(assessment).values({ id, classId: s.classId, sessionId, ...values });
-  }
-  await audit({
-    actorId: actor.userId,
-    action: 'assessment.save',
-    entity: 'assessment',
-    entityId: id,
-    detail: { classId: s.classId, date: s.date, kind: input.kind, status: values.status },
+  const id = assessmentId ?? crypto.randomUUID();
+  await db.transaction(async (tx) => {
+    if (assessmentId) {
+      const updated = await tx
+        .update(assessment)
+        .set({ ...values, updatedAt: new Date() })
+        .where(and(eq(assessment.id, id), eq(assessment.sessionId, sessionId)))
+        .returning({ id: assessment.id });
+      if (!updated.length) throw new ValidationError('That work no longer exists.');
+    } else {
+      await tx.insert(assessment).values({ id, classId: s.classId, sessionId, ...values });
+    }
+    await audit(
+      {
+        actorId: actor.userId,
+        action: 'assessment.save',
+        entity: 'assessment',
+        entityId: id,
+        detail: { classId: s.classId, date: s.date, kind: input.kind, status: values.status },
+      },
+      tx,
+    );
   });
   return { id };
 }
@@ -162,13 +166,12 @@ export async function deleteAssessment(actor: Actor | null, assessmentId: string
   const [a] = await db.select().from(assessment).where(eq(assessment.id, assessmentId)).limit(1);
   if (!a) throw new ValidationError('That work no longer exists.');
   assertCan(actor, 'assessment.write', await classAccess(a.classId));
-  await db.delete(assessment).where(eq(assessment.id, assessmentId));
-  await audit({
-    actorId: actor.userId,
-    action: 'assessment.delete',
-    entity: 'assessment',
-    entityId: assessmentId,
-    detail: { title: a.title },
+  await db.transaction(async (tx) => {
+    await tx.delete(assessment).where(eq(assessment.id, assessmentId));
+    await audit(
+      { actorId: actor.userId, action: 'assessment.delete', entity: 'assessment', entityId: assessmentId, detail: { title: a.title } },
+      tx,
+    );
   });
 }
 

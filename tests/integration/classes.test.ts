@@ -92,6 +92,15 @@ describe('creating a weekend class', () => {
     expect(await listClasses(admin, { termId })).toHaveLength(1);
     const confirmed = await createClass(admin, { ...clash, confirmClashes: true });
     expect(confirmed.status).toBe('created');
+
+    // 09:30 overlaps both classes: one warning per class for the teacher and for the room.
+    const both = await createClass(admin, { ...clash, startTime: '09:30' });
+    expect(both.status === 'needs-confirmation' && [...both.warnings].sort()).toEqual([
+      'Room A is booked for Python Level 1 · Sat 09:00 on Saturday 09:00–10:30.',
+      'Room A is booked for Python Level 1 · Sat 10:00 on Saturday 10:00–11:30.',
+      'Sophea Chan already teaches Python Level 1 · Sat 09:00 on Saturday 09:00–10:30.',
+      'Sophea Chan already teaches Python Level 1 · Sat 10:00 on Saturday 10:00–11:30.',
+    ]);
   });
 
   it('lists the classes of a term with their schedule and lead teacher', async () => {

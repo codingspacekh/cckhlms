@@ -24,6 +24,16 @@ export class ValidationError extends Error {
   }
 }
 
+// Postgres refused a duplicate of a unique key (code 23505), for example two clicks saving the same row at once.
+// Drizzle wraps the driver's error, so look at its cause too.
+export function isUniqueViolation(err: unknown, constraint: string): boolean {
+  for (const e of [err, (err as { cause?: unknown } | null)?.cause]) {
+    const pg = e as { code?: string; constraint?: string } | null | undefined;
+    if (pg?.code === '23505' && pg.constraint === constraint) return true;
+  }
+  return false;
+}
+
 export function assertCan(actor: Actor | null, action: Action, ctx: PolicyContext = {}): asserts actor is Actor {
   if (!can(actor, action, ctx)) throw new ForbiddenError();
 }

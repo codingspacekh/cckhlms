@@ -55,18 +55,28 @@ export async function addAttachment(
 
   const id = crypto.randomUUID();
   await storage.put(id, file.bytes);
-  const [row] = await db
-    .insert(lessonAttachment)
-    .values({ id, lessonId: l.id, filename, contentType: type.contentType, size: file.bytes.byteLength, uploadedBy: actor.userId })
-    .returning();
-  await audit({
-    actorId: actor.userId,
-    action: 'lesson.attach',
-    entity: 'lesson_attachment',
-    entityId: id,
-    detail: { lessonId: l.id, filename, size: file.bytes.byteLength },
-  });
-  return toRow(row!);
+  try {
+    return await db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(lessonAttachment)
+        .values({ id, lessonId: l.id, filename, contentType: type.contentType, size: file.bytes.byteLength, uploadedBy: actor.userId })
+        .returning();
+      await audit(
+        {
+          actorId: actor.userId,
+          action: 'lesson.attach',
+          entity: 'lesson_attachment',
+          entityId: id,
+          detail: { lessonId: l.id, filename, size: file.bytes.byteLength },
+        },
+        tx,
+      );
+      return toRow(row!);
+    });
+  } catch (err) {
+    await storage.remove(id); // no row points at it, so don't keep the file
+    throw err;
+  }
 }
 
 async function findAttachment(id: string) {
@@ -84,15 +94,14 @@ async function findAttachment(id: string) {
 export async function removeAttachment(actor: Actor | null, id: string) {
   const { a, classId } = await findAttachment(id);
   assertCan(actor, 'lesson.write', await classAccess(classId));
-  await db.delete(lessonAttachment).where(eq(lessonAttachment.id, id));
-  await storage.remove(id);
-  await audit({
-    actorId: actor.userId,
-    action: 'lesson.detach',
-    entity: 'lesson_attachment',
-    entityId: id,
-    detail: { filename: a.filename },
+  await db.transaction(async (tx) => {
+    await tx.delete(lessonAttachment).where(eq(lessonAttachment.id, id));
+    await audit(
+      { actorId: actor.userId, action: 'lesson.detach', entity: 'lesson_attachment', entityId: id, detail: { filename: a.filename } },
+      tx,
+    );
   });
+  await storage.remove(id); // after the commit, so a file is never missing while its row is still there
 }
 
 export async function openAttachment(

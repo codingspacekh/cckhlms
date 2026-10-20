@@ -256,7 +256,7 @@ export async function moderatePost(actor: Actor | null, ref: PostRef, decision: 
   const post = await findPost(ref);
   assertCan(actor, 'qa.moderate', post.ctx);
   const now = new Date();
-  const resolved = await db.transaction(async (tx) => {
+  await db.transaction(async (tx) => {
     await (ref.type === 'question'
       ? tx
           .update(question)
@@ -271,17 +271,20 @@ export async function moderatePost(actor: Actor | null, ref: PostRef, decision: 
         .update(question)
         .set({ acceptedReplyId: null })
         .where(and(eq(question.id, post.questionId), eq(question.acceptedReplyId, ref.id)));
-    return tx
+    const resolved = await tx
       .update(postReport)
       .set({ resolvedBy: actor.userId, resolvedAt: now, outcome: decision === 'restore' ? 'restored' : 'removed' })
       .where(and(eq(postReport.postType, ref.type), eq(postReport.postId, ref.id), isNull(postReport.resolvedAt)))
       .returning({ id: postReport.id });
-  });
-  await audit({
-    actorId: actor.userId,
-    action: `qa.${decision}`,
-    entity: ref.type,
-    entityId: ref.id,
-    detail: { type: ref.type, id: ref.id, reports: resolved.length, authorId: post.authorId },
+    await audit(
+      {
+        actorId: actor.userId,
+        action: `qa.${decision}`,
+        entity: ref.type,
+        entityId: ref.id,
+        detail: { type: ref.type, id: ref.id, reports: resolved.length, authorId: post.authorId },
+      },
+      tx,
+    );
   });
 }

@@ -2,6 +2,7 @@
 import { expect, test } from '@playwright/test';
 import { Pool } from 'pg';
 import { E2E } from '../../playwright.config';
+import { otherTeachersClass } from './fixtures';
 import { stateFile, USERS } from './global-setup';
 import { expectAccessible, watchProblems } from './helpers';
 
@@ -62,6 +63,18 @@ test.describe('wrong role', () => {
   test('a student who opens an admin page gets "not allowed" (403)', async ({ page }) => {
     const res = await page.goto('/admin');
     expect(res?.status()).toBe(403);
+    await expect(page.getByRole('heading', { name: "You don't have access to this page" })).toBeVisible();
+  });
+});
+
+test.describe('not your class', () => {
+  test.use({ storageState: stateFile('teacher') });
+  test('a teacher who opens another teacher’s class gets "not allowed" (403) on every section', async ({ page }) => {
+    const { classId } = await otherTeachersClass();
+    for (const section of ['', '/students', '/syllabus', '/schedule', '/gradebook', '/stats', '/reports']) {
+      const res = await page.goto(`/teacher/classes/${classId}${section}`);
+      expect(res?.status(), section || 'weeks').toBe(403);
+    }
     await expect(page.getByRole('heading', { name: "You don't have access to this page" })).toBeVisible();
   });
 });

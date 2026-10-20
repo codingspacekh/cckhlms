@@ -62,25 +62,29 @@ export async function createCourse(actor: Actor | null, raw: CourseInput): Promi
   assertCan(actor, 'courses.manage');
   const c = parse(raw);
   await checkCodeAndLevel(null, c.code, c.nextCourseId);
-  const [created] = await db
-    .insert(course)
-    .values({ id: crypto.randomUUID(), ...c, nextCourseId: c.nextCourseId ?? null })
-    .returning();
-  await audit({ actorId: actor.userId, action: 'course.create', entity: 'course', entityId: created!.id, detail: { code: c.code } });
-  return created!;
+  return db.transaction(async (tx) => {
+    const [created] = await tx
+      .insert(course)
+      .values({ id: crypto.randomUUID(), ...c, nextCourseId: c.nextCourseId ?? null })
+      .returning();
+    await audit({ actorId: actor.userId, action: 'course.create', entity: 'course', entityId: created!.id, detail: { code: c.code } }, tx);
+    return created!;
+  });
 }
 
 export async function updateCourse(actor: Actor | null, id: string, raw: CourseInput): Promise<void> {
   assertCan(actor, 'courses.manage');
   const c = parse(raw);
   await checkCodeAndLevel(id, c.code, c.nextCourseId);
-  const res = await db
-    .update(course)
-    .set({ ...c, description: c.description ?? null, nextCourseId: c.nextCourseId ?? null })
-    .where(eq(course.id, id))
-    .returning({ id: course.id });
-  if (!res.length) throw new ValidationError('That course no longer exists.');
-  await audit({ actorId: actor.userId, action: 'course.update', entity: 'course', entityId: id, detail: { code: c.code } });
+  await db.transaction(async (tx) => {
+    const res = await tx
+      .update(course)
+      .set({ ...c, description: c.description ?? null, nextCourseId: c.nextCourseId ?? null })
+      .where(eq(course.id, id))
+      .returning({ id: course.id });
+    if (!res.length) throw new ValidationError('That course no longer exists.');
+    await audit({ actorId: actor.userId, action: 'course.update', entity: 'course', entityId: id, detail: { code: c.code } }, tx);
+  });
 }
 
 // Saves the topics in the new order. Topics whose title is unchanged keep their id, so lessons linked to
@@ -113,12 +117,9 @@ export async function setSyllabus(actor: Actor | null, courseId: string, text: s
       }
     }
     for (const t of existing) if (!keep.has(t.id)) await tx.delete(syllabusTopic).where(eq(syllabusTopic.id, t.id));
-  });
-  await audit({
-    actorId: actor.userId,
-    action: 'course.syllabus',
-    entity: 'course',
-    entityId: courseId,
-    detail: { topics: titles.length },
+    await audit(
+      { actorId: actor.userId, action: 'course.syllabus', entity: 'course', entityId: courseId, detail: { topics: titles.length } },
+      tx,
+    );
   });
 }

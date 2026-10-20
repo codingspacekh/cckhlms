@@ -11,8 +11,13 @@ export type AuditEntry = {
   ip?: string | null;
 };
 
-export async function audit(e: AuditEntry) {
-  await db
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+export type Executor = typeof db | Tx;
+
+// Pass the transaction that makes the change, so the change and its audit row are saved together or not at all
+// (tests/integration/audit.test.ts).
+export async function audit(e: AuditEntry, tx: Executor = db) {
+  await tx
     .insert(auditLog)
     .values({ actorId: e.actorId ?? null, action: e.action, entity: e.entity, entityId: e.entityId, detail: e.detail, ip: e.ip ?? null });
 }

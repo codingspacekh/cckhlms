@@ -11,7 +11,7 @@ import { classAccess } from '@/modules/academics/access';
 import { getClubSettings } from '@/modules/club/service';
 import { weeksOf } from '@/modules/teaching/weeks';
 import type { Actor } from '@/server/actor';
-import { audit } from '@/server/audit';
+import { audit, type Executor } from '@/server/audit';
 import { assertCan, ValidationError } from '@/server/errors';
 import {
   afterPenalty,
@@ -214,48 +214,58 @@ export async function saveCell(
   const input = parse(cellSchema, raw);
   const { a, actor: teacher, latest } = await target(actor, assessmentId, studentId, input.version);
   const typed = parseCell(input.value, a.maxScore);
-  const now = new Date();
   await db.transaction(async (tx) => {
-    const unexcuse = () => tx.delete(excusal).where(and(eq(excusal.assessmentId, assessmentId), eq(excusal.studentId, studentId)));
-    if (typed.kind === 'excuse') {
-      await tx.insert(excusal).values({ assessmentId, studentId, excusedBy: teacher!.userId }).onConflictDoNothing();
-      return;
-    }
-    await unexcuse();
-    if (typed.kind === 'clear') {
-      if (!latest) return;
-      // A teacher-entered score has nothing of the student's in it, so it goes; a project goes back to "to mark".
-      if (latest.byTeacher) await tx.delete(submission).where(eq(submission.id, latest.id));
-      else await tx.update(submission).set({ score: null, gradedBy: null, gradedAt: null }).where(eq(submission.id, latest.id));
-      return;
-    }
-    if (latest)
-      await tx
-        .update(submission)
-        .set({ score: typed.score, gradedBy: teacher!.userId, gradedAt: now, returnedAt: null })
-        .where(eq(submission.id, latest.id));
-    else
-      await tx.insert(submission).values({
-        id: crypto.randomUUID(),
-        assessmentId,
-        studentId,
-        version: 1,
-        files: [],
-        byTeacher: true,
-        score: typed.score,
-        gradedBy: teacher!.userId,
-        gradedAt: now,
-        submittedAt: now,
-      });
-  });
-  await audit({
-    actorId: teacher!.userId,
-    action: 'gradebook.cell',
-    entity: 'assessment',
-    entityId: assessmentId,
-    detail: { assessmentId, studentId, value: input.value.trim(), previousScore: latest?.score ?? null },
+    await writeCell(tx, { assessmentId, studentId, teacherId: teacher!.userId, typed, latest });
+    await audit(
+      {
+        actorId: teacher!.userId,
+        action: 'gradebook.cell',
+        entity: 'assessment',
+        entityId: assessmentId,
+        detail: { assessmentId, studentId, value: input.value.trim(), previousScore: latest?.score ?? null },
+      },
+      tx,
+    );
   });
   return cellAndOverall(a.classId, assessmentId, studentId, opts);
+}
+
+async function writeCell(
+  tx: Executor,
+  c: { assessmentId: string; studentId: string; teacherId: string; typed: ReturnType<typeof parseCell>; latest: Latest | undefined },
+) {
+  const { assessmentId, studentId, typed, latest } = c;
+  if (typed.kind === 'excuse') {
+    await tx.insert(excusal).values({ assessmentId, studentId, excusedBy: c.teacherId }).onConflictDoNothing();
+    return;
+  }
+  await tx.delete(excusal).where(and(eq(excusal.assessmentId, assessmentId), eq(excusal.studentId, studentId)));
+  if (typed.kind === 'clear') {
+    if (!latest) return;
+    // A teacher-entered score has nothing of the student's in it, so it goes; a project goes back to "to mark".
+    if (latest.byTeacher) await tx.delete(submission).where(eq(submission.id, latest.id));
+    else await tx.update(submission).set({ score: null, gradedBy: null, gradedAt: null }).where(eq(submission.id, latest.id));
+    return;
+  }
+  const now = new Date();
+  if (latest)
+    await tx
+      .update(submission)
+      .set({ score: typed.score, gradedBy: c.teacherId, gradedAt: now, returnedAt: null })
+      .where(eq(submission.id, latest.id));
+  else
+    await tx.insert(submission).values({
+      id: crypto.randomUUID(),
+      assessmentId,
+      studentId,
+      version: 1,
+      files: [],
+      byTeacher: true,
+      score: typed.score,
+      gradedBy: c.teacherId,
+      gradedAt: now,
+      submittedAt: now,
+    });
 }
 
 // A short comment on a marked cell: the same feedback the student sees on the marking page.
@@ -263,13 +273,18 @@ export async function saveComment(actor: Actor | null, assessmentId: string, stu
   const input = parse(commentSchema, raw);
   const { actor: teacher, latest } = await target(actor, assessmentId, studentId, input.version);
   if (!latest) throw new ValidationError('Enter a score first.');
-  await db.update(submission).set({ feedbackMd: input.comment.trim() }).where(eq(submission.id, latest.id));
-  await audit({
-    actorId: teacher!.userId,
-    action: 'gradebook.comment',
-    entity: 'submission',
-    entityId: latest.id,
-    detail: { assessmentId, studentId },
+  await db.transaction(async (tx) => {
+    await tx.update(submission).set({ feedbackMd: input.comment.trim() }).where(eq(submission.id, latest.id));
+    await audit(
+      {
+        actorId: teacher!.userId,
+        action: 'gradebook.comment',
+        entity: 'submission',
+        entityId: latest.id,
+        detail: { assessmentId, studentId },
+      },
+      tx,
+    );
   });
 }
 

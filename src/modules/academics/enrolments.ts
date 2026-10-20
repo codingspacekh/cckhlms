@@ -8,14 +8,11 @@ import { getClubSettings } from '@/modules/club/service';
 import type { Actor } from '@/server/actor';
 import { audit } from '@/server/audit';
 import { assertCan, ValidationError } from '@/server/errors';
+import { classTeacherIds } from './access';
 import { formatDate, nextSession, numberWeeks, overlaps, scheduleLabel, todayIn, type Day } from './schedule';
 
 export type EnrolResult = { status: 'enrolled'; enrolmentId: string } | { status: 'needs-confirmation'; warnings: string[] };
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Choose a date.');
-
-async function teacherIdsOf(classId: string) {
-  return (await db.select({ id: classTeacher.userId }).from(classTeacher).where(eq(classTeacher.classId, classId))).map((r) => r.id);
-}
 
 async function openClass(classId: string) {
   const [c] = await db
@@ -98,13 +95,18 @@ export async function enrolStudent(
   if (warnings.length && !opts.confirmClashes) return { status: 'needs-confirmation', warnings };
   const enrolledOn = opts.enrolledOn ? isoDate.parse(opts.enrolledOn) : todayIn((await getClubSettings()).timeZone, opts.now);
   const id = crypto.randomUUID();
-  await db.insert(enrolment).values({ id, classId, studentId, enrolledOn });
-  await audit({
-    actorId: actor.userId,
-    action: 'enrolment.create',
-    entity: 'enrolment',
-    entityId: id,
-    detail: { classId, studentId, enrolledOn, warnings },
+  await db.transaction(async (tx) => {
+    await tx.insert(enrolment).values({ id, classId, studentId, enrolledOn });
+    await audit(
+      {
+        actorId: actor.userId,
+        action: 'enrolment.create',
+        entity: 'enrolment',
+        entityId: id,
+        detail: { classId, studentId, enrolledOn, warnings },
+      },
+      tx,
+    );
   });
   return { status: 'enrolled', enrolmentId: id };
 }
@@ -121,8 +123,10 @@ export async function withdrawEnrolment(actor: Actor | null, enrolmentId: string
   const e = await activeEnrolment(enrolmentId);
   const on = isoDate.parse(input.on);
   if (on < e.enrolledOn) throw new ValidationError(`The leaving date can't be before the join date (${formatDate(e.enrolledOn)}).`);
-  await db.update(enrolment).set({ status: 'withdrawn', endedOn: on }).where(eq(enrolment.id, enrolmentId));
-  await audit({ actorId: actor.userId, action: 'enrolment.withdraw', entity: 'enrolment', entityId: enrolmentId, detail: { on } });
+  await db.transaction(async (tx) => {
+    await tx.update(enrolment).set({ status: 'withdrawn', endedOn: on }).where(eq(enrolment.id, enrolmentId));
+    await audit({ actorId: actor.userId, action: 'enrolment.withdraw', entity: 'enrolment', entityId: enrolmentId, detail: { on } }, tx);
+  });
 }
 
 // BR-18: the old enrolment ends and a new one starts on the same day. Scores don't move with the student.
@@ -144,13 +148,16 @@ export async function transferEnrolment(
   await db.transaction(async (tx) => {
     await tx.update(enrolment).set({ status: 'withdrawn', endedOn: on }).where(eq(enrolment.id, enrolmentId));
     await tx.insert(enrolment).values({ id, classId: toClassId, studentId: e.studentId, enrolledOn: on, transferredFromId: enrolmentId });
-  });
-  await audit({
-    actorId: actor.userId,
-    action: 'enrolment.transfer',
-    entity: 'enrolment',
-    entityId: id,
-    detail: { from: enrolmentId, toClassId, on },
+    await audit(
+      {
+        actorId: actor.userId,
+        action: 'enrolment.transfer',
+        entity: 'enrolment',
+        entityId: id,
+        detail: { from: enrolmentId, toClassId, on },
+      },
+      tx,
+    );
   });
   return { status: 'enrolled' as const, enrolmentId: id };
 }
@@ -167,7 +174,7 @@ export type RosterRow = {
 };
 
 export async function listRoster(actor: Actor | null, classId: string): Promise<RosterRow[]> {
-  assertCan(actor, 'class.view', { classTeacherIds: await teacherIdsOf(classId) });
+  assertCan(actor, 'class.view', { classTeacherIds: await classTeacherIds(classId) });
   const prev = alias(enrolment, 'prev');
   const prevClass = alias(klass, 'prev_class');
   const rows = await db

@@ -90,6 +90,7 @@ Cloudflare → `cckh.dev` → **Security → WAF → Rate limiting rules → Cre
 | Roll back | Automatic if the new version fails its health check. By hand: `ssh deploy@SERVER_IP 'sh /opt/cckhlms/deploy.sh <previous-sha>'` (the last 3 images are kept). | If a release misbehaves |
 | Backup now | `ssh deploy@SERVER_IP 'cd /opt/cckhlms && docker compose -f compose.prod.yaml exec backup backup.sh'` | Before risky changes |
 | OS updates | Security updates install automatically. Monthly on a weekday: `ssh deploy@SERVER_IP 'sudo apt-get update && sudo apt-get upgrade -y'`, then `sudo reboot` if it says a restart is required. Containers come back by themselves. | Monthly |
+| App won't start: "The server settings need fixing" | `docker compose -f compose.prod.yaml logs app` lists each problem (for example a secret shorter than 32 characters, or an `http://` address). Fix `/opt/cckhlms/.env` as in *Rotate a secret*. | When a deploy fails its health check |
 | Rotate a secret | Edit `/opt/cckhlms/.env`, then `APP_TAG=$(cat .deployed-tag) docker compose -f compose.prod.yaml up -d`. Changing `BETTER_AUTH_SECRET` signs everyone out. | If leaked |
 | Pay / renew | Hetzner monthly; `cckh.dev` yearly. Budget: $100 covers ≈13–16 months; set a reminder 3 months before. | — |
 
