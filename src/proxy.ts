@@ -1,7 +1,7 @@
 // Strict, per-request CSP (NFR-05, ADR 0001). The only frame allowed is the preview origin.
 import { NextResponse, type NextRequest } from 'next/server';
+import { PREVIEW_ORIGIN } from '@/server/preview-origin';
 
-const PREVIEW_ORIGIN = process.env.PREVIEW_ORIGIN ?? 'http://preview.localhost:3102';
 const HTTPS = (process.env.BETTER_AUTH_URL ?? '').startsWith('https://');
 
 // Development only: `next dev` prints http://localhost:3000, but sign-in accepts only BETTER_AUTH_URL's origin

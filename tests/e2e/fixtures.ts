@@ -154,3 +154,7 @@ export const javaHomework = () =>
 // Python homework in week 10, for the submissions spec.
 export const pythonHomework = () =>
   publishedHomework({ title: 'Times tables', language: 'python', week: 10, instructionsMd: 'Print the 7 times table.' });
+
+// Web homework in week 11, for the preview spec.
+export const webHomework = () =>
+  publishedHomework({ title: 'My first web page', language: 'web', week: 11, instructionsMd: 'Make a page with a button.' });

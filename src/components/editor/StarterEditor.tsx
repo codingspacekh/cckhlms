@@ -4,10 +4,18 @@ import type { ProjectFile } from '@/lib/project/files';
 import { saveStarterAction } from '@/modules/assessments/project-actions';
 import { ProjectEditor } from './ProjectEditor';
 
-type Props = { classId: string; assessmentId: string; initial: ProjectFile[]; nonce: string; java: boolean; zipName: string };
+type Props = {
+  classId: string;
+  assessmentId: string;
+  initial: ProjectFile[];
+  nonce: string;
+  java: boolean;
+  previewOrigin?: string;
+  zipName: string;
+};
 
 // FR-CODE-06: the teacher's starter files, copied into each student's project when they first open the work.
-export function StarterEditor({ classId, assessmentId, initial, nonce, java, zipName }: Props) {
+export function StarterEditor({ classId, assessmentId, initial, nonce, java, previewOrigin, zipName }: Props) {
   const files = useRef(initial);
   const [dirty, setDirty] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
@@ -52,6 +60,7 @@ export function StarterEditor({ classId, assessmentId, initial, nonce, java, zip
         initial={initial}
         nonce={nonce}
         java={java}
+        previewOrigin={previewOrigin}
         zipName={zipName}
         onChange={(next: ProjectFile[]) => {
           files.current = next;

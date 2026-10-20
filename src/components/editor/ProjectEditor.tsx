@@ -7,6 +7,7 @@ import { checkJavaPackages, fixPackage } from '@/lib/project/java-package';
 import { exportProject, importZip } from '@/lib/project/zip';
 import { CodeArea, type CodeAreaHandle } from './CodeArea';
 import { FileTree } from './FileTree';
+import { WebPreview } from './WebPreview';
 
 type Props = {
   initial: ProjectFile[];
@@ -14,6 +15,7 @@ type Props = {
   zipName: string; // without .zip
   java?: boolean;
   readOnly?: boolean;
+  previewOrigin?: string; // Web work: show the page from the preview origin (FR-CODE-04)
   // `now`: a whole-file change (upload, new file, rename, delete, package fix) to save at once; typing can wait.
   onChange?: (files: ProjectFile[], now: boolean) => void;
 };
@@ -24,7 +26,7 @@ const firstFile = (files: ProjectFile[]) =>
     [...files].sort((a, b) => a.path.localeCompare(b.path))[0]!
   ).path;
 
-export function ProjectEditor({ initial, nonce, zipName, java = false, readOnly = false, onChange }: Props) {
+export function ProjectEditor({ initial, nonce, zipName, java = false, readOnly = false, previewOrigin, onChange }: Props) {
   const [files, setFiles] = useState(initial);
   const [current, setCurrent] = useState(() => firstFile(initial));
   const [resetKey, setResetKey] = useState(0);
@@ -160,6 +162,7 @@ export function ProjectEditor({ initial, nonce, zipName, java = false, readOnly 
           }
         />
       </div>
+      {previewOrigin && <WebPreview files={files} previewOrigin={previewOrigin} />}
     </div>
   );
 }

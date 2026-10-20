@@ -10,6 +10,7 @@ import { teacherProject } from '@/modules/assessments/projects';
 import { submissionList } from '@/modules/assessments/submissions';
 import { getClubSettings } from '@/modules/club/service';
 import { pageData, requireActor } from '@/server/guard';
+import { PREVIEW_ORIGIN } from '@/server/preview-origin';
 
 export const metadata: Metadata = { title: 'Classwork & homework' };
 
@@ -78,6 +79,7 @@ export default async function TeacherWorkPage({ params }: { params: Promise<{ id
         initial={files}
         nonce={nonce}
         java={a.language === 'java'}
+        previewOrigin={a.language === 'web' ? PREVIEW_ORIGIN : undefined}
         zipName={`${zipNameFor(a.title)}-starter`}
       />
     </>

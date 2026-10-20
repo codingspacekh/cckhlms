@@ -23,6 +23,7 @@ type Props = {
   savedAt: string | null;
   nonce: string;
   java: boolean;
+  previewOrigin?: string;
   zipName: string;
   timeZone: string;
   submit: SubmitPanel;
@@ -33,7 +34,18 @@ const AUTOSAVE_MS = 1000;
 
 // FR-CODE-05 · FR-STU-05: the student's project, saved about a second after they stop typing, and handed in
 // with "Submit" (which saves first, so the last change is always in it).
-export function StudentWorkspace({ classId, assessmentId, initial, savedAt, nonce, java, zipName, timeZone, submit }: Props) {
+export function StudentWorkspace({
+  classId,
+  assessmentId,
+  initial,
+  savedAt,
+  nonce,
+  java,
+  previewOrigin,
+  zipName,
+  timeZone,
+  submit,
+}: Props) {
   const [state, setState] = useState<SaveState>(savedAt ? { kind: 'saved', at: savedAt } : { kind: 'idle' });
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [submitting, startSubmit] = useTransition();
@@ -108,7 +120,7 @@ export function StudentWorkspace({ classId, assessmentId, initial, savedAt, nonc
                   : 'Your work is saved as you type.'}
           </span>
         </div>
-        <ProjectEditor initial={initial} nonce={nonce} java={java} zipName={zipName} onChange={changed} />
+        <ProjectEditor initial={initial} nonce={nonce} java={java} previewOrigin={previewOrigin} zipName={zipName} onChange={changed} />
       </section>
       <section className="card stack" aria-labelledby="submit-title">
         <div className="spread">

@@ -1345,3 +1345,42 @@ td.text {
     max-height: 180px;
   }
 }
+
+/* the Web preview (FR-CODE-04): the page from the preview origin, and its console */
+.web-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.preview-frame {
+  height: 380px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  overflow: hidden;
+  background: #ffffff; /* students' pages expect a white page in both themes */
+}
+.preview-frame iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+.console {
+  font-family: var(--f-mono);
+  font-size: 0.8rem;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  padding: 8px 10px;
+  min-height: 44px;
+  max-height: 170px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.console .line.error {
+  color: var(--bad-text);
+}
+.console .line.warn {
+  color: var(--warn-text);
+}
