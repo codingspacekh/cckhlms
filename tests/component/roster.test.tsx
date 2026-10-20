@@ -45,6 +45,19 @@ describe('RosterTable', () => {
     expect(screen.queryByRole('button', { name: 'Withdraw Rithy Som' })).toBeNull();
   });
 
+  it('FR-TCH-17: shows each student’s homework handed in and current standing against the pass mark', () => {
+    const standing = new Map([['e1', { overall: 58.5, homework: 75 }]]);
+    render(<RosterTable rows={rows} attendance={new Map([['e1', 90]])} standing={standing} passMark={60} />);
+    expect(screen.getByRole('columnheader', { name: 'Homework' })).toBeTruthy();
+    expect(screen.getByRole('columnheader', { name: 'Standing' })).toBeTruthy();
+    const active = screen.getByRole('row', { name: /Bopha Lim/ });
+    expect(active.textContent).toContain('75%');
+    expect(active.textContent).toContain('58.5');
+    expect(within(active).getByText('Below 60')).toBeTruthy();
+    // A student who left has no standing in this class any more.
+    expect(screen.getByRole('row', { name: /Rithy Som/ }).textContent).not.toMatch(/Below|\d+\.\d/);
+  });
+
   it('says so when there are no students yet', () => {
     render(<RosterTable rows={[]} actions={() => null} />);
     expect(screen.getByText('No students yet.')).toBeTruthy();

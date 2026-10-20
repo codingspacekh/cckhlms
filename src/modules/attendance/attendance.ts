@@ -181,6 +181,11 @@ export async function setAttendanceNote(actorIn: Actor | null, sessionId: string
 // Attendance % for every enrolment of the class (BR-09), keyed by enrolment id.
 export async function classAttendance(actor: Actor | null, classId: string) {
   assertCan(actor, 'class.view', await classAccess(classId));
+  return attendanceRates(classId);
+}
+
+// The same, not checked: for reports, whose callers check who's asking.
+export async function attendanceRates(classId: string) {
   const sessions = (await weeksOf(classId)).filter((s) => !s.cancelled);
   const enrolments = await db
     .select({ id: enrolment.id, enrolledOn: enrolment.enrolledOn, endedOn: enrolment.endedOn })

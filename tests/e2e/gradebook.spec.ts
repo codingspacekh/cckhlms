@@ -44,6 +44,14 @@ test.describe('teacher', () => {
     for (const [i, name] of c.students.entries()) await expect(cell(name)).toHaveValue(i === c.students.length - 1 ? 'ex' : scoreFor(i));
     // A student with nothing else marked or missing: the quiz is their whole overall score.
     await expect(page.getByRole('row', { name: new RegExp(c.students[2]!) })).toContainText('90.0');
+
+    // FR-TCH-17: the Students tab shows the same current standing.
+    await page
+      .getByRole('group', { name: `${c.className} sections` })
+      .getByRole('link', { name: 'Students' })
+      .click();
+    await expect(page.getByRole('columnheader', { name: 'Standing' })).toBeVisible();
+    await expect(page.getByRole('row', { name: new RegExp(c.students[2]!) })).toContainText('90.0');
   });
 
   test('a comment on a cell is saved with the mark', async ({ page }) => {
