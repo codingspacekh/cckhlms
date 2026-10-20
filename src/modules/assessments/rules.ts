@@ -166,10 +166,11 @@ export function checkScore(raw: string, maxScore: number): number {
   return n;
 }
 
-// BR-14: late work counts with the late penalty taken off.
+// BR-14: late work counts with the late penalty taken off. Not rounded: scores go in 0.5 steps and the penalty
+// is a whole percent, so this is exact to 3 decimals (9.5 − 7 % = 8.835), as in a spreadsheet.
 export function afterPenalty(score: number, a: { late: boolean; latePenaltyPct: number }): number {
   if (!a.late || a.latePenaltyPct <= 0) return score;
-  return Math.round(score * (100 - a.latePenaltyPct)) / 100;
+  return Math.round(score * (100 - a.latePenaltyPct) * 10) / 1000;
 }
 
 // FR-TCH-19: one gradebook cell, worked out when read like "missing" (ADR-08). Excused (by the teacher, or
@@ -223,7 +224,9 @@ export function parseCell(raw: string, maxScore: number): { kind: 'score'; score
 // BR-12: overall out of 100 = 60 × exam + 30 × classwork + 10 × homework, each as total points over total
 // maximum of the work that counts. A category with nothing counted shares its weight among the others.
 export const KIND_WEIGHT: Record<Kind, number> = { exam: 60, classwork: 30, homework: 10 };
-const round1 = (n: number) => Math.round(n * 10) / 10;
+// To 1 decimal, halves up, like a spreadsheet's ROUND. The sums can land a hair under a half (63.75 comes out
+// as 63.7499…), so the float noise is cleared to 9 significant figures first.
+export const round1 = (n: number) => Math.round(Number((n * 10).toPrecision(9))) / 10;
 
 export function overallScore(items: { kind: Kind; maxScore: number; points: number | null }[]): {
   overall: number | null;

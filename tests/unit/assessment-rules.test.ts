@@ -156,9 +156,9 @@ describe('marking (FR-TCH-11/12, BR-04, BR-14)', () => {
     for (const bad of ['', 'abc', '-1', '10.5', '7.25', '1e1'])
       expect(() => checkScore(bad, 10), bad).toThrow('Enter a score from 0 to 10, in steps of 0.5.');
   });
-  it('BR-14: late work counts with the late penalty taken off, to 2 decimals', () => {
+  it('BR-14: late work counts with the late penalty taken off, exactly (not rounded first)', () => {
     expect(afterPenalty(8, { late: true, latePenaltyPct: 10 })).toBe(7.2);
-    expect(afterPenalty(7.5, { late: true, latePenaltyPct: 15 })).toBe(6.38);
+    expect(afterPenalty(7.5, { late: true, latePenaltyPct: 15 })).toBe(6.375);
     expect(afterPenalty(8, { late: false, latePenaltyPct: 10 })).toBe(8);
     expect(afterPenalty(8, { late: true, latePenaltyPct: 0 })).toBe(8);
   });

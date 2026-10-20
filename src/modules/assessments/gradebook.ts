@@ -51,7 +51,14 @@ export type GradebookCell = {
   byTeacher: boolean;
 };
 export type Overall = ReturnType<typeof overallScore>;
-export type GradebookRow = { id: string; name: string; cells: Record<string, GradebookCell>; overall: Overall };
+export type GradebookRow = {
+  id: string;
+  name: string;
+  enrolmentId: string;
+  enrolledOn: string;
+  cells: Record<string, GradebookCell>;
+  overall: Overall;
+};
 export type Gradebook = { classId: string; className: string; passMark: number; work: GradebookWork[]; rows: GradebookRow[] };
 
 const toWork = (a: AssessmentRow, sessions: Sessions, tz: string): GradebookWork => ({
@@ -81,8 +88,9 @@ function toCell(w: GradebookWork, latest: Latest | undefined, excused: boolean, 
 const overallOf = (work: GradebookWork[], cells: Record<string, GradebookCell>) =>
   overallScore(work.map((w) => ({ kind: w.kind, maxScore: w.maxScore, points: cells[w.id]!.points })));
 
-// Everything the table needs for one class, or for one student in it.
-async function load(classId: string, opts: Opts & { studentId?: string }) {
+// Everything the table needs for one class, or for one student in it. Not checked: callers check who's asking
+// (reports read it too, so every screen shows the same marks).
+export async function loadGradebook(classId: string, opts: Opts & { studentId?: string }) {
   const now = opts.now ?? new Date();
   const [{ timeZone: tz }, sessions, [k], students, rows] = await Promise.all([
     getClubSettings(),
@@ -93,7 +101,7 @@ async function load(classId: string, opts: Opts & { studentId?: string }) {
       .innerJoin(course, eq(course.id, klass.courseId))
       .where(eq(klass.id, classId)),
     db
-      .select({ id: user.id, name: user.name, enrolledOn: enrolment.enrolledOn })
+      .select({ id: user.id, name: user.name, enrolmentId: enrolment.id, enrolledOn: enrolment.enrolledOn })
       .from(enrolment)
       .innerJoin(user, eq(user.id, enrolment.studentId))
       .where(
@@ -142,14 +150,14 @@ async function load(classId: string, opts: Opts & { studentId?: string }) {
       const key = `${w.id}:${s.id}`;
       cells[w.id] = toCell(w, latest.get(key), isExcused.has(key), s.enrolledOn, now, tz);
     }
-    return { id: s.id, name: s.name, cells, overall: overallOf(work, cells) };
+    return { id: s.id, name: s.name, enrolmentId: s.enrolmentId, enrolledOn: s.enrolledOn, cells, overall: overallOf(work, cells) };
   });
   return { className: k?.name ?? '', passMark: k?.passMark ?? 60, work, rows: out };
 }
 
 export async function gradebook(actor: Actor | null, classId: string, opts: Opts = {}): Promise<Gradebook> {
   assertCan(actor, 'work.grade', await classAccess(classId));
-  return { classId, ...(await load(classId, opts)) };
+  return { classId, ...(await loadGradebook(classId, opts)) };
 }
 
 const cellSchema = z.object({ value: z.string().max(20), version: z.number().int().min(1).nullable() });
@@ -189,7 +197,7 @@ async function target(actor: Actor | null, assessmentId: string, studentId: stri
 }
 
 async function cellAndOverall(classId: string, assessmentId: string, studentId: string, opts: Opts) {
-  const one = await load(classId, { ...opts, studentId });
+  const one = await loadGradebook(classId, { ...opts, studentId });
   const row = one.rows[0]!;
   return { cell: row.cells[assessmentId]!, overall: row.overall };
 }
