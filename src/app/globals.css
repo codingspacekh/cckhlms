@@ -691,6 +691,59 @@ textarea {
   font-family: var(--f);
   font-weight: 600;
 }
+.slip .slip-class {
+  font-family: var(--f);
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.slip-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+th.pick,
+td.pick {
+  width: 44px;
+}
+/* Printing login slips (FR-AUTH-09): only the sheet, two slips across, black on white, none split over pages. */
+@media print {
+  body:has(.print-area) .side,
+  body:has(.print-area) .top,
+  body:has(.print-area) .skip,
+  body:has(.print-area) main#main > :not(.print-area),
+  .print-area .no-print {
+    display: none !important;
+  }
+  body:has(.print-area) {
+    background: #fff;
+  }
+  body:has(.print-area) .app {
+    display: block;
+  }
+  body:has(.print-area) main#main {
+    padding: 0;
+    max-width: none;
+  }
+  .print-area .slip-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+  }
+  .print-area .slip {
+    break-inside: avoid;
+    color: #000;
+    border-color: #000;
+    border-radius: 0;
+    margin: -0.75px; /* the dashed cut lines of neighbouring slips overlap */
+    padding: 16px;
+    font-size: 11pt;
+  }
+  .print-area .slip .slip-class {
+    color: #333;
+  }
+}
 .narrow-form {
   max-width: 560px;
 }

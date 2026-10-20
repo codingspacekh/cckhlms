@@ -2,6 +2,7 @@
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useActionState, useRef, useState, useTransition, type ReactNode } from 'react';
+import { SlipCard } from '@/components/accounts/SlipSheet';
 import { Icon } from '@/components/ui/Icon';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Pill } from '@/components/ui/Pill';
@@ -17,7 +18,21 @@ import {
 import type { Person, Role } from '@/modules/identity/service';
 
 // The accounts table takes the full width; adding a person and the one-time login slip open in a dialog.
-export function PeopleManager({ people, role, selfId, tabs }: { people: Person[]; role: Role; selfId: string; tabs: ReactNode }) {
+export function PeopleManager({
+  people,
+  role,
+  selfId,
+  tabs,
+  clubName,
+  site,
+}: {
+  people: Person[];
+  role: Role;
+  selfId: string;
+  tabs: ReactNode;
+  clubName: string;
+  site: string;
+}) {
   const router = useRouter();
   const dialog = useRef<HTMLDialogElement>(null);
   const [view, setView] = useState<'add' | 'slip' | null>(null);
@@ -54,9 +69,14 @@ export function PeopleManager({ people, role, selfId, tabs }: { people: Person[]
         eyebrow="Club"
         title="People"
         actions={
-          <button type="button" className="btn primary" onClick={openAdd}>
-            <Icon name="plus" /> Add a person
-          </button>
+          <>
+            <Link className="btn" href="/admin/people/import">
+              <Icon name="upload" /> Import students
+            </Link>
+            <button type="button" className="btn primary" onClick={openAdd}>
+              <Icon name="plus" /> Add a person
+            </button>
+          </>
         }
       />
       {tabs}
@@ -139,7 +159,7 @@ export function PeopleManager({ people, role, selfId, tabs }: { people: Person[]
       </section>
 
       <dialog ref={dialog} className="dialog" aria-labelledby="people-dialog-title" onClose={() => setView(null)}>
-        {view === 'slip' && slip && <LoginSlip slip={slip} onDone={() => dialog.current?.close()} />}
+        {view === 'slip' && slip && <LoginSlip slip={slip} clubName={clubName} site={site} onDone={() => dialog.current?.close()} />}
         {view === 'add' && (
           <AddPersonForm
             key={formKey}
@@ -231,7 +251,7 @@ function AddPersonForm({
   );
 }
 
-function LoginSlip({ slip, onDone }: { slip: Slip; onDone: () => void }) {
+function LoginSlip({ slip, clubName, site, onDone }: { slip: Slip; clubName: string; site: string; onDone: () => void }) {
   return (
     <section className="stack" role="region" aria-label="Login slip">
       <h2 id="people-dialog-title">{slip.reason === 'created' ? `Account created for ${slip.name}` : `New password for ${slip.name}`}</h2>
@@ -239,16 +259,7 @@ function LoginSlip({ slip, onDone }: { slip: Slip; onDone: () => void }) {
         <strong>Shown once.</strong> Write it on the login slip now. Only a hash is stored, so nobody can see it again. You can reset it
         later.
       </p>
-      <div className="slip">
-        <b>CCKH Coding Club · lms.cckh.dev</b>
-        <span>Name: {slip.name}</span>
-        <span>
-          Username: <span data-testid="slip-username">{slip.username}</span>
-        </span>
-        <span>
-          Password: <span data-testid="slip-password">{slip.password}</span>
-        </span>
-      </div>
+      <SlipCard slip={slip} clubName={clubName} site={site} />
       <div className="row end">
         <button
           type="button"

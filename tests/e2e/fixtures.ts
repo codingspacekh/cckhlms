@@ -364,3 +364,37 @@ export async function termEndClass(): Promise<TeachingClass & { next: string; re
   await publishTermReports(teacher, classId);
   return { classId, className, topics: [], students, next, repeat };
 }
+
+// For the account specs (CSV import, login slips): an empty Saturday-afternoon class with 10 places, in the main
+// class's term, for the imported students.
+export async function slipsClass(): Promise<{ classId: string; className: string }> {
+  const main = await teachingClass();
+  const { db } = await import('../../src/db/client');
+  const { user, klass } = await import('../../src/db/schema');
+  const { eq } = await import('drizzle-orm');
+  const { createCourse } = await import('../../src/modules/academics/courses');
+  const { createClass } = await import('../../src/modules/academics/classes');
+
+  const className = 'Python Slips · Sat 14:00';
+  const existing = await db.select({ id: klass.id }).from(klass).where(eq(klass.room, 'Slips room'));
+  if (existing[0]) return { classId: existing[0].id, className };
+  const idOf = async (username: string) => (await db.select({ id: user.id }).from(user).where(eq(user.username, username)))[0]!.id;
+  const admin = { userId: await idOf(USERS.admin.username), username: 'admin', name: 'Admin', role: 'admin', sessionId: 'e2e' };
+  const [k] = await db.select({ termId: klass.termId, firstDate: klass.firstDate }).from(klass).where(eq(klass.id, main.classId));
+  const course = await createCourse(admin, { code: 'PYS', name: 'Python Slips', defaultLanguage: 'python' });
+  const r = await createClass(admin, {
+    courseId: course.id,
+    termId: k!.termId,
+    day: 'sat',
+    startTime: '14:00',
+    minutes: 90,
+    firstDate: k!.firstDate,
+    weeks: 10,
+    room: 'Slips room',
+    capacity: 10,
+    leadTeacherId: await idOf(USERS.teacher.username),
+    confirmClashes: true,
+  });
+  if (r.status !== 'created') throw new Error('slips class not created');
+  return { classId: r.classId, className };
+}

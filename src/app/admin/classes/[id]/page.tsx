@@ -44,6 +44,11 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
             <Link className="btn" href={`/admin/classes/${c.id}/certificates`}>
               Certificates
             </Link>
+            {!archived && (
+              <Link className="btn" href={`/admin/classes/${c.id}/slips`}>
+                Login slips
+              </Link>
+            )}
             {!c.promotedAt && (
               <Link className="btn" href={`/admin/classes/${c.id}/promote`}>
                 Promote

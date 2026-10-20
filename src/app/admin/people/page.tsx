@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { getClubSettings } from '@/modules/club/service';
 import { listPeople, type Role } from '@/modules/identity/service';
+import { LMS_ORIGIN } from '@/server/auth';
 import { requireActor } from '@/server/guard';
 import { PeopleManager } from './PeopleManager';
 
@@ -15,7 +17,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
   const actor = await requireActor('accounts.manage');
   const { role: requested } = await searchParams;
   const role: Role = TABS.some((t) => t.role === requested) ? (requested as Role) : 'student';
-  const people = await listPeople(actor, role);
+  const [people, { clubName }] = await Promise.all([listPeople(actor, role), getClubSettings()]);
   const tabs = (
     <nav className="tabs" aria-label="Kind of account">
       {TABS.map((t) => (
@@ -25,5 +27,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
       ))}
     </nav>
   );
-  return <PeopleManager people={people} role={role} selfId={actor.userId} tabs={tabs} />;
+  return (
+    <PeopleManager people={people} role={role} selfId={actor.userId} tabs={tabs} clubName={clubName} site={new URL(LMS_ORIGIN).host} />
+  );
 }
