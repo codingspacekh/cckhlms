@@ -37,7 +37,7 @@ flowchart LR
 | **M1** ✅ | Walking skeleton (code; server set-up in G1) | Public repo + required CI checks, Docker Compose, VPS + Cloudflare Tunnel, automatic deploys with rollback, sign-in, dashboard shell, backups + first restore drill | NFR-04, 05, 10 | 5 days |
 | **M2** ✅ | Academics | Club settings, accounts and passwords, terms, courses + syllabus, weekend classes with weekly sessions, enrolments, transfers | FR-AUTH-01…07, 10, 11 · FR-ADM-01…08, 16 · FR-TCH-05 | 6 days |
 | **M3** ✅ | Teaching | Weekly lessons, Q&A with reporting, attendance, weekly class report, syllabus coverage | FR-TCH-01…06, 14, 20 · FR-STU-02…04, 10 | 5 days |
-| **M4** | Assessments | Classwork/homework/exams, multi-file editor, Web preview, submissions, grading, gradebook | FR-TCH-07…12, 19 · FR-STU-05, 06 · FR-CODE-01…06 | 8 days |
+| **M4** ✅ | Assessments | Classwork/homework/exams, multi-file editor, Web preview, submissions, grading, gradebook | FR-TCH-07…12, 19 · FR-STU-05, 06 · FR-CODE-01…06 | 8 days |
 | **G1** ⏳ | Go live | Owner's server and Cloudflare set-up (runbook §2); first deploy, restore drill, uptime alert | NFR-04 | 1–2 hours |
 | — | **R1: Pilot** | One real class uses the LMS on production for at least 4 weeks | | |
 | **M5** | Reports & statistics | 60/30/10 overall score, end-term exam, term reports with pass/fail, charts for all three roles, admin dashboard | FR-TCH-15…18 · FR-ADM-09, 10 · FR-STU-07 | 6 days |
@@ -264,7 +264,7 @@ The next milestone does not start until all four are true.
 
 **Exit criteria:** on production, a teacher runs one real or rehearsal week end to end (lesson, attendance, Q&A, weekly report), and the syllabus coverage view matches.
 
-### M4 — Assessments (8 days) — ✅ CODE DONE 2026-10-20 · waiting for the owner's review
+### M4 — Assessments (8 days) — ✅ DONE 2026-10-20 (owner signed off; PRs #14–#19 merged)
 > **Result** (PRs #14–#19, stacked: merge in order):
 > - **Setting work (FR-TCH-07/08, BR-01, BR-16):**
 >   - each week has a **Classwork & homework** tab: classwork, homework or exam; Python, Java, Web or paper / in class; out of; late policy; draft or published;
@@ -333,7 +333,56 @@ The next milestone does not start until all four are true.
 - Weekly: the owner collects feedback from the teacher and 2–3 students; fixes go through the normal TDD/PR process (no hot-fixing on the server).
 - A restore drill is repeated with real data. Real attendance and scores feed the M5 checks.
 
-### M5 — Reports & statistics (6 days)
+### M5 — Reports & statistics (6 days) — ✅ CODE DONE 2026-10-20 · waiting for the owner's review
+> **Result** (PRs #20–#24, stacked: merge in order). Built before G1 and R1, like M4: the checks against the pilot's real numbers move to R1 (see the exit criterion).
+> - **Score engine (BR-12/13/14/17):**
+>   - a **golden table** of 31 hand-worked cases (`score-golden.test.ts`);
+>   - it found three disagreements with a spreadsheet, all fixed: an exact half came out just under (63.75 → 63.7); **59.95 showed as 59.9**, so a pass was shown as a fail; and the late penalty was rounded to 2 decimals before it counted;
+>   - rounding now clears float noise and rounds halves up like `ROUND(…, 1)`, and late points are exact.
+> - **Current standing (FR-TCH-17, FR-ADM-09, FR-STU-07):**
+>   - `src/modules/reporting` works out each student's overall score and its parts, the suggested result, attendance and homework handed in, from the gradebook's own loader, so every screen agrees;
+>   - the teacher's Students tab shows Homework and Standing.
+>   - *Changed from the plan:* no SQL views (architecture §5.3). Due times are worked out from the sessions in TypeScript (ADR-08), so views would have to repeat those rules. Instead, an **independent SQL query** in the integration test (exact `numeric` arithmetic) must agree with the engine for every student. It was checked both ways round by breaking each side.
+> - **Term reports (FR-TCH-15/16/17, BR-08, BR-13):**
+>   - a Term reports tab per class: rating, comment, needs support (with what support), an optional adjusted final score, and the result;
+>   - the suggested result is chosen to start with; a different score or result needs a reason, which is logged;
+>   - **Publish** sends the class's reports together or not at all, and **snapshots** the numbers;
+>   - after that, only Admin or the **lead** teacher may change a report, with a reason; the change takes the current numbers and is logged with before/after;
+>   - Admin reaches the same table from the class page.
+> - **Charts (FR-TCH-18):**
+>   - a chart kit built to the dataviz rules: thin bars, hairline grid, one scale, pass-mark reference, a legend only for ≥ 2 series;
+>   - one text-only tooltip on hover and focus;
+>   - a **table view built from the same data**;
+>   - drawn at its real width, so text stays readable on a phone;
+>   - the palette was validated against the app's surfaces in both modes.
+> - **Statistics tab:** class average, below the pass mark, homework handed in; attendance and score trend by week; average by task; spread of standings; **topics to revisit** (from the lesson's and the weekly report's topics).
+> - **My progress (FR-STU-07):**
+>   - a tile per class;
+>   - my scores by task next to the class average;
+>   - this term against my last;
+>   - my published term reports.
+>   - *Privacy (BR-11):* the class average shows only from **5 scores** up, so a classmate's mark can't be worked out from it; the staff-only support note never reaches the student.
+> - **Admin (FR-ADM-09/10):**
+>   - the dashboard: tiles, standings across classes, this weekend's sessions, a classes table, and **needs attention** (support flags, missing weekly reports by class, attendance under 75 % after 2 sessions);
+>   - a **student report** per student (from People or the dashboard): per class standing, attendance, homework, scores by task, improvement (BR-10: last 4 scores against the 4 before), the term report with the support flag, and final scores term by term.
+> - **Permissions:** `termreport.write` (the class's teachers) and `termreport.amend` (Admin or the lead teacher). The policy matrix gains a `'lead'` rule.
+> - **Migration 0015:** `student_report`.
+> - **Tests:** 516 unit/component (97 % lines), 217 integration (98 % lines), 94 e2e. They include:
+>   - the golden table;
+>   - the SQL cross-check (`standing.test.ts`);
+>   - axe in light **and dark** mode on Statistics and My progress;
+>   - the **M5 exit journey** (`m5-journey.spec.ts`): the teacher checks Statistics and publishes term reports with one student flagged → the admin dashboard shows the flag and the student report shows the published report → the student sees it on My progress.
+> - **Found by looking at the screens** (the dataviz skill's last step), not by the tests:
+>   - the Table button wrapped under long subtitles;
+>   - a 2.5 tick on a count axis;
+>   - columns without values;
+>   - 6 px axis text on phones;
+>   - one alert per missing weekly report (now one per class);
+>   - a classes table wider than its card;
+>   - the student area's top bar said "My week" on every page (now "Learning").
+> - **Local demo data:** `npm run seed:dev` adds draft term reports for Python Level 1, with one student flagged as needing support.
+> - **Exit criterion:** until G1 and the pilot (R1), the owner checks it on a local production build (or `npm run seed:dev` + `npm run dev`). The pilot class's standings against a hand-calculated spreadsheet, with **zero differences**, is done during R1.
+
 **Goal:** scores, term results and charts are correct and easy to read.
 
 **Build:**

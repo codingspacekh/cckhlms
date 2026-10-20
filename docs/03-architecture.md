@@ -248,7 +248,7 @@ At this scale, statistics are computed live with SQL views; no separate analytic
 | Weak topics | scores grouped by syllabus topics linked to the lesson/session of each assessment |
 | Class distribution | histogram of scores per assessment |
 
-Views: `v_enrolment_stats`, `v_assessment_stats`, `v_student_trend`.
+No SQL views after all (M5, 2026-10-20): due times are worked out from the sessions in TypeScript (ADR-08), so a view would have to repeat those rules. Reports read the gradebook's own calculation (`src/modules/reporting`), and an independent SQL query in the integration tests checks it.
 
 ## 6. Code Editor Design (FR-CODE)
 

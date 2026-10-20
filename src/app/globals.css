@@ -1426,6 +1426,9 @@ svg.c .hx:focus .xh {
   color: var(--muted);
   margin-top: 2px;
 }
+.meter-cell .meter {
+  width: 64px;
+}
 .chart-empty {
   padding: 24px 0;
   text-align: center;
