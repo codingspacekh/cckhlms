@@ -101,3 +101,41 @@ export function zipNameFor(title: string, username?: string): string {
       .slice(0, 60) || 'project';
   return username ? `${slug}-${username}` : slug;
 }
+
+// BR-03/BR-04: until the due time a student can submit and resubmit (the latest counts). After it, a first
+// submission is late if late work is accepted; work already handed in stays as it is.
+export function canSubmit(a: {
+  due: Date | null;
+  now: Date;
+  allowLate: boolean;
+  submitted: boolean;
+}): { ok: true; late: boolean } | { ok: false; reason: string } {
+  if (!a.due || a.now.getTime() <= a.due.getTime()) return { ok: true, late: false };
+  if (a.submitted) return { ok: false, reason: 'The due time has passed, so your submission can’t be changed.' };
+  if (!a.allowLate) return { ok: false, reason: 'The due time has passed and late work isn’t accepted for this.' };
+  return { ok: true, late: true };
+}
+
+export type WorkStatus = 'submitted' | 'late' | 'missing' | 'not_due' | 'excused';
+export const WORK_STATUS_LABEL: Record<WorkStatus, string> = {
+  submitted: 'Submitted',
+  late: 'Late',
+  missing: 'Missing',
+  not_due: 'Not due yet',
+  excused: 'Joined after it was due',
+};
+
+// A student's status on one piece of work, worked out when read: "missing" is never stored (ADR-08). A
+// student who joined after the due date isn't expected to have done it (BR-17).
+export function workStatus(a: {
+  latest: { late: boolean } | null;
+  due: Date | null;
+  now: Date;
+  enrolledOn: string;
+  tz: string;
+}): WorkStatus {
+  if (a.latest) return a.latest.late ? 'late' : 'submitted';
+  if (!a.due) return 'not_due';
+  if (a.enrolledOn > toClubTime(a.due, a.tz).date) return 'excused';
+  return a.now.getTime() > a.due.getTime() ? 'missing' : 'not_due';
+}

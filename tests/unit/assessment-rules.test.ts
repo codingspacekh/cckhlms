@@ -1,7 +1,16 @@
 // FR-TCH-07/08 · BR-16 · BR-19: when classwork, homework and exams are due, worked out from the class's
 // sessions in club time each time they're read.
 import { describe, expect, it } from 'vitest';
-import { defaultDueMode, dueChoices, formatDue, nextHeldSession, resolveDue, zipNameFor } from '@/modules/assessments/rules';
+import {
+  canSubmit,
+  defaultDueMode,
+  dueChoices,
+  formatDue,
+  nextHeldSession,
+  resolveDue,
+  workStatus,
+  zipNameFor,
+} from '@/modules/assessments/rules';
 
 const TZ = 'Asia/Phnom_Penh'; // UTC+7, no daylight saving
 const s = (id: string, date: string, cancelled = false) => ({ id, date, startTime: '09:00', minutes: 90, cancelled });
@@ -85,5 +94,45 @@ describe('zipNameFor', () => {
     expect(zipNameFor('Countdown to lift off!')).toBe('countdown-to-lift-off');
     expect(zipNameFor('Shapes: part 2', 'bopha.l')).toBe('shapes-part-2-bopha.l');
     expect(zipNameFor('???')).toBe('project');
+  });
+});
+
+describe('submitting (BR-03, BR-04)', () => {
+  const due = new Date('2027-01-16T02:00:00Z');
+  const before = new Date('2027-01-16T01:59:00Z');
+  const after = new Date('2027-01-16T02:01:00Z');
+  it('before the due time: submit, and resubmit as often as needed', () => {
+    expect(canSubmit({ due, now: before, allowLate: false, submitted: false })).toEqual({ ok: true, late: false });
+    expect(canSubmit({ due, now: before, allowLate: false, submitted: true })).toEqual({ ok: true, late: false });
+  });
+  it('after it: a first submission is late if late work is accepted, otherwise refused', () => {
+    expect(canSubmit({ due, now: after, allowLate: true, submitted: false })).toEqual({ ok: true, late: true });
+    expect(canSubmit({ due, now: after, allowLate: false, submitted: false })).toEqual({
+      ok: false,
+      reason: 'The due time has passed and late work isn’t accepted for this.',
+    });
+  });
+  it('after it, work already submitted on time stays as it is', () => {
+    expect(canSubmit({ due, now: after, allowLate: true, submitted: true })).toEqual({
+      ok: false,
+      reason: 'The due time has passed, so your submission can’t be changed.',
+    });
+  });
+  it('work with no due date can always be submitted', () => {
+    expect(canSubmit({ due: null, now: after, allowLate: false, submitted: true })).toEqual({ ok: true, late: false });
+  });
+});
+
+describe('work status for the teacher (missing is worked out when read)', () => {
+  const due = new Date('2027-01-16T02:00:00Z');
+  const tz = 'Asia/Phnom_Penh';
+  const now = new Date('2027-01-17T00:00:00Z');
+  it('submitted, late, missing, not due yet, or joined after the due date (BR-17)', () => {
+    expect(workStatus({ latest: { late: false }, due, now, enrolledOn: '2027-01-09', tz })).toBe('submitted');
+    expect(workStatus({ latest: { late: true }, due, now, enrolledOn: '2027-01-09', tz })).toBe('late');
+    expect(workStatus({ latest: null, due, now, enrolledOn: '2027-01-09', tz })).toBe('missing');
+    expect(workStatus({ latest: null, due, now: new Date('2027-01-15T00:00:00Z'), enrolledOn: '2027-01-09', tz })).toBe('not_due');
+    expect(workStatus({ latest: null, due, now, enrolledOn: '2027-01-17', tz })).toBe('excused');
+    expect(workStatus({ latest: null, due: null, now, enrolledOn: '2027-01-09', tz })).toBe('not_due');
   });
 });

@@ -42,6 +42,7 @@ describe('startup', () => {
       'reply',
       'session',
       'student_profile',
+      'submission',
       'syllabus_topic',
       'teacher_profile',
       'term',

@@ -18,7 +18,7 @@ const filesSchema = z
   .max(LIMITS.maxFiles, `A project can have at most ${LIMITS.maxFiles} files.`);
 
 // The files as sent by the browser, checked as a project: safe paths, allowed types, the limits.
-function validFiles(raw: unknown): ProjectFile[] {
+export function validFiles(raw: unknown): ProjectFile[] {
   const parsed = filesSchema.safeParse(raw);
   if (!parsed.success) throw new ValidationError(parsed.error.issues[0]?.message ?? 'Those files can’t be saved.', 'files');
   try {
@@ -32,14 +32,14 @@ function validFiles(raw: unknown): ProjectFile[] {
   }
 }
 
-async function codeWork(assessmentId: string) {
+export async function codeWork(assessmentId: string) {
   const [a] = await db.select().from(assessment).where(eq(assessment.id, assessmentId)).limit(1);
   if (!a) throw new ValidationError('That work no longer exists.');
   if (a.language === 'paper') throw new ValidationError('This work is done on paper, so it has no files.');
   return a;
 }
 
-const starterOf = (a: { starterFiles: ProjectFile[]; language: string }) =>
+export const starterOf = (a: { starterFiles: ProjectFile[]; language: string }) =>
   a.starterFiles.length ? a.starterFiles : defaultStarter(a.language as WorkLanguage);
 
 export async function teacherProject(actor: Actor | null, assessmentId: string): Promise<{ view: AssessmentView; files: ProjectFile[] }> {
