@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { formatDate } from '@/modules/academics/schedule';
 import { formatDue } from '@/modules/assessments/rules';
 import { studentWeekWork } from '@/modules/assessments/service';
+import { myStanding } from '@/modules/assessments/submissions';
 import { formatSize } from '@/modules/teaching/attachment-rules';
 import { getClubSettings } from '@/modules/club/service';
 import { QaBoard } from '@/components/teaching/QaBoard';
@@ -25,6 +26,7 @@ export default async function StudentLessonPage({ params }: { params: Promise<{ 
       pageData(studentWeekWork(actor, id, Number(week))),
       getClubSettings(),
     ]);
+    const mine = await myStanding(actor, id, work);
     return (
       <>
         <PageHeader eyebrow={<Link href={`/student/classes/${id}`}>{className}</Link>} title={`Week ${week}`} />
@@ -32,7 +34,7 @@ export default async function StudentLessonPage({ params }: { params: Promise<{ 
         {work.length > 0 && (
           <section className="card stack" aria-labelledby="week-work-title">
             <h2 id="week-work-title">Classwork & homework</h2>
-            <WorkList classId={id} items={work.map((a) => ({ ...a, dueLabel: formatDue(a.due, timeZone) }))} />
+            <WorkList classId={id} items={work.map((a) => ({ ...a, dueLabel: formatDue(a.due, timeZone), mine: mine.get(a.id) }))} />
           </section>
         )}
       </>
@@ -43,6 +45,7 @@ export default async function StudentLessonPage({ params }: { params: Promise<{ 
     studentWeekWork(actor, id, l.week),
     getClubSettings(),
   ]);
+  const mine = await myStanding(actor, id, work);
   const i = l.weeks.indexOf(l.week);
   const prev = l.weeks[i - 1];
   const next = l.weeks[i + 1];
@@ -88,7 +91,7 @@ export default async function StudentLessonPage({ params }: { params: Promise<{ 
           {work.length > 0 && (
             <section className="card stack" aria-labelledby="week-work-title">
               <h2 id="week-work-title">Classwork & homework</h2>
-              <WorkList classId={id} items={work.map((a) => ({ ...a, dueLabel: formatDue(a.due, timeZone) }))} />
+              <WorkList classId={id} items={work.map((a) => ({ ...a, dueLabel: formatDue(a.due, timeZone), mine: mine.get(a.id) }))} />
             </section>
           )}
           {l.attachments.length > 0 && (

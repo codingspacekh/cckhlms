@@ -1,4 +1,4 @@
-// FR-STU-05: a student's list of classwork and homework, each linking to its page.
+// FR-STU-05/06: a student's list of classwork and homework, each linking to its page, with where they stand.
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { WorkList } from '@/components/assessments/WorkList';
@@ -33,6 +33,28 @@ describe('WorkList', () => {
     expect(screen.getAllByRole('listitem').map((li) => li.textContent)).toEqual([
       'CountdownHomeworkWeek 3 · Python · out of 10Due Sat 16 Jan 2027, 09:00',
       'QuizClassworkPaper / in class · out of 10Due Sat 16 Jan 2027, 09:00',
+    ]);
+  });
+
+  it('FR-STU-06: shows where the student stands: marked with the score, returned, handed in, or missing', () => {
+    const mine = [
+      { status: 'submitted', mark: 'graded', score: 7.5 },
+      { status: 'late', mark: 'returned', score: null },
+      { status: 'late', mark: 'to_mark', score: null },
+      { status: 'submitted', mark: 'to_mark', score: null },
+      { status: 'missing', mark: null, score: null },
+      { status: 'not_due', mark: null, score: null },
+      { status: 'excused', mark: null, score: null },
+    ] as const;
+    render(<WorkList classId="c1" items={mine.map((m, i) => ({ ...item, id: `a${i}`, mine: m }))} />);
+    expect(screen.getAllByRole('listitem').map((li) => li.querySelector('[data-testid="mine"]')?.textContent ?? null)).toEqual([
+      'Marked 7.5 / 10',
+      'Returned for redo',
+      'Handed in late',
+      'Handed in',
+      'Missing',
+      null,
+      null,
     ]);
   });
 });

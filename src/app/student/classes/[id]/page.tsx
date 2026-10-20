@@ -6,13 +6,15 @@ import { WorkList } from '@/components/assessments/WorkList';
 import { formatDate } from '@/modules/academics/schedule';
 import { formatDue } from '@/modules/assessments/rules';
 import { studentClassWork } from '@/modules/assessments/service';
+import { myStanding } from '@/modules/assessments/submissions';
 import { getClubSettings } from '@/modules/club/service';
 import { classLessons } from '@/modules/teaching/lessons';
 import { pageData, requireActor } from '@/server/guard';
 
 export const metadata: Metadata = { title: 'Lessons' };
 
-// A student's class: its published lessons, by week (FR-STU-02), and its classwork and homework (FR-STU-05).
+// A student's class: its published lessons, by week (FR-STU-02), and its classwork and homework with where
+// they stand on each (FR-STU-05/06).
 export default async function StudentClassPage({ params }: { params: Promise<{ id: string }> }) {
   const actor = await requireActor('student.area');
   const { id } = await params;
@@ -21,6 +23,7 @@ export default async function StudentClassPage({ params }: { params: Promise<{ i
     pageData(studentClassWork(actor, id)),
     getClubSettings(),
   ]);
+  const mine = await myStanding(actor, id, work);
   return (
     <>
       <PageHeader eyebrow={<Link href="/student">My week</Link>} title={className} />
@@ -53,7 +56,7 @@ export default async function StudentClassPage({ params }: { params: Promise<{ i
         {work.length === 0 ? (
           <p className="small muted">Nothing set yet. Work your teacher sets appears here.</p>
         ) : (
-          <WorkList classId={id} showWeek items={work.map((a) => ({ ...a, dueLabel: formatDue(a.due, timeZone) }))} />
+          <WorkList classId={id} showWeek items={work.map((a) => ({ ...a, dueLabel: formatDue(a.due, timeZone), mine: mine.get(a.id) }))} />
         )}
       </section>
     </>

@@ -11,6 +11,7 @@ import {
   index,
   integer,
   jsonb,
+  numeric,
   pgTable,
   primaryKey,
   smallint,
@@ -535,10 +536,17 @@ export const submission = pgTable(
     files: jsonb('files').$type<{ path: string; content: string }[]>().notNull(),
     late: boolean('late').notNull().default(false),
     submittedAt: ts('submitted_at').notNull().defaultNow(),
+    // Marking (FR-TCH-11/12): only the latest version is marked (BR-04). Returned = sent back for a redo.
+    score: numeric('score', { precision: 6, scale: 1, mode: 'number' }),
+    feedbackMd: text('feedback_md').notNull().default(''),
+    gradedBy: text('graded_by').references(() => user.id, { onDelete: 'set null' }),
+    gradedAt: ts('graded_at'),
+    returnedAt: ts('returned_at'),
   },
   (t) => [
     unique('submission_version_unique').on(t.assessmentId, t.studentId, t.version),
     index('submission_assessment_idx').on(t.assessmentId),
     check('submission_version_positive', sql`${t.version} >= 1`),
+    check('submission_score_positive', sql`${t.score} >= 0`),
   ],
 );

@@ -1,8 +1,17 @@
+import Link from 'next/link';
 import { Pill } from '@/components/ui/Pill';
 import { TableScroll } from '@/components/ui/TableScroll';
-import { WORK_STATUS_LABEL, type WorkStatus } from '@/modules/assessments/rules';
+import { MARK_LABEL, WORK_STATUS_LABEL, type Mark, type WorkStatus } from '@/modules/assessments/rules';
 
-export type SubmissionListRow = { studentId: string; name: string; status: WorkStatus; submittedLabel: string | null; versions: number };
+export type SubmissionListRow = {
+  studentId: string;
+  name: string;
+  status: WorkStatus;
+  submittedLabel: string | null;
+  versions: number;
+  mark: Mark | null;
+  score: number | null;
+};
 
 const TONE: Record<WorkStatus, 'good' | 'warn' | 'bad' | undefined> = {
   submitted: 'good',
@@ -19,13 +28,27 @@ const ICON: Record<WorkStatus, 'check' | 'clock' | 'alert' | 'x'> = {
   excused: 'x',
 };
 
-// FR-TCH-10: who has handed the work in. "Missing" is worked out when the page loads (ADR-08).
-export function SubmissionsTable({ rows, counts }: { rows: SubmissionListRow[]; counts: Record<WorkStatus, number> }) {
+// FR-TCH-10/11: who has handed the work in, and what's still to mark. "Missing" is worked out when the page
+// loads (ADR-08). Each name opens that student's work for marking.
+export function SubmissionsTable({
+  rows,
+  counts,
+  toMark,
+  maxScore,
+  base,
+}: {
+  rows: SubmissionListRow[];
+  counts: Record<WorkStatus, number>;
+  toMark: number;
+  maxScore: number;
+  base: string; // this work's teacher page
+}) {
   return (
     <section className="card flush" aria-labelledby="subs-title">
       <div className="chead">
         <h2 id="subs-title">Submissions</h2>
         <div className="row" data-testid="submission-counts">
+          {toMark > 0 && <Pill tone="info">{toMark} to mark</Pill>}
           <Pill tone="good">{counts.submitted} submitted</Pill>
           <Pill tone="warn">{counts.late} late</Pill>
           <Pill tone="bad">{counts.missing} missing</Pill>
@@ -45,12 +68,15 @@ export function SubmissionsTable({ rows, counts }: { rows: SubmissionListRow[]; 
                 <th scope="col" className="n">
                   Versions
                 </th>
+                <th scope="col">Mark</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.studentId}>
-                  <th scope="row">{r.name}</th>
+                  <th scope="row">
+                    <Link href={`${base}/students/${r.studentId}`}>{r.name}</Link>
+                  </th>
                   <td>
                     <Pill tone={TONE[r.status]} icon={ICON[r.status]}>
                       {WORK_STATUS_LABEL[r.status]}
@@ -58,6 +84,17 @@ export function SubmissionsTable({ rows, counts }: { rows: SubmissionListRow[]; 
                   </td>
                   <td className="tnum">{r.submittedLabel ?? <span className="muted">—</span>}</td>
                   <td className="n tnum">{r.versions || <span className="muted">—</span>}</td>
+                  <td className="tnum">
+                    {r.mark === 'graded' ? (
+                      `${r.score} / ${maxScore}`
+                    ) : r.mark ? (
+                      <Pill tone={r.mark === 'to_mark' ? 'info' : undefined} icon={r.mark === 'to_mark' ? 'clock' : 'alert'}>
+                        {MARK_LABEL[r.mark]}
+                      </Pill>
+                    ) : (
+                      <span className="muted">—</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

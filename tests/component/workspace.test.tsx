@@ -26,9 +26,29 @@ vi.mock('@/modules/assessments/project-actions', () => ({
   saveStarterAction: (...a: unknown[]) => saveStarterAction(...a),
 }));
 const { StudentWorkspace } = await import('@/components/editor/StudentWorkspace');
+type SubmitPanel = import('@/components/editor/StudentWorkspace').SubmitPanel;
 const { StarterEditor } = await import('@/components/editor/StarterEditor');
 
-const open = { canSubmit: true, reason: null, late: false, latePenaltyPct: 10, dueLabel: 'Sat 16 Jan 2027, 09:00', versions: [] };
+const open = {
+  canSubmit: true,
+  reason: null,
+  late: false,
+  latePenaltyPct: 10,
+  dueLabel: 'Sat 16 Jan 2027, 09:00',
+  maxScore: 10,
+  mark: null,
+  versions: [],
+};
+const v = (version: number, at: string, more: Partial<SubmitPanel['versions'][number]> = {}) => ({
+  version,
+  at,
+  late: false,
+  score: null,
+  counts: null,
+  feedbackHtml: '',
+  returned: false,
+  ...more,
+});
 const props = {
   classId: 'c1',
   submit: open,
@@ -139,10 +159,7 @@ describe('handing it in (FR-STU-05)', () => {
   });
 
   it('shows what was handed in, says when it would be late, and when it is closed', () => {
-    const versions = [
-      { version: 2, at: 'Fri 15 Jan 2027, 17:00', late: false },
-      { version: 1, at: 'Thu 14 Jan 2027, 18:00', late: false },
-    ];
+    const versions = [v(2, 'Fri 15 Jan 2027, 17:00'), v(1, 'Thu 14 Jan 2027, 18:00')];
     const { rerender } = render(<StudentWorkspace {...props} submit={{ ...open, versions }} />);
     expect(screen.getByTestId('submit-state').textContent).toBe(
       'Version 2 submitted Fri 15 Jan 2027, 17:00. You can submit again until Sat 16 Jan 2027, 09:00.',
@@ -157,6 +174,32 @@ describe('handing it in (FR-STU-05)', () => {
     rerender(<StudentWorkspace {...props} submit={{ ...open, canSubmit: false, reason }} />);
     expect((screen.getByRole('button', { name: 'Submit' }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByText(reason)).toBeTruthy();
+  });
+
+  it('FR-STU-06: shows the mark and the teacher’s feedback, and what late work counts as (BR-14)', () => {
+    const versions = [
+      v(2, 'Sat 16 Jan 2027, 12:00', { late: true, score: 8, counts: 7.2, feedbackHtml: '<p>Good <strong>loop</strong>.</p>' }),
+      v(1, 'Thu 14 Jan 2027, 18:00', { returned: true, feedbackHtml: '<p>Count down to 0.</p>' }),
+    ];
+    const reason = 'Your teacher has marked this, so it can’t be changed.';
+    render(<StudentWorkspace {...props} submit={{ ...open, canSubmit: false, reason, mark: 'graded', versions }} />);
+    const mark = screen.getByRole('region', { name: 'Your mark' });
+    expect(mark.querySelector('[data-testid="score"]')!.textContent).toBe('8 / 10');
+    expect(mark.textContent).toContain('Handed in late, so 10% comes off: it counts as 7.2.');
+    expect(mark.querySelector('.md')!.innerHTML).toBe('<p>Good <strong>loop</strong>.</p>');
+    expect(screen.getByRole('list', { name: 'Versions you submitted' }).textContent).toBe(
+      'Version 2Sat 16 Jan 2027, 12:00Late8 / 10Version 1Thu 14 Jan 2027, 18:00Returned',
+    );
+  });
+
+  it('FR-TCH-12: returned for a redo, it shows the teacher’s note and lets them submit again', () => {
+    const versions = [v(1, 'Thu 14 Jan 2027, 18:00', { returned: true, feedbackHtml: '<p>Count down to 0.</p>' })];
+    render(<StudentWorkspace {...props} submit={{ ...open, mark: 'returned', versions }} />);
+    const note = screen.getByRole('region', { name: 'Returned for a redo' });
+    expect(note.textContent).toContain('Your teacher returned version 1. Change your project and submit it again.');
+    expect(note.querySelector('.md')!.innerHTML).toBe('<p>Count down to 0.</p>');
+    expect(screen.getByTestId('submit-state').textContent).toBe('Version 1 returned for a redo.');
+    expect((screen.getByRole('button', { name: 'Submit again' }) as HTMLButtonElement).disabled).toBe(false);
   });
 });
 
