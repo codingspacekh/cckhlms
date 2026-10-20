@@ -2,7 +2,7 @@
 // confirm the result the score suggests (BR-13), then publish them all together. Publishing snapshots the
 // numbers (BR-12), so a published report doesn't move when a mark changes; after that only Admin or the lead
 // teacher may change one, with a reason, and the change takes the current numbers (BR-08).
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { enrolment, studentReport } from '@/db/schema';
 import { classAccess } from '@/modules/academics/access';
@@ -139,6 +139,15 @@ export async function saveTermReport(actor: Actor | null, enrolmentId: string, r
   const after = toRow(standing, { ...(existing ?? ({} as ReportRow)), ...values, enrolmentId } as ReportRow, standings.passMark);
   const detail = { classId: e.classId, studentId: e.studentId };
   await db.transaction(async (tx) => {
+    // Lock the report and check again: a publish that lands after the checks above must not be overwritten by a
+    // draft, which would skip the amend rules (BR-08).
+    const [current] = await tx
+      .select({ publishedAt: studentReport.publishedAt })
+      .from(studentReport)
+      .where(eq(studentReport.enrolmentId, enrolmentId))
+      .for('update');
+    if (!!current?.publishedAt !== published)
+      throw new ValidationError('This report was published while you were editing it. Reload to see it.');
     await tx
       .insert(studentReport)
       .values({ id: crypto.randomUUID(), enrolmentId, ...values })
@@ -184,10 +193,12 @@ export async function publishTermReports(actor: Actor | null, classId: string, o
   await db.transaction(async (tx) => {
     for (const r of toPublish) {
       const s = standings.students.find((x) => x.enrolmentId === r.enrolmentId)!;
-      await tx
+      const [updated] = await tx
         .update(studentReport)
         .set({ ...snapshot(s), publishedAt: now, publishedBy: actor.userId })
-        .where(eq(studentReport.enrolmentId, r.enrolmentId));
+        .where(and(eq(studentReport.enrolmentId, r.enrolmentId), isNull(studentReport.publishedAt)))
+        .returning({ id: studentReport.id });
+      if (!updated) throw new ValidationError('Someone published these reports a moment ago. Reload to see them.');
       await audit(
         {
           actorId: actor.userId,
