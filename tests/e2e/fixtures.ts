@@ -398,3 +398,35 @@ export async function slipsClass(): Promise<{ classId: string; className: string
   if (r.status !== 'created') throw new Error('slips class not created');
   return { classId: r.classId, className };
 }
+
+// For the notifications spec: homework in the main class's week 1, due tomorrow night, so it is "due soon".
+export async function dueSoonWork(): Promise<{ classId: string; title: string }> {
+  const main = await teachingClass();
+  const { db } = await import('../../src/db/client');
+  const { user, assessment } = await import('../../src/db/schema');
+  const { eq } = await import('drizzle-orm');
+  const { saveAssessment } = await import('../../src/modules/assessments/service');
+  const { weeksOf } = await import('../../src/modules/teaching/weeks');
+  const { addDays, todayIn } = await import('../../src/modules/academics/schedule');
+
+  const title = 'Notify me';
+  if ((await db.select({ id: assessment.id }).from(assessment).where(eq(assessment.title, title))).length)
+    return { classId: main.classId, title };
+  const [t] = await db.select({ id: user.id }).from(user).where(eq(user.username, USERS.teacher.username));
+  const teacher = { userId: t!.id, username: USERS.teacher.username, name: USERS.teacher.name, role: 'teacher', sessionId: 'e2e' };
+  const week1 = (await weeksOf(main.classId)).find((s) => s.week === 1)!.id;
+  await saveAssessment(teacher, week1, {
+    kind: 'homework',
+    title,
+    instructionsMd: 'Print your name.',
+    language: 'python',
+    maxScore: 10,
+    dueMode: 'fixed',
+    dueDate: addDays(todayIn('Asia/Phnom_Penh'), 1),
+    dueTime: '23:59',
+    allowLate: true,
+    latePenaltyPct: 10,
+    intent: 'publish',
+  });
+  return { classId: main.classId, title };
+}

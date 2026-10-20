@@ -69,6 +69,12 @@ const ICONS = {
       <path d="m8.5 14-1.5 7 5-3 5 3-1.5-7" />
     </>
   ),
+  bell: (
+    <>
+      <path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z" />
+      <path d="M10 20a2 2 0 0 0 4 0" />
+    </>
+  ),
   printer: (
     <>
       <path d="M7 9V3h10v6" />

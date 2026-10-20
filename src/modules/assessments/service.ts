@@ -1,6 +1,6 @@
 // Classwork, homework and exams set in a week of a class (FR-TCH-07/08), and what students see of them
 // (FR-STU-05, BR-01). When work is due is worked out from the class's sessions when read (rules.ts, BR-16).
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/db/client';
 import { assessment, classSession, klass } from '@/db/schema';
@@ -137,16 +137,23 @@ export async function saveAssessment(
     authorId: actor.userId,
   };
   const id = assessmentId ?? crypto.randomUUID();
+  const now = new Date();
+  const published = values.status === 'published';
   await db.transaction(async (tx) => {
     if (assessmentId) {
       const updated = await tx
         .update(assessment)
-        .set({ ...values, updatedAt: new Date() })
+        // Editing published work keeps its time, so students aren't told about it again (FR-STU-09).
+        .set({
+          ...values,
+          publishedAt: published ? sql`coalesce(${assessment.publishedAt}, ${now.toISOString()}::timestamptz)` : null,
+          updatedAt: now,
+        })
         .where(and(eq(assessment.id, id), eq(assessment.sessionId, sessionId)))
         .returning({ id: assessment.id });
       if (!updated.length) throw new ValidationError('That work no longer exists.');
     } else {
-      await tx.insert(assessment).values({ id, classId: s.classId, sessionId, ...values });
+      await tx.insert(assessment).values({ id, classId: s.classId, sessionId, ...values, publishedAt: published ? now : null });
     }
     await audit(
       {
