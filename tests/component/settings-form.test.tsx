@@ -10,7 +10,7 @@ afterEach(() => {
   cleanup();
   updateSettingsAction.mockReset();
 });
-const settings = { clubName: 'CCKH Coding Club', timeZone: 'Asia/Phnom_Penh' };
+const settings = { clubName: 'CCKH Coding Club', timeZone: 'Asia/Phnom_Penh', certificateSigner: 'Club Director' };
 const zones = ['Asia/Bangkok', 'Asia/Phnom_Penh'];
 
 describe('SettingsForm', () => {
@@ -18,6 +18,7 @@ describe('SettingsForm', () => {
     render(<SettingsForm settings={settings} timeZones={zones} />);
     expect((screen.getByLabelText('Club name') as HTMLInputElement).value).toBe('CCKH Coding Club');
     expect((screen.getByLabelText(/Time zone/) as HTMLSelectElement).value).toBe('Asia/Phnom_Penh');
+    expect((screen.getByLabelText(/Signed by/) as HTMLInputElement).value).toBe('Club Director');
   });
 
   it('sends the form and confirms when saved', async () => {
@@ -29,6 +30,7 @@ describe('SettingsForm', () => {
     const form = updateSettingsAction.mock.calls[0]![1] as FormData;
     expect(form.get('clubName')).toBe('CCKH Weekend Club');
     expect(form.get('timeZone')).toBe('Asia/Phnom_Penh');
+    expect(form.get('certificateSigner')).toBe('Club Director');
   });
 
   it('shows the problem when saving fails', async () => {

@@ -25,6 +25,7 @@ describe('startup', () => {
       'assessment',
       'attendance',
       'audit_log',
+      'certificate',
       'class',
       'class_report',
       'class_report_topic',

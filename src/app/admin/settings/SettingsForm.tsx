@@ -21,6 +21,10 @@ export function SettingsForm({ settings, timeZones }: { settings: ClubSettings; 
           ))}
         </select>
       </label>
+      <label className="f">
+        Signed by <span className="xs muted">(the name on the signature line of certificates)</span>
+        <input name="certificateSigner" type="text" defaultValue={settings.certificateSigner} required maxLength={100} />
+      </label>
       {result?.ok && (
         <p className="note" role="status">
           {result.message}

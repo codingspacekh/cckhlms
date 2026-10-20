@@ -8,6 +8,13 @@ const config: NextConfig = {
   // pages scrolled a little further than their content. Errors still show in the dev overlay.
   devIndicators: false,
   experimental: { authInterrupts: true }, // forbidden() → real 403 pages
+  // The certificate PDF reads its fonts from disk (src/modules/certificates/template.tsx).
+  outputFileTracingIncludes: {
+    '/api/certificates/*': [
+      './node_modules/@fontsource/noto-sans/files/noto-sans-{latin,latin-ext,vietnamese}-{400,700}-normal.woff',
+      './node_modules/@fontsource/noto-sans-khmer/files/noto-sans-khmer-khmer-{400,700}-normal.woff',
+    ],
+  },
   async headers() {
     return [
       {

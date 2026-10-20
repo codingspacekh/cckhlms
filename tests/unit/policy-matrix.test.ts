@@ -8,8 +8,9 @@ const ROLES = ['admin', 'teacher', 'student'] as const;
 type Role = (typeof ROLES)[number];
 
 // true = always · false = never · 'own' = only for their own class: one a teacher teaches, or one a student is
-// enrolled in · 'lead' = only the class's lead teacher, not its assistants (BR-08)
-type Rule = boolean | 'own' | 'lead';
+// enrolled in · 'lead' = only the class's lead teacher, not its assistants (BR-08) · 'self' = only a thing that
+// belongs to them (their own certificate)
+type Rule = boolean | 'own' | 'lead' | 'self';
 const MATRIX: Record<Action, Record<Role, Rule>> = {
   'admin.area': { admin: true, teacher: false, student: false },
   'teacher.area': { admin: false, teacher: true, student: false },
@@ -35,6 +36,8 @@ const MATRIX: Record<Action, Record<Role, Rule>> = {
   'work.grade': { admin: false, teacher: 'own', student: false },
   'termreport.write': { admin: false, teacher: 'own', student: false },
   'termreport.amend': { admin: true, teacher: 'lead', student: false },
+  'certificates.manage': { admin: true, teacher: false, student: false },
+  'certificate.download': { admin: true, teacher: false, student: 'self' },
 };
 
 // The actions that change a class's teaching or students' work: refused once the class is archived.
@@ -67,7 +70,14 @@ describe('policy matrix', () => {
   for (const [action, row] of Object.entries(MATRIX) as [Action, Record<Role, Rule>][]) {
     for (const role of ROLES) {
       const rule = row[role];
-      if (rule === 'lead') {
+      if (rule === 'self') {
+        it(`${role} may use ${action} only for something of their own`, () => {
+          expect(can(actor(role), action, { ownerId: 'u1' })).toBe(true);
+          expect(can(actor(role), action, { ownerId: 'someone-else' })).toBe(false);
+          expect(can(actor(role), action, both)).toBe(false); // being in the class isn't enough
+          expect(can(actor(role), action)).toBe(false);
+        });
+      } else if (rule === 'lead') {
         it(`${role} may use ${action} only as the class's lead teacher`, () => {
           expect(can(actor(role), action, { classTeacherIds: ['u1'], classLeadIds: ['u1'] })).toBe(true);
           expect(can(actor(role), action, { classTeacherIds: ['u1'], classLeadIds: ['someone-else'] })).toBe(false);
@@ -99,7 +109,13 @@ describe('policy matrix', () => {
   // published term report stays possible: it needs a reason and is logged (BR-08).
   describe('an archived class', () => {
     const allowedCtx = (rule: Rule, role: Role) =>
-      rule === 'lead' ? { classTeacherIds: ['u1'], classLeadIds: ['u1'] } : rule === 'own' ? own(role) : {};
+      rule === 'lead'
+        ? { classTeacherIds: ['u1'], classLeadIds: ['u1'] }
+        : rule === 'own'
+          ? own(role)
+          : rule === 'self'
+            ? { ownerId: 'u1' }
+            : {};
     for (const [action, row] of Object.entries(MATRIX) as [Action, Record<Role, Rule>][]) {
       for (const role of ROLES) {
         const rule = row[role];

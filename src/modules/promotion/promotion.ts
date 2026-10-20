@@ -1,10 +1,11 @@
 // Term-end promotion (FR-ADM-13, BR-07): the wizard moves a class's students on. Passed students go to the
 // next-level class, the others to a repeat class (or leave the club). Everything happens in one transaction:
 // new enrolments, the old ones marked completed, the old class archived, one audit row. Nothing is deleted.
-import { and, asc, desc, eq, gt, inArray, lte, ne, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, ne, sql } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { classTeacher, course, enrolment, klass, studentReport, term, user } from '@/db/schema';
 import { scheduleLabel, todayIn, type Day } from '@/modules/academics/schedule';
+import { latestStartedTerms } from '@/modules/academics/terms';
 import { getClubSettings } from '@/modules/club/service';
 import { loadTermReports } from '@/modules/reporting/term-reports';
 import type { Result } from '@/modules/reporting/rules';
@@ -112,12 +113,10 @@ export type PromotionListRow = {
   promotedAt: Date | null;
 };
 
-// The Promotion page: the classes of the two latest terms that have started, newest term first. By date, not by
-// status, so a term that wasn't marked active still shows.
+// The Promotion page: the classes of the two latest terms that have started, newest term first.
 export async function promotionList(actor: Actor | null, opts: Opts = {}): Promise<PromotionListRow[]> {
   assertCan(actor, 'classes.manage');
-  const today = todayIn((await getClubSettings()).timeZone, opts.now);
-  const terms = await db.select({ id: term.id }).from(term).where(lte(term.startDate, today)).orderBy(desc(term.startDate)).limit(2);
+  const terms = await latestStartedTerms(todayIn((await getClubSettings()).timeZone, opts.now));
   if (!terms.length) return [];
   return db
     .select({
@@ -131,12 +130,7 @@ export async function promotionList(actor: Actor | null, opts: Opts = {}): Promi
     })
     .from(klass)
     .innerJoin(term, eq(term.id, klass.termId))
-    .where(
-      inArray(
-        klass.termId,
-        terms.map((t) => t.id),
-      ),
-    )
+    .where(inArray(klass.termId, terms))
     .orderBy(desc(term.startDate), asc(klass.name));
 }
 

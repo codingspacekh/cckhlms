@@ -1,14 +1,14 @@
 // FR-ADM-13 · FR-ADM-14 · BR-07: Admin promotes a class at the end of term; it is archived, and its teacher can
 // still open it from Past classes but not change it.
 import { expect, test } from '@playwright/test';
-import { promotionClass } from './fixtures';
+import { termEndClass } from './fixtures';
 import { stateFile } from './global-setup';
 import { expectAccessible } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
-let c: Awaited<ReturnType<typeof promotionClass>>;
+let c: Awaited<ReturnType<typeof termEndClass>>;
 test.beforeAll(async () => {
-  c = await promotionClass();
+  c = await termEndClass();
 });
 
 test.describe('admin', () => {

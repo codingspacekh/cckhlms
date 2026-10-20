@@ -63,6 +63,12 @@ const ICONS = {
     </>
   ),
   promote: <path d="M7 17 17 7M9 7h8v8" />,
+  award: (
+    <>
+      <circle cx="12" cy="9" r="6" />
+      <path d="m8.5 14-1.5 7 5-3 5 3-1.5-7" />
+    </>
+  ),
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof ICONS;

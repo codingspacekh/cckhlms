@@ -3,12 +3,14 @@
 import type { Actor } from './actor';
 
 // Optional facts about the thing being acted on, for "own class" rules: who teaches the class (and which of them
-// is its lead), which students are enrolled in it now, and whether it is archived (FR-ADM-14).
+// is its lead), which students are enrolled in it now, and whether it is archived (FR-ADM-14). For things that
+// belong to one student (a certificate), who that is.
 export type PolicyContext = {
   classTeacherIds?: readonly string[];
   classLeadIds?: readonly string[];
   classStudentIds?: readonly string[];
   classArchived?: boolean;
+  ownerId?: string;
 };
 type Rule = (actor: Actor, ctx: PolicyContext) => boolean;
 
@@ -20,6 +22,7 @@ const hasRole =
 const teachesClass: Rule = (a, ctx) => rolesOf(a).includes('teacher') && (ctx.classTeacherIds ?? []).includes(a.userId);
 const leadsClass: Rule = (a, ctx) => teachesClass(a, ctx) && (ctx.classLeadIds ?? []).includes(a.userId);
 const studiesInClass: Rule = (a, ctx) => rolesOf(a).includes('student') && (ctx.classStudentIds ?? []).includes(a.userId);
+const ownsIt: Rule = (a, ctx) => rolesOf(a).includes('student') && ctx.ownerId === a.userId;
 // For actions that change a class: an archived class can still be read, but not changed.
 const whileOpen =
   (rule: Rule): Rule =>
@@ -57,6 +60,9 @@ export const ACTIONS = {
   // may change them (BR-08).
   'termreport.write': whileOpen(teachesClass),
   'termreport.amend': either(hasRole('admin'), leadsClass),
+  // Certificates (FR-ADM-11, FR-STU-08): Admin issues them; a student downloads their own.
+  'certificates.manage': hasRole('admin'),
+  'certificate.download': either(hasRole('admin'), ownsIt),
 } satisfies Record<string, Rule>;
 
 export type Action = keyof typeof ACTIONS;
