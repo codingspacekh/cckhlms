@@ -103,6 +103,13 @@ describe('start-up settings from the server environment', () => {
     expect((await pool.query(`select count(*)::int as n from "user"`)).rows[0].n).toBe(0);
   });
 
+  it('refuses to start in production with unsafe settings, before touching the database', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('BETTER_AUTH_SECRET', 'change-me-to-32-or-more-random-characters');
+    await expect(startup({ bootstrapAdmin: null })).rejects.toThrow(/BETTER_AUTH_SECRET is still the example value/);
+    expect(await tables()).toEqual([]);
+  });
+
   it('exits the process when start-up fails, so Docker restarts it', async () => {
     vi.stubEnv('BOOTSTRAP_ADMIN_USERNAME', 'owner');
     vi.stubEnv('BOOTSTRAP_ADMIN_PASSWORD', 'short');

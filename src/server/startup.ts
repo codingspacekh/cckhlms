@@ -1,9 +1,10 @@
-// Runs once when the server starts (src/instrumentation.ts): migrations, the club settings row,
-// and the first admin if there is none yet.
+// Runs once when the server starts (src/instrumentation.ts): the settings check, migrations, the club
+// settings row, and the first admin if there is none yet.
 import { like } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { runMigrations } from '@/db/migrate';
 import { clubSettings, user } from '@/db/schema';
+import { configProblems } from './config';
 import { seedUser } from './seed';
 
 type Bootstrap = { username: string; password: string } | null;
@@ -14,6 +15,8 @@ function bootstrapFromEnv(): Bootstrap {
 }
 
 export async function startup(opts: { bootstrapAdmin?: Bootstrap } = {}) {
+  const problems = configProblems(process.env);
+  if (problems.length) throw new Error(`The server settings need fixing:\n- ${problems.join('\n- ')}`);
   const bootstrap = opts.bootstrapAdmin !== undefined ? opts.bootstrapAdmin : bootstrapFromEnv();
   if (bootstrap && bootstrap.password.length < 12) throw new Error('The first admin password must be at least 12 characters.');
   await runMigrations();
