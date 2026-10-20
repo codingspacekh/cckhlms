@@ -160,8 +160,8 @@ export async function createClass(actor: Actor | null, raw: ClassInput): Promise
         note: s.cancelled ? 'No class (set when the class was created)' : null,
       })),
     );
+    await audit({ actorId: actor.userId, action: 'class.create', entity: 'class', entityId: classId, detail: { name, warnings } }, tx);
   });
-  await audit({ actorId: actor.userId, action: 'class.create', entity: 'class', entityId: classId, detail: { name, warnings } });
   return { status: 'created', classId, warnings };
 }
 
@@ -329,13 +329,16 @@ export async function cancelSession(actorIn: Actor | null, sessionId: string, in
         .insert(classSession)
         .values({ id: crypto.randomUUID(), classId: s.classId, date: added, startTime: k!.startTime, minutes: k!.minutes });
     }
-  });
-  await audit({
-    actorId: actor.userId,
-    action: 'session.cancel',
-    entity: 'class_session',
-    entityId: sessionId,
-    detail: { date: s.date, reason: reason.data, addedWeek: added },
+    await audit(
+      {
+        actorId: actor.userId,
+        action: 'session.cancel',
+        entity: 'class_session',
+        entityId: sessionId,
+        detail: { date: s.date, reason: reason.data, addedWeek: added },
+      },
+      tx,
+    );
   });
 }
 
@@ -346,16 +349,21 @@ export async function moveSession(actorIn: Actor | null, sessionId: string, inpu
   const startTime = input.startTime ? time.safeParse(input.startTime) : null;
   if (startTime && !startTime.success) throw ValidationError.fromZod(startTime.error);
   await dateTaken(s.classId, date.data, sessionId);
-  await db
-    .update(classSession)
-    .set({ date: date.data, startTime: startTime?.data ?? s.startTime })
-    .where(eq(classSession.id, sessionId));
-  await audit({
-    actorId: actor.userId,
-    action: 'session.move',
-    entity: 'class_session',
-    entityId: sessionId,
-    detail: { from: s.date, to: date.data },
+  await db.transaction(async (tx) => {
+    await tx
+      .update(classSession)
+      .set({ date: date.data, startTime: startTime?.data ?? s.startTime })
+      .where(eq(classSession.id, sessionId));
+    await audit(
+      {
+        actorId: actor.userId,
+        action: 'session.move',
+        entity: 'class_session',
+        entityId: sessionId,
+        detail: { from: s.date, to: date.data },
+      },
+      tx,
+    );
   });
 }
 
@@ -369,20 +377,19 @@ export async function addMakeUpSession(
   if (!parsed.success) throw ValidationError.fromZod(parsed.error);
   await dateTaken(classId, parsed.data.date);
   const id = crypto.randomUUID();
-  await db.insert(classSession).values({
-    id,
-    classId,
-    date: parsed.data.date,
-    startTime: parsed.data.startTime,
-    minutes: parsed.data.minutes,
-    note: 'Make-up session',
-  });
-  await audit({
-    actorId: actor.userId,
-    action: 'session.add',
-    entity: 'class_session',
-    entityId: id,
-    detail: { classId, date: parsed.data.date },
+  await db.transaction(async (tx) => {
+    await tx.insert(classSession).values({
+      id,
+      classId,
+      date: parsed.data.date,
+      startTime: parsed.data.startTime,
+      minutes: parsed.data.minutes,
+      note: 'Make-up session',
+    });
+    await audit(
+      { actorId: actor.userId, action: 'session.add', entity: 'class_session', entityId: id, detail: { classId, date: parsed.data.date } },
+      tx,
+    );
   });
   return { id };
 }

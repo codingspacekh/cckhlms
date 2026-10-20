@@ -98,13 +98,18 @@ export async function enrolStudent(
   if (warnings.length && !opts.confirmClashes) return { status: 'needs-confirmation', warnings };
   const enrolledOn = opts.enrolledOn ? isoDate.parse(opts.enrolledOn) : todayIn((await getClubSettings()).timeZone, opts.now);
   const id = crypto.randomUUID();
-  await db.insert(enrolment).values({ id, classId, studentId, enrolledOn });
-  await audit({
-    actorId: actor.userId,
-    action: 'enrolment.create',
-    entity: 'enrolment',
-    entityId: id,
-    detail: { classId, studentId, enrolledOn, warnings },
+  await db.transaction(async (tx) => {
+    await tx.insert(enrolment).values({ id, classId, studentId, enrolledOn });
+    await audit(
+      {
+        actorId: actor.userId,
+        action: 'enrolment.create',
+        entity: 'enrolment',
+        entityId: id,
+        detail: { classId, studentId, enrolledOn, warnings },
+      },
+      tx,
+    );
   });
   return { status: 'enrolled', enrolmentId: id };
 }
@@ -121,8 +126,10 @@ export async function withdrawEnrolment(actor: Actor | null, enrolmentId: string
   const e = await activeEnrolment(enrolmentId);
   const on = isoDate.parse(input.on);
   if (on < e.enrolledOn) throw new ValidationError(`The leaving date can't be before the join date (${formatDate(e.enrolledOn)}).`);
-  await db.update(enrolment).set({ status: 'withdrawn', endedOn: on }).where(eq(enrolment.id, enrolmentId));
-  await audit({ actorId: actor.userId, action: 'enrolment.withdraw', entity: 'enrolment', entityId: enrolmentId, detail: { on } });
+  await db.transaction(async (tx) => {
+    await tx.update(enrolment).set({ status: 'withdrawn', endedOn: on }).where(eq(enrolment.id, enrolmentId));
+    await audit({ actorId: actor.userId, action: 'enrolment.withdraw', entity: 'enrolment', entityId: enrolmentId, detail: { on } }, tx);
+  });
 }
 
 // BR-18: the old enrolment ends and a new one starts on the same day. Scores don't move with the student.
@@ -144,13 +151,16 @@ export async function transferEnrolment(
   await db.transaction(async (tx) => {
     await tx.update(enrolment).set({ status: 'withdrawn', endedOn: on }).where(eq(enrolment.id, enrolmentId));
     await tx.insert(enrolment).values({ id, classId: toClassId, studentId: e.studentId, enrolledOn: on, transferredFromId: enrolmentId });
-  });
-  await audit({
-    actorId: actor.userId,
-    action: 'enrolment.transfer',
-    entity: 'enrolment',
-    entityId: id,
-    detail: { from: enrolmentId, toClassId, on },
+    await audit(
+      {
+        actorId: actor.userId,
+        action: 'enrolment.transfer',
+        entity: 'enrolment',
+        entityId: id,
+        detail: { from: enrolmentId, toClassId, on },
+      },
+      tx,
+    );
   });
   return { status: 'enrolled' as const, enrolmentId: id };
 }

@@ -193,7 +193,8 @@ export async function saveLesson(
   }
   const status: LessonStatus = input.intent === 'draft' ? 'draft' : 'published';
 
-  const lessonId = await db.transaction(async (tx) => {
+  const state = lessonState({ status, publishAt }, now);
+  await db.transaction(async (tx) => {
     const [row] = await tx
       .insert(lesson)
       .values({
@@ -212,15 +213,16 @@ export async function saveLesson(
       .returning({ id: lesson.id });
     await tx.delete(lessonTopic).where(eq(lessonTopic.lessonId, row!.id));
     if (topicIds.length) await tx.insert(lessonTopic).values(topicIds.map((topicId) => ({ lessonId: row!.id, topicId })));
-    return row!.id;
-  });
-  const state = lessonState({ status, publishAt }, now);
-  await audit({
-    actorId: actor.userId,
-    action: 'lesson.save',
-    entity: 'lesson',
-    entityId: lessonId,
-    detail: { classId: s.classId, date: s.date, state, publishAt: publishAt?.toISOString() ?? null },
+    await audit(
+      {
+        actorId: actor.userId,
+        action: 'lesson.save',
+        entity: 'lesson',
+        entityId: row!.id,
+        detail: { classId: s.classId, date: s.date, state, publishAt: publishAt?.toISOString() ?? null },
+      },
+      tx,
+    );
   });
   return { state };
 }

@@ -136,29 +136,36 @@ export async function saveTermReport(actor: Actor | null, enrolmentId: string, r
     if (missing.length) throw new ValidationError(`A published report needs ${missing.join(' and ')}.`);
   }
   const values = { ...fields, ...(published ? snapshot(standing) : {}), authorId: actor.userId, updatedAt: new Date() };
-  await db
-    .insert(studentReport)
-    .values({ id: crypto.randomUUID(), enrolmentId, ...values })
-    .onConflictDoUpdate({ target: studentReport.enrolmentId, set: values });
-
   const after = toRow(standing, { ...(existing ?? ({} as ReportRow)), ...values, enrolmentId } as ReportRow, standings.passMark);
   const detail = { classId: e.classId, studentId: e.studentId };
-  if (published)
-    await audit({
-      actorId: actor.userId,
-      action: 'termreport.amend',
-      entity: 'student_report',
-      entityId: enrolmentId,
-      detail: { ...detail, changeReason, reason: fields.reason, before: summary(before), after: summary(after) },
-    });
-  else if (fields.reason)
-    await audit({
-      actorId: actor.userId,
-      action: 'termreport.override',
-      entity: 'student_report',
-      entityId: enrolmentId,
-      detail: { ...detail, ...summary(after), suggested: after.suggested, calculated: after.calculated, reason: fields.reason },
-    });
+  await db.transaction(async (tx) => {
+    await tx
+      .insert(studentReport)
+      .values({ id: crypto.randomUUID(), enrolmentId, ...values })
+      .onConflictDoUpdate({ target: studentReport.enrolmentId, set: values });
+    if (published)
+      await audit(
+        {
+          actorId: actor.userId,
+          action: 'termreport.amend',
+          entity: 'student_report',
+          entityId: enrolmentId,
+          detail: { ...detail, changeReason, reason: fields.reason, before: summary(before), after: summary(after) },
+        },
+        tx,
+      );
+    else if (fields.reason)
+      await audit(
+        {
+          actorId: actor.userId,
+          action: 'termreport.override',
+          entity: 'student_report',
+          entityId: enrolmentId,
+          detail: { ...detail, ...summary(after), suggested: after.suggested, calculated: after.calculated, reason: fields.reason },
+        },
+        tx,
+      );
+  });
 }
 
 // Publishes the class's draft reports together, or none of them: every student in the class needs a finished
@@ -181,15 +188,17 @@ export async function publishTermReports(actor: Actor | null, classId: string, o
         .update(studentReport)
         .set({ ...snapshot(s), publishedAt: now, publishedBy: actor.userId })
         .where(eq(studentReport.enrolmentId, r.enrolmentId));
+      await audit(
+        {
+          actorId: actor.userId,
+          action: 'termreport.publish',
+          entity: 'student_report',
+          entityId: r.enrolmentId,
+          detail: { classId, studentId: r.studentId, score: r.score, result: r.result, finalScore: r.finalScore, calculated: r.calculated },
+        },
+        tx,
+      );
     }
   });
-  for (const r of toPublish)
-    await audit({
-      actorId: actor.userId,
-      action: 'termreport.publish',
-      entity: 'student_report',
-      entityId: r.enrolmentId,
-      detail: { classId, studentId: r.studentId, score: r.score, result: r.result, finalScore: r.finalScore, calculated: r.calculated },
-    });
   return { published: toPublish.length };
 }

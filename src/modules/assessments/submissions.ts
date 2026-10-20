@@ -50,13 +50,18 @@ export async function submitWork(actor: Actor | null, assessmentId: string, opts
   const files = validFiles(draft?.files ?? starterOf(a));
   const version = previous + 1;
   const id = crypto.randomUUID();
-  await db.insert(submission).values({ id, assessmentId, studentId: actor.userId, version, files, late: allowed.late, submittedAt: now });
-  await audit({
-    actorId: actor.userId,
-    action: 'submission.submit',
-    entity: 'submission',
-    entityId: id,
-    detail: { assessmentId, version, late: allowed.late },
+  await db.transaction(async (tx) => {
+    await tx.insert(submission).values({ id, assessmentId, studentId: actor.userId, version, files, late: allowed.late, submittedAt: now });
+    await audit(
+      {
+        actorId: actor.userId,
+        action: 'submission.submit',
+        entity: 'submission',
+        entityId: id,
+        detail: { assessmentId, version, late: allowed.late },
+      },
+      tx,
+    );
   });
   return { version, late: allowed.late };
 }

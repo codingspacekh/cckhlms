@@ -23,9 +23,11 @@ export async function updateClubSettings(actor: Actor | null, raw: ClubSettings)
   assertCan(actor, 'settings.manage');
   const parsed = clubSettingsSchema.safeParse(raw);
   if (!parsed.success) throw ValidationError.fromZod(parsed.error);
-  await db
-    .update(clubSettings)
-    .set({ ...parsed.data, updatedAt: new Date() })
-    .where(eq(clubSettings.id, 1));
-  await audit({ actorId: actor.userId, action: 'settings.update', entity: 'club_settings', entityId: '1', detail: parsed.data });
+  await db.transaction(async (tx) => {
+    await tx
+      .update(clubSettings)
+      .set({ ...parsed.data, updatedAt: new Date() })
+      .where(eq(clubSettings.id, 1));
+    await audit({ actorId: actor.userId, action: 'settings.update', entity: 'club_settings', entityId: '1', detail: parsed.data }, tx);
+  });
 }

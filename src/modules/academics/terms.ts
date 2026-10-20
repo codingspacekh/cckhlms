@@ -37,12 +37,14 @@ export async function createTerm(actor: Actor | null, raw: TermInput): Promise<T
     .limit(1);
   if (overlap) throw new ValidationError(`These dates overlap ${overlap.name}.`, 'startDate');
 
-  const [created] = await db
-    .insert(term)
-    .values({ id: crypto.randomUUID(), year: t.year, number: t.number, name, startDate: t.startDate, endDate: t.endDate })
-    .returning();
-  await audit({ actorId: actor.userId, action: 'term.create', entity: 'term', entityId: created!.id, detail: { name } });
-  return created!;
+  return db.transaction(async (tx) => {
+    const [created] = await tx
+      .insert(term)
+      .values({ id: crypto.randomUUID(), year: t.year, number: t.number, name, startDate: t.startDate, endDate: t.endDate })
+      .returning();
+    await audit({ actorId: actor.userId, action: 'term.create', entity: 'term', entityId: created!.id, detail: { name } }, tx);
+    return created!;
+  });
 }
 
 export async function setTermStatus(actor: Actor | null, id: string, status: TermStatus) {
@@ -62,6 +64,8 @@ export async function setTermStatus(actor: Actor | null, id: string, status: Ter
       .limit(1);
     if (other) throw new ValidationError(`Close ${other.name} first: only one term can be active.`);
   }
-  await db.update(term).set({ status }).where(eq(term.id, id));
-  await audit({ actorId: actor.userId, action: 'term.status', entity: 'term', entityId: id, detail: { status } });
+  await db.transaction(async (tx) => {
+    await tx.update(term).set({ status }).where(eq(term.id, id));
+    await audit({ actorId: actor.userId, action: 'term.status', entity: 'term', entityId: id, detail: { status } }, tx);
+  });
 }

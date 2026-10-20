@@ -54,13 +54,18 @@ export async function saveStarterFiles(actor: Actor | null, assessmentId: string
   assertCan(actor, 'assessment.write', await classAccess(a.classId));
   if (a.language === 'paper') throw new ValidationError('This work is done on paper, so it has no files.');
   const files = validFiles(raw);
-  await db.update(assessment).set({ starterFiles: files, updatedAt: new Date() }).where(eq(assessment.id, assessmentId));
-  await audit({
-    actorId: actor.userId,
-    action: 'assessment.starter',
-    entity: 'assessment',
-    entityId: assessmentId,
-    detail: { files: files.length },
+  await db.transaction(async (tx) => {
+    await tx.update(assessment).set({ starterFiles: files, updatedAt: new Date() }).where(eq(assessment.id, assessmentId));
+    await audit(
+      {
+        actorId: actor.userId,
+        action: 'assessment.starter',
+        entity: 'assessment',
+        entityId: assessmentId,
+        detail: { files: files.length },
+      },
+      tx,
+    );
   });
 }
 

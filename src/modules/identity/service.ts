@@ -56,24 +56,23 @@ export async function createAccount(actor: Actor | null, raw: AccountInput) {
 
   const created = await insertAccount({ username, name: input.name, password, role: input.role });
   try {
-    if (input.role === 'student') {
-      await db
-        .insert(studentProfile)
-        .values({ userId: created.id, guardianName: input.guardianName, guardianPhone: input.guardianPhone, notes: input.notes });
-    } else if (input.role === 'teacher') {
-      await db.insert(teacherProfile).values({ userId: created.id, phone: input.phone, notes: input.notes });
-    }
+    await db.transaction(async (tx) => {
+      if (input.role === 'student') {
+        await tx
+          .insert(studentProfile)
+          .values({ userId: created.id, guardianName: input.guardianName, guardianPhone: input.guardianPhone, notes: input.notes });
+      } else if (input.role === 'teacher') {
+        await tx.insert(teacherProfile).values({ userId: created.id, phone: input.phone, notes: input.notes });
+      }
+      await audit(
+        { actorId: actor.userId, action: 'account.create', entity: 'user', entityId: created.id, detail: { role: input.role, username } },
+        tx,
+      );
+    });
   } catch (err) {
-    await db.delete(user).where(eq(user.id, created.id)); // keep it all-or-nothing
+    await db.delete(user).where(eq(user.id, created.id)); // Better Auth made the user outside our transaction: keep it all-or-nothing
     throw err;
   }
-  await audit({
-    actorId: actor.userId,
-    action: 'account.create',
-    entity: 'user',
-    entityId: created.id,
-    detail: { role: input.role, username },
-  });
   return { userId: created.id, username, password };
 }
 
@@ -101,12 +100,17 @@ export async function setActive(actor: Actor | null, userId: string, active: boo
       if (!other?.n) throw new ValidationError('This is the last active admin. Add or switch on another admin first.');
     }
   }
-  await db
-    .update(user)
-    .set({ banned: !active, banReason: active ? null : 'Switched off by the club admin', updatedAt: new Date() })
-    .where(eq(user.id, userId));
+  await db.transaction(async (tx) => {
+    await tx
+      .update(user)
+      .set({ banned: !active, banReason: active ? null : 'Switched off by the club admin', updatedAt: new Date() })
+      .where(eq(user.id, userId));
+    await audit(
+      { actorId: actor.userId, action: active ? 'account.reactivate' : 'account.deactivate', entity: 'user', entityId: userId },
+      tx,
+    );
+  });
   if (!active) await (await auth.$context).internalAdapter.deleteUserSessions(userId);
-  await audit({ actorId: actor.userId, action: active ? 'account.reactivate' : 'account.deactivate', entity: 'user', entityId: userId });
 }
 
 export async function signOutEverywhere(actor: Actor | null, userId: string) {
