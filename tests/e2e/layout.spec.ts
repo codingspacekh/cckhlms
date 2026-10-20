@@ -39,7 +39,7 @@ test.describe('teacher', () => {
     await expect.poll(() => page.evaluate(() => scrollY), { message: 'Week 2 from 200px down' }).toBe(0);
   });
 
-  for (const section of ['', '/students', '/schedule']) {
+  for (const section of ['', '/students', '/reports', '/schedule']) {
     test(`the class page${section} fits without scrolling sideways`, async ({ page }) => {
       await page.goto(`/teacher/classes/${c.classId}${section}`);
       await expect(page.getByRole('table').first()).toBeVisible();

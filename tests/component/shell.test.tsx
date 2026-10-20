@@ -38,6 +38,7 @@ describe('Sidebar', () => {
     ).toEqual([
       ['Weeks', '/teacher/classes/c1', null],
       ['Gradebook', '/teacher/classes/c1/gradebook', null],
+      ['Term reports', '/teacher/classes/c1/reports', null],
       ['Students', '/teacher/classes/c1/students', 'page'],
       ['Syllabus', '/teacher/classes/c1/syllabus', null],
       ['Schedule', '/teacher/classes/c1/schedule', null],

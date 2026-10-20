@@ -43,6 +43,7 @@ describe('startup', () => {
       'reply',
       'session',
       'student_profile',
+      'student_report',
       'submission',
       'syllabus_topic',
       'teacher_profile',

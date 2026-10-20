@@ -568,3 +568,41 @@ export const excusal = pgTable(
   },
   (t) => [primaryKey({ columns: [t.assessmentId, t.studentId] })],
 );
+
+// A student's term report for one class (FR-TCH-15/16/17): rating, comment, needs support, and the result the
+// teacher confirms (BR-13). final_score is set only when the teacher adjusts the calculated score; reason says
+// why the score or the result departs from the calculation. Publishing snapshots the numbers, so a published
+// report doesn't change when a mark does; after that only Admin or the lead teacher may change it (BR-08).
+export const studentReport = pgTable(
+  'student_report',
+  {
+    id: text('id').primaryKey(),
+    enrolmentId: text('enrolment_id')
+      .notNull()
+      .unique()
+      .references(() => enrolment.id, { onDelete: 'restrict' }),
+    rating: text('rating'),
+    comment: text('comment').notNull().default(''),
+    needsSupport: boolean('needs_support').notNull().default(false),
+    supportNote: text('support_note').notNull().default(''),
+    finalScore: numeric('final_score', { precision: 4, scale: 1, mode: 'number' }),
+    result: text('result'),
+    reason: text('reason'),
+    // Snapshot at publishing (BR-12): the calculated overall score and its parts.
+    calculatedScore: numeric('calculated_score', { precision: 4, scale: 1, mode: 'number' }),
+    examPct: numeric('exam_pct', { precision: 4, scale: 1, mode: 'number' }),
+    classworkPct: numeric('classwork_pct', { precision: 4, scale: 1, mode: 'number' }),
+    homeworkPct: numeric('homework_pct', { precision: 4, scale: 1, mode: 'number' }),
+    publishedAt: ts('published_at'),
+    publishedBy: text('published_by').references(() => user.id, { onDelete: 'set null' }),
+    authorId: text('author_id').references(() => user.id, { onDelete: 'set null' }),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [
+    check('student_report_rating_known', sql`${t.rating} in ('excellent', 'good', 'developing', 'needs_work')`),
+    check('student_report_result_known', sql`${t.result} in ('pass', 'fail')`),
+    check('student_report_final_score_range', sql`${t.finalScore} between 0 and 100`),
+    check('student_report_support_note', sql`${t.needsSupport} or ${t.supportNote} = ''`),
+    check('student_report_published_complete', sql`${t.publishedAt} is null or (${t.result} is not null and ${t.rating} is not null)`),
+  ],
+);

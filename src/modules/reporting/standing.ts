@@ -31,7 +31,8 @@ export type ClassStandings = { classId: string; className: string; passMark: num
 
 const noAttendance = { percent: null, present: 0, late: 0, absent: 0, excused: 0, held: 0 };
 
-async function load(classId: string, opts: Opts & { studentId?: string }): Promise<ClassStandings> {
+// Not checked: callers check who's asking.
+export async function loadStandings(classId: string, opts: Opts & { studentId?: string }): Promise<ClassStandings> {
   const [book, rates] = await Promise.all([loadGradebook(classId, opts), attendanceRates(classId)]);
   const standingOf = (r: GradebookRow): StudentStanding => {
     const tasks = book.work.map((w) => {
@@ -66,11 +67,11 @@ async function load(classId: string, opts: Opts & { studentId?: string }): Promi
 // The whole class: for its teachers and Admin.
 export async function classStandings(actor: Actor | null, classId: string, opts: Opts = {}): Promise<ClassStandings> {
   assertCan(actor, 'class.view', await classAccess(classId));
-  return load(classId, opts);
+  return loadStandings(classId, opts);
 }
 
 // A student's own standing in a class they're in now, and nobody else's (BR-11).
 export async function myClassStanding(actor: Actor | null, classId: string, opts: Opts = {}): Promise<StudentStanding | null> {
   assertCan(actor, 'work.submit', await classAccess(classId));
-  return (await load(classId, { ...opts, studentId: actor.userId })).students[0] ?? null;
+  return (await loadStandings(classId, { ...opts, studentId: actor.userId })).students[0] ?? null;
 }
