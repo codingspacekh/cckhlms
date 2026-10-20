@@ -20,7 +20,15 @@ export const NAV: Record<Role, NavSection[]> = {
     },
   ],
   teacher: [{ title: 'Teaching', items: [{ href: '/teacher', label: 'Dashboard', icon: 'home' }] }],
-  student: [{ title: 'Learning', items: [{ href: '/student', label: 'My week', icon: 'home' }] }],
+  student: [
+    {
+      title: 'Learning',
+      items: [
+        { href: '/student', label: 'My week', icon: 'home' },
+        { href: '/student/progress', label: 'My progress', icon: 'trend' },
+      ],
+    },
+  ],
 };
 
 // A teacher's class opens in the sidebar as these sections (owner, 2026-10-19: sub-tabs instead of one long page).
