@@ -333,7 +333,7 @@ The next milestone does not start until all four are true.
 - Weekly: the owner collects feedback from the teacher and 2–3 students; fixes go through the normal TDD/PR process (no hot-fixing on the server).
 - A restore drill is repeated with real data. Real attendance and scores feed the M5 checks.
 
-### M5 — Reports & statistics (6 days) — ✅ CODE DONE 2026-10-20 · waiting for the owner's review
+### M5 — Reports & statistics (6 days) — ✅ DONE 2026-10-20 (owner signed off; PRs #20–#24 merged) · pilot spreadsheet check during R1
 > **Result** (PRs #20–#24, stacked: merge in order). Built before G1 and R1, like M4: the checks against the pilot's real numbers move to R1 (see the exit criterion).
 > - **Score engine (BR-12/13/14/17):**
 >   - a **golden table** of 31 hand-worked cases (`score-golden.test.ts`);
