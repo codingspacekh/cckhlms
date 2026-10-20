@@ -39,7 +39,7 @@ export type WeeklyReport = {
 };
 
 export async function weeklyReport(actor: Actor | null, classId: string, week: number, opts: Opts = {}): Promise<WeeklyReport> {
-  assertCan(actor, 'report.write', await classAccess(classId));
+  assertCan(actor, 'report.write', await classAccess(classId, 'read'));
   const s = (await weeksOf(classId)).find((r) => r.week === week);
   if (!s) throw new ValidationError(`This class has no week ${week}.`);
   const syllabus = await syllabusOf(classId);

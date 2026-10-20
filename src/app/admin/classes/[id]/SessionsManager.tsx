@@ -6,9 +6,16 @@ import { addMakeUpAction, cancelSessionAction, moveSessionAction } from '@/modul
 import type { SessionRow } from '@/modules/academics/classes';
 import { addMinutes, formatDate } from '@/modules/academics/schedule';
 
-type Props = { classId: string; weeks: number; defaultStart: string; defaultMinutes: number; sessions: SessionRow[] };
+type Props = {
+  classId: string;
+  weeks: number;
+  defaultStart: string;
+  defaultMinutes: number;
+  sessions: SessionRow[];
+  readOnly?: boolean; // an archived class (FR-ADM-14)
+};
 
-export function SessionsManager({ classId, weeks, defaultStart, defaultMinutes, sessions }: Props) {
+export function SessionsManager({ classId, weeks, defaultStart, defaultMinutes, sessions, readOnly = false }: Props) {
   const [target, setTarget] = useState<SessionRow | null>(null);
   const [mode, setMode] = useState<'cancel' | 'move'>('cancel');
   const [error, setError] = useState<string | null>(null);
@@ -79,7 +86,7 @@ export function SessionsManager({ classId, weeks, defaultStart, defaultMinutes, 
                     {s.status === 'cancelled' && <Pill icon="x">Cancelled</Pill>} {s.note && <span className="small muted">{s.note}</span>}
                   </td>
                   <td>
-                    {s.status === 'scheduled' && (
+                    {s.status === 'scheduled' && !readOnly && (
                       <div className="row end nowrap">
                         <button type="button" className="btn sm ghost" onClick={() => open(s, 'move')} disabled={pending}>
                           Move
@@ -97,42 +104,44 @@ export function SessionsManager({ classId, weeks, defaultStart, defaultMinutes, 
         </TableScroll>
       </section>
 
-      <form className="card stack narrow-form" action={makeUpAction} aria-label="Add a make-up session">
-        <h2>Add a make-up session</h2>
-        <input type="hidden" name="classId" value={classId} />
-        <div className="grid g3">
-          <label className="f">
-            Date
-            <input name="date" type="date" required />
-          </label>
-          <label className="f">
-            Start time
-            <input name="startTime" type="time" defaultValue={defaultStart} required />
-          </label>
-          <label className="f">
-            Length
-            <select name="minutes" defaultValue={defaultMinutes}>
-              <option value={90}>90 min</option>
-              <option value={120}>120 min</option>
-            </select>
-          </label>
-        </div>
-        {makeUp && !makeUp.ok && (
-          <p className="note bad" role="alert">
-            {makeUp.error}
-          </p>
-        )}
-        {makeUp?.ok && (
-          <p className="note" role="status">
-            {makeUp.message}
-          </p>
-        )}
-        <div>
-          <button type="submit" className="btn" disabled={addingMakeUp}>
-            Add make-up session
-          </button>
-        </div>
-      </form>
+      {!readOnly && (
+        <form className="card stack narrow-form" action={makeUpAction} aria-label="Add a make-up session">
+          <h2>Add a make-up session</h2>
+          <input type="hidden" name="classId" value={classId} />
+          <div className="grid g3">
+            <label className="f">
+              Date
+              <input name="date" type="date" required />
+            </label>
+            <label className="f">
+              Start time
+              <input name="startTime" type="time" defaultValue={defaultStart} required />
+            </label>
+            <label className="f">
+              Length
+              <select name="minutes" defaultValue={defaultMinutes}>
+                <option value={90}>90 min</option>
+                <option value={120}>120 min</option>
+              </select>
+            </label>
+          </div>
+          {makeUp && !makeUp.ok && (
+            <p className="note bad" role="alert">
+              {makeUp.error}
+            </p>
+          )}
+          {makeUp?.ok && (
+            <p className="note" role="status">
+              {makeUp.message}
+            </p>
+          )}
+          <div>
+            <button type="submit" className="btn" disabled={addingMakeUp}>
+              Add make-up session
+            </button>
+          </div>
+        </form>
+      )}
 
       <dialog ref={dialog} className="dialog" aria-labelledby="session-dialog-title" onClose={() => setTarget(null)}>
         {target && (

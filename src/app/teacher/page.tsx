@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { sessionWhen } from '@/components/academics/nextSessionText';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { myClasses } from '@/modules/academics/enrolments';
+import { myClasses, pastClasses } from '@/modules/academics/enrolments';
 import { scheduleLabel } from '@/modules/academics/schedule';
 import { requireActor } from '@/server/guard';
 
@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: 'Dashboard' };
 
 export default async function TeacherDashboard() {
   const actor = await requireActor('teacher.area');
-  const classes = await myClasses(actor);
+  const [classes, past] = await Promise.all([myClasses(actor), pastClasses(actor)]);
   return (
     <>
       <PageHeader eyebrow={`Welcome, ${actor.name}`} title="Dashboard" />
@@ -48,6 +48,22 @@ export default async function TeacherDashboard() {
           </div>
         )}
       </section>
+      {past.length > 0 && (
+        <section aria-labelledby="past-classes-title" className="card stack">
+          <h2 id="past-classes-title">Past classes</h2>
+          <p className="xs muted">Archived at the end of their term. You can look at them, but not change them.</p>
+          <ul className="plain list">
+            {past.map((c) => (
+              <li key={c.id}>
+                <Link className="strong" href={`/teacher/classes/${c.id}`}>
+                  {c.name}
+                </Link>{' '}
+                <span className="xs muted">{c.termName}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </>
   );
 }

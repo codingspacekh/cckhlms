@@ -72,7 +72,7 @@ async function isOpen(date: string, now: Date) {
 }
 
 export async function attendanceSheet(actor: Actor | null, classId: string, week: number, opts: Opts = {}): Promise<AttendanceSheet> {
-  assertCan(actor, 'attendance.mark', await classAccess(classId));
+  assertCan(actor, 'attendance.mark', await classAccess(classId, 'read'));
   const s = (await weeksOf(classId)).find((r) => r.week === week);
   if (!s) throw new ValidationError(`This class has no week ${week}.`);
   const rows = await sheetRows(classId, s.id, s.date);

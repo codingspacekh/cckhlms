@@ -57,7 +57,7 @@ export type WeekRow = {
 
 // The teacher's list of weeks with each lesson's state.
 export async function classWeeks(actor: Actor | null, classId: string, opts: Opts = {}): Promise<WeekRow[]> {
-  assertCan(actor, 'lesson.write', await classAccess(classId));
+  assertCan(actor, 'lesson.write', await classAccess(classId, 'read'));
   const sessions = await weeksOf(classId);
   const lessons = sessions.length
     ? await db
@@ -110,7 +110,7 @@ export type LessonEditor = {
 };
 
 export async function lessonForEdit(actor: Actor | null, classId: string, week: number, opts: Opts = {}): Promise<LessonEditor> {
-  assertCan(actor, 'lesson.write', await classAccess(classId));
+  assertCan(actor, 'lesson.write', await classAccess(classId, 'read'));
   const c = await classInfo(classId);
   const all = await weeksOf(classId);
   const s = all.find((r) => r.week === week);

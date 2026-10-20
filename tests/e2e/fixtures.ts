@@ -265,3 +265,101 @@ export const journeyClass = () => smallClass({ room: 'Journey room', code: 'PYJ'
 // A class the e2e teacher doesn't teach, for "not your class" checks.
 export const otherTeachersClass = () =>
   smallClass({ room: 'Other room', code: 'PYO', course: 'Python Other', startTime: '11:00', teacher: 'Chenda Keo' });
+
+// For the promotion spec (FR-ADM-13): a Sunday class with two students of its own (so promoting it doesn't move
+// the shared e2e accounts), its exam marked (Nita Ung 80, Pich Ros 40) and its term reports published, plus the
+// two classes they can move to in Term 1 · 2029.
+export async function promotionClass(): Promise<TeachingClass & { next: string; repeat: string }> {
+  const main = await teachingClass();
+  const { db } = await import('../../src/db/client');
+  const { user, klass } = await import('../../src/db/schema');
+  const { eq } = await import('drizzle-orm');
+  const { createTerm } = await import('../../src/modules/academics/terms');
+  const { createCourse } = await import('../../src/modules/academics/courses');
+  const { createClass } = await import('../../src/modules/academics/classes');
+  const { enrolStudent } = await import('../../src/modules/academics/enrolments');
+  const { saveAssessment } = await import('../../src/modules/assessments/service');
+  const { saveCell } = await import('../../src/modules/assessments/gradebook');
+  const { createAccount } = await import('../../src/modules/identity/service');
+  const { publishTermReports, saveTermReport } = await import('../../src/modules/reporting/term-reports');
+  const { weeksOf } = await import('../../src/modules/teaching/weeks');
+
+  const className = 'Python Promote · Sun 12:00';
+  const next = 'Python Promote 2 · Sat 09:00';
+  const repeat = 'Python Promote · Sat 11:00';
+  const students = ['Nita Ung', 'Pich Ros'];
+  const existing = await db.select({ id: klass.id }).from(klass).where(eq(klass.room, 'Promote room'));
+  if (existing[0]) return { classId: existing[0].id, className, topics: [], students, next, repeat };
+
+  const idOf = async (username: string) => (await db.select({ id: user.id }).from(user).where(eq(user.username, username)))[0]!.id;
+  const admin = { userId: await idOf(USERS.admin.username), username: 'admin', name: 'Admin', role: 'admin', sessionId: 'e2e' };
+  const teacher = { userId: await idOf(USERS.teacher.username), username: '', name: USERS.teacher.name, role: 'teacher', sessionId: 'e2e' };
+  // Next term's classes go to another teacher, so the e2e teacher's own class list doesn't change.
+  const vibol = (await createAccount(admin, { role: 'teacher', name: 'Vibol Heng' })).userId;
+  const weekend = async (
+    courseId: string,
+    termId: string,
+    day: 'sat' | 'sun',
+    startTime: string,
+    firstDate: string,
+    room: string,
+    leadTeacherId = teacher.userId,
+  ) => {
+    const r = await createClass(admin, {
+      courseId,
+      termId,
+      day,
+      startTime,
+      minutes: 90,
+      firstDate,
+      weeks: 10,
+      room,
+      leadTeacherId,
+      confirmClashes: true,
+    });
+    if (r.status !== 'created') throw new Error(`${room} class not created`);
+    return r.classId;
+  };
+
+  const [k] = await db.select({ termId: klass.termId, firstDate: klass.firstDate }).from(klass).where(eq(klass.id, main.classId));
+  const sunday = new Date(new Date(`${k!.firstDate}T00:00:00Z`).getTime() + 86_400_000).toISOString().slice(0, 10);
+  const level2 = await createCourse(admin, { code: 'PYQ', name: 'Python Promote 2', defaultLanguage: 'python' });
+  const level1 = await createCourse(admin, { code: 'PYP', name: 'Python Promote', defaultLanguage: 'python', nextCourseId: level2.id });
+  const classId = await weekend(level1.id, k!.termId, 'sun', '12:00', sunday, 'Promote room');
+  const later = await createTerm(admin, { year: 2029, number: 1, startDate: '2029-01-13', endDate: '2029-03-25' });
+  await weekend(level2.id, later.id, 'sat', '09:00', '2029-01-13', 'Promote next room', vibol);
+  await weekend(level1.id, later.id, 'sat', '11:00', '2029-01-13', 'Promote repeat room', vibol);
+
+  const week2 = (await weeksOf(classId)).find((s) => s.week === 2)!.id;
+  const { id: exam } = await saveAssessment(teacher, week2, {
+    kind: 'exam',
+    title: 'End-term exam',
+    instructionsMd: '',
+    language: 'paper',
+    maxScore: 100,
+    dueMode: 'session_end',
+    allowLate: false,
+    latePenaltyPct: 0,
+    intent: 'publish',
+  });
+  for (const [name, score, result] of [
+    ['Nita Ung', '80', 'pass'],
+    ['Pich Ros', '40', 'fail'],
+  ] as const) {
+    const a = await createAccount(admin, { role: 'student', name });
+    const e = await enrolStudent(admin, classId, a.userId, { enrolledOn: sunday, confirmClashes: true });
+    if (e.status !== 'enrolled') throw new Error(`${name} not enrolled`);
+    await saveCell(teacher, exam, a.userId, { value: score, version: null });
+    await saveTermReport(teacher, e.enrolmentId, {
+      rating: 'good',
+      comment: '',
+      needsSupport: false,
+      supportNote: '',
+      finalScore: '',
+      result,
+      reason: '',
+    });
+  }
+  await publishTermReports(teacher, classId);
+  return { classId, className, topics: [], students, next, repeat };
+}

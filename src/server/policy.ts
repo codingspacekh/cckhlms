@@ -3,11 +3,12 @@
 import type { Actor } from './actor';
 
 // Optional facts about the thing being acted on, for "own class" rules: who teaches the class (and which of them
-// is its lead), and which students are enrolled in it now.
+// is its lead), which students are enrolled in it now, and whether it is archived (FR-ADM-14).
 export type PolicyContext = {
   classTeacherIds?: readonly string[];
   classLeadIds?: readonly string[];
   classStudentIds?: readonly string[];
+  classArchived?: boolean;
 };
 type Rule = (actor: Actor, ctx: PolicyContext) => boolean;
 
@@ -19,6 +20,11 @@ const hasRole =
 const teachesClass: Rule = (a, ctx) => rolesOf(a).includes('teacher') && (ctx.classTeacherIds ?? []).includes(a.userId);
 const leadsClass: Rule = (a, ctx) => teachesClass(a, ctx) && (ctx.classLeadIds ?? []).includes(a.userId);
 const studiesInClass: Rule = (a, ctx) => rolesOf(a).includes('student') && (ctx.classStudentIds ?? []).includes(a.userId);
+// For actions that change a class: an archived class can still be read, but not changed.
+const whileOpen =
+  (rule: Rule): Rule =>
+  (a, ctx) =>
+    !ctx.classArchived && rule(a, ctx);
 const either =
   (...rules: Rule[]): Rule =>
   (a, ctx) =>
@@ -33,23 +39,23 @@ export const ACTIONS = {
   'terms.manage': hasRole('admin'),
   'courses.manage': hasRole('admin'),
   'classes.manage': hasRole('admin'),
-  'class.schedule': either(hasRole('admin'), teachesClass),
+  'class.schedule': whileOpen(either(hasRole('admin'), teachesClass)),
   'class.view': either(hasRole('admin'), teachesClass),
   'enrolments.manage': hasRole('admin'),
-  'lesson.write': teachesClass,
+  'lesson.write': whileOpen(teachesClass),
   'lesson.read': either(hasRole('admin'), teachesClass, studiesInClass),
-  'attendance.mark': teachesClass,
-  'qa.post': either(teachesClass, studiesInClass),
-  'qa.moderate': teachesClass,
-  'report.write': teachesClass,
-  'assessment.write': teachesClass,
+  'attendance.mark': whileOpen(teachesClass),
+  'qa.post': whileOpen(either(teachesClass, studiesInClass)),
+  'qa.moderate': whileOpen(teachesClass),
+  'report.write': whileOpen(teachesClass),
+  'assessment.write': whileOpen(teachesClass),
   'assessment.read': either(hasRole('admin'), teachesClass, studiesInClass),
-  'work.save': studiesInClass,
-  'work.submit': studiesInClass,
-  'work.grade': teachesClass,
+  'work.save': whileOpen(studiesInClass),
+  'work.submit': whileOpen(studiesInClass),
+  'work.grade': whileOpen(teachesClass),
   // Term reports (FR-TCH-15/17): the class's teachers write them; once published, only Admin or the lead teacher
   // may change them (BR-08).
-  'termreport.write': teachesClass,
+  'termreport.write': whileOpen(teachesClass),
   'termreport.amend': either(hasRole('admin'), leadsClass),
 } satisfies Record<string, Rule>;
 

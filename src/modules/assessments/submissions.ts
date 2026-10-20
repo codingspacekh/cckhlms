@@ -6,7 +6,7 @@ import { db } from '@/db/client';
 import { enrolment, excusal, submission, user, workDraft } from '@/db/schema';
 import type { ProjectFile } from '@/lib/project/files';
 import { renderMarkdown } from '@/lib/markdown';
-import { classAccess } from '@/modules/academics/access';
+import { classAccess, enrolledOrCompleted } from '@/modules/academics/access';
 import { getClubSettings } from '@/modules/club/service';
 import { weeksOf } from '@/modules/teaching/weeks';
 import type { Actor } from '@/server/actor';
@@ -96,7 +96,7 @@ export type MySubmissions = {
 // (FR-STU-06), and whether they can submit now. Only ever their own (BR-11).
 export async function mySubmissions(actor: Actor | null, assessmentId: string, opts: Opts = {}): Promise<MySubmissions> {
   const a = await codeWork(assessmentId);
-  assertCan(actor, 'work.submit', await classAccess(a.classId));
+  assertCan(actor, 'work.submit', await classAccess(a.classId, 'read'));
   const [{ due }, rows] = await Promise.all([dueOf(a), versionsOf(assessmentId, actor.userId)]);
   const latest = rows[0] ?? null;
   return {
@@ -137,7 +137,7 @@ export type SubmissionRow = {
 // Every student in the class now, with their status on this work (FR-TCH-10).
 export async function submissionList(actor: Actor | null, assessmentId: string, opts: Opts = {}) {
   const a = await codeWork(assessmentId);
-  assertCan(actor, 'assessment.write', await classAccess(a.classId));
+  assertCan(actor, 'assessment.write', await classAccess(a.classId, 'read'));
   const now = opts.now ?? new Date();
   const [{ due, tz }, students, subs] = await Promise.all([
     dueOf(a),
@@ -145,7 +145,7 @@ export async function submissionList(actor: Actor | null, assessmentId: string, 
       .select({ id: user.id, name: user.name, enrolledOn: enrolment.enrolledOn })
       .from(enrolment)
       .innerJoin(user, eq(user.id, enrolment.studentId))
-      .where(and(eq(enrolment.classId, a.classId), eq(enrolment.status, 'active')))
+      .where(and(eq(enrolment.classId, a.classId), enrolledOrCompleted))
       .orderBy(asc(user.name)),
     db
       .select({
@@ -192,7 +192,7 @@ export async function myStanding(
   items: { id: string; due: Date | null }[],
   opts: Opts = {},
 ): Promise<Map<string, MyStanding>> {
-  assertCan(actor, 'work.submit', await classAccess(classId));
+  assertCan(actor, 'work.submit', await classAccess(classId, 'read'));
   const now = opts.now ?? new Date();
   const ids = items.map((i) => i.id);
   const [{ timeZone: tz }, [enrolled], subs, excused] = await Promise.all([

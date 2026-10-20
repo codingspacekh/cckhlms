@@ -72,6 +72,6 @@ export async function classStandings(actor: Actor | null, classId: string, opts:
 
 // A student's own standing in a class they're in now, and nobody else's (BR-11).
 export async function myClassStanding(actor: Actor | null, classId: string, opts: Opts = {}): Promise<StudentStanding | null> {
-  assertCan(actor, 'work.submit', await classAccess(classId));
+  assertCan(actor, 'work.submit', await classAccess(classId, 'read'));
   return (await loadStandings(classId, { ...opts, studentId: actor.userId })).students[0] ?? null;
 }

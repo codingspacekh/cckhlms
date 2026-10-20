@@ -44,7 +44,7 @@ export const starterOf = (a: { starterFiles: ProjectFile[]; language: string }) 
 
 export async function teacherProject(actor: Actor | null, assessmentId: string): Promise<{ view: AssessmentView; files: ProjectFile[] }> {
   const a = await codeWork(assessmentId);
-  assertCan(actor, 'assessment.write', await classAccess(a.classId));
+  assertCan(actor, 'assessment.write', await classAccess(a.classId, 'read'));
   return { view: await readAssessment(actor, assessmentId), files: starterOf(a) };
 }
 
@@ -75,7 +75,7 @@ export async function studentProject(
   assessmentId: string,
 ): Promise<{ view: AssessmentView; files: ProjectFile[]; savedAt: Date | null }> {
   const a = await codeWork(assessmentId);
-  assertCan(actor, 'work.save', await classAccess(a.classId));
+  assertCan(actor, 'work.save', await classAccess(a.classId, 'read'));
   if (a.status !== 'published') throw new ValidationError('That work no longer exists.');
   const [d] = await db
     .select()

@@ -88,7 +88,7 @@ const inSession = (sessionId: string) =>
 
 // A teacher's week: the work set in it and the "due" choices for new work.
 export async function weekWork(actor: Actor | null, classId: string, week: number) {
-  assertCan(actor, 'assessment.write', await classAccess(classId));
+  assertCan(actor, 'assessment.write', await classAccess(classId, 'read'));
   const { s, sessions } = await weekSession(classId, week);
   const tz = (await getClubSettings()).timeZone;
   return {

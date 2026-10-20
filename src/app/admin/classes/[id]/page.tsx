@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { ArchivedNote } from '@/components/academics/ArchivedNote';
+import { RosterTable } from '@/components/academics/RosterTable';
 import { CoverageCard } from '@/components/teaching/CoverageCard';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { getClass, listClasses } from '@/modules/academics/classes';
@@ -28,17 +30,26 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
   const inClass = new Set(roster.filter((r) => r.status === 'active').map((r) => r.studentId));
   const lead = c.teachers.find((t) => t.role === 'lead');
   const assistants = c.teachers.filter((t) => t.role === 'assistant');
+  const archived = c.status === 'archived';
   return (
     <>
       <PageHeader
         eyebrow={<Link href="/admin/classes">Classes</Link>}
         title={c.name}
         actions={
-          <Link className="btn" href={`/admin/classes/${c.id}/reports`}>
-            Term reports
-          </Link>
+          <>
+            <Link className="btn" href={`/admin/classes/${c.id}/reports`}>
+              Term reports
+            </Link>
+            {!c.promotedAt && (
+              <Link className="btn" href={`/admin/classes/${c.id}/promote`}>
+                Promote
+              </Link>
+            )}
+          </>
         }
       />
+      {archived && <ArchivedNote termName={c.termName} />}
       <section className="card summary" aria-label="Class summary">
         <div>
           <span className="k">Schedule</span>
@@ -69,16 +80,32 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
           </div>
         )}
       </section>
-      <RosterManager
-        classId={c.id}
-        roster={roster}
-        candidates={students.filter((p) => p.active && !inClass.has(p.id)).map((p) => ({ id: p.id, name: p.name }))}
-        otherClasses={termClasses.filter((k) => k.id !== c.id).map((k) => ({ id: k.id, name: k.name }))}
-        today={todayIn(settings.timeZone)}
-      />
+      {archived ? (
+        <section className="stack" aria-labelledby="students-title">
+          <h2 id="students-title">Students</h2>
+          <div className="card flush">
+            <RosterTable rows={roster} />
+          </div>
+        </section>
+      ) : (
+        <RosterManager
+          classId={c.id}
+          roster={roster}
+          candidates={students.filter((p) => p.active && !inClass.has(p.id)).map((p) => ({ id: p.id, name: p.name }))}
+          otherClasses={termClasses.filter((k) => k.id !== c.id).map((k) => ({ id: k.id, name: k.name }))}
+          today={todayIn(settings.timeZone)}
+        />
+      )}
       <CoverageCard coverage={coverage} />
       <h2>Sessions</h2>
-      <SessionsManager classId={c.id} weeks={c.weeks} defaultStart={c.startTime} defaultMinutes={c.minutes} sessions={c.sessions} />
+      <SessionsManager
+        classId={c.id}
+        weeks={c.weeks}
+        defaultStart={c.startTime}
+        defaultMinutes={c.minutes}
+        sessions={c.sessions}
+        readOnly={archived}
+      />
     </>
   );
 }

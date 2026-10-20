@@ -37,6 +37,21 @@ const MATRIX: Record<Action, Record<Role, Rule>> = {
   'termreport.amend': { admin: true, teacher: 'lead', student: false },
 };
 
+// The actions that change a class's teaching or students' work: refused once the class is archived.
+const CHANGES_A_CLASS = new Set<Action>([
+  'class.schedule',
+  'lesson.write',
+  'attendance.mark',
+  'qa.post',
+  'qa.moderate',
+  'report.write',
+  'assessment.write',
+  'work.save',
+  'work.submit',
+  'work.grade',
+  'termreport.write',
+]);
+
 const actor = (role: string): Actor => ({ userId: 'u1', username: 'x', name: 'X', role, sessionId: 's1' });
 
 describe('policy matrix', () => {
@@ -79,6 +94,23 @@ describe('policy matrix', () => {
       expect(can(null, action)).toBe(false);
     });
   }
+
+  // FR-ADM-14: an archived class (its term is closed, or it was promoted) can be read but not changed. Amending a
+  // published term report stays possible: it needs a reason and is logged (BR-08).
+  describe('an archived class', () => {
+    const allowedCtx = (rule: Rule, role: Role) =>
+      rule === 'lead' ? { classTeacherIds: ['u1'], classLeadIds: ['u1'] } : rule === 'own' ? own(role) : {};
+    for (const [action, row] of Object.entries(MATRIX) as [Action, Record<Role, Rule>][]) {
+      for (const role of ROLES) {
+        const rule = row[role];
+        if (rule === false) continue;
+        const changes = CHANGES_A_CLASS.has(action);
+        it(`${role} ${changes ? 'may not' : 'may still'} use ${action}`, () => {
+          expect(can(actor(role), action, { ...allowedCtx(rule, role), classArchived: true })).toBe(!changes);
+        });
+      }
+    }
+  });
 
   it('gives a user with several roles the rights of each', () => {
     expect(can(actor('admin,teacher'), 'admin.area')).toBe(true);

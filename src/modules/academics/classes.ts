@@ -6,7 +6,7 @@ import { classSession, classTeacher, course, klass, term, user } from '@/db/sche
 import type { Actor } from '@/server/actor';
 import { audit } from '@/server/audit';
 import { assertCan, ValidationError } from '@/server/errors';
-import { classTeacherIds } from './access';
+import { classAccess, classTeacherIds } from './access';
 import { addDays, DAY_NAME, formatDate, generateSessions, numberWeeks, overlaps, scheduleLabel, weekdayOf, type Day } from './schedule';
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Choose a date.');
@@ -241,12 +241,13 @@ export type ClassDetail = {
   room: string | null;
   capacity: number | null;
   status: string;
+  promotedAt: Date | null;
   teachers: { userId: string; name: string; role: 'lead' | 'assistant' }[];
   sessions: SessionRow[];
 };
 
 export async function getClass(actor: Actor | null, id: string): Promise<ClassDetail> {
-  assertCan(actor, 'class.schedule', { classTeacherIds: await classTeacherIds(id) });
+  assertCan(actor, 'class.view', { classTeacherIds: await classTeacherIds(id) });
   const [c] = await db
     .select({ k: klass, courseCode: course.code, courseName: course.name, termName: term.name })
     .from(klass)
@@ -282,6 +283,7 @@ export async function getClass(actor: Actor | null, id: string): Promise<ClassDe
     room: c.k.room,
     capacity: c.k.capacity,
     status: c.k.status,
+    promotedAt: c.k.promotedAt,
     teachers,
     sessions: raw.map((s) => ({
       id: s.id,
@@ -298,7 +300,7 @@ export async function getClass(actor: Actor | null, id: string): Promise<ClassDe
 async function sessionForChange(actor: Actor | null, sessionId: string) {
   const [s] = await db.select().from(classSession).where(eq(classSession.id, sessionId)).limit(1);
   if (!s) throw new ValidationError('That session no longer exists.');
-  assertCan(actor, 'class.schedule', { classTeacherIds: await classTeacherIds(s.classId) });
+  assertCan(actor, 'class.schedule', await classAccess(s.classId));
   return { s, actor };
 }
 
@@ -381,7 +383,7 @@ export async function addMakeUpSession(
   classId: string,
   input: { date: string; startTime: string; minutes: number | string },
 ) {
-  assertCan(actor, 'class.schedule', { classTeacherIds: await classTeacherIds(classId) });
+  assertCan(actor, 'class.schedule', await classAccess(classId));
   const parsed = z.object({ date: isoDate, startTime: time, minutes: classInputSchema.shape.minutes }).safeParse(input);
   if (!parsed.success) throw ValidationError.fromZod(parsed.error);
   await dateTaken(classId, parsed.data.date);

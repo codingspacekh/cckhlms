@@ -1,7 +1,8 @@
-// Terms (FR-ADM-03): planned → active → closed, at most one active, no overlapping dates.
+// Terms (FR-ADM-03, FR-ADM-14): planned → active → closed, at most one active, no overlapping dates. Closing a term
+// archives its classes.
 import { and, asc, desc, eq, gte, lte, ne } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { term } from '@/db/schema';
+import { klass, term } from '@/db/schema';
 import type { Actor } from '@/server/actor';
 import { audit } from '@/server/audit';
 import { assertCan, ValidationError } from '@/server/errors';
@@ -67,5 +68,18 @@ export async function setTermStatus(actor: Actor | null, id: string, status: Ter
   await db.transaction(async (tx) => {
     await tx.update(term).set({ status }).where(eq(term.id, id));
     await audit({ actorId: actor.userId, action: 'term.status', entity: 'term', entityId: id, detail: { status } }, tx);
+    // FR-ADM-14: closing the term archives its classes. Nothing is deleted; they stay viewable.
+    if (status === 'closed') {
+      const archived = await tx
+        .update(klass)
+        .set({ status: 'archived' })
+        .where(and(eq(klass.termId, id), eq(klass.status, 'active')))
+        .returning({ id: klass.id });
+      for (const c of archived)
+        await audit(
+          { actorId: actor.userId, action: 'class.archive', entity: 'class', entityId: c.id, detail: { reason: 'term_closed' } },
+          tx,
+        );
+    }
   });
 }

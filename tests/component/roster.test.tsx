@@ -58,6 +58,24 @@ describe('RosterTable', () => {
     expect(screen.getByRole('row', { name: /Rithy Som/ }).textContent).not.toMatch(/Below|\d+\.\d/);
   });
 
+  it('FR-ADM-13: shows students who finished the class (promotion) with their standing, not as having left', () => {
+    const finished: RosterRow = {
+      ...rows[0]!,
+      id: 'e3',
+      name: 'Kosal Meas',
+      status: 'completed',
+      endedOn: '2027-04-04',
+      transferredFrom: null,
+    };
+    const standing = new Map([['e3', { overall: 72, homework: 80 }]]);
+    render(<RosterTable rows={[finished]} standing={standing} passMark={60} actions={() => <button>Withdraw</button>} />);
+    const row = screen.getByRole('row', { name: /Kosal Meas/ });
+    expect(row.textContent).toContain('Finished 4 Apr 2027');
+    expect(row.textContent).not.toContain('Left');
+    expect(row.textContent).toContain('72.0');
+    expect(within(row).queryByRole('button')).toBeNull();
+  });
+
   it('says so when there are no students yet', () => {
     render(<RosterTable rows={[]} actions={() => null} />);
     expect(screen.getByText('No students yet.')).toBeTruthy();

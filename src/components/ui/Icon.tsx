@@ -62,6 +62,7 @@ const ICONS = {
       <path d="m3 13 9 5 9-5" />
     </>
   ),
+  promote: <path d="M7 17 17 7M9 7h8v8" />,
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof ICONS;

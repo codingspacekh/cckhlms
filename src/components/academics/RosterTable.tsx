@@ -65,7 +65,7 @@ export function RosterTable({
             </tr>
           )}
           {rows.map((r) => (
-            <tr key={r.id} className={r.status === 'active' ? undefined : 'off'}>
+            <tr key={r.id} className={r.status === 'withdrawn' ? 'off' : undefined}>
               <th scope="row" className="strong">
                 {r.name}
               </th>
@@ -80,11 +80,13 @@ export function RosterTable({
                     Active
                   </Pill>
                 ) : (
-                  <span className="small">Left {r.endedOn ? formatDay(r.endedOn) : ''}</span>
+                  <span className="small">
+                    {r.status === 'completed' ? 'Finished' : 'Left'} {r.endedOn ? formatDay(r.endedOn) : ''}
+                  </span>
                 )}
               </td>
               {attendance && <td className="n tnum">{percent(attendance.get(r.id))}</td>}
-              {standing && <StandingCells s={r.status === 'active' ? standing.get(r.id) : undefined} passMark={passMark} />}
+              {standing && <StandingCells s={r.status === 'withdrawn' ? undefined : standing.get(r.id)} passMark={passMark} />}
               {actions && <td>{r.status === 'active' ? actions(r) : null}</td>}
             </tr>
           ))}
