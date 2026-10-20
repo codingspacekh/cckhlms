@@ -196,7 +196,7 @@ export const paperQuiz = () =>
 
 // Small Sunday classes for the M5 specs: the e2e student and the classmate, with the end-term exam (paper)
 // marked in week 2: Bopha Lim 72.5 / 100 (suggests Pass), Borey Sam 55 (suggests Fail).
-type SmallClass = { room: string; code: string; course: string; startTime: string };
+type SmallClass = { room: string; code: string; course: string; startTime: string; teacher?: string };
 async function smallClass(spec: SmallClass): Promise<TeachingClass> {
   const main = await teachingClass(); // creates the classmate account
   const { db } = await import('../../src/db/client');
@@ -217,8 +217,13 @@ async function smallClass(spec: SmallClass): Promise<TeachingClass> {
   const idOfName = async (name: string) => (await db.select({ id: user.id }).from(user).where(eq(user.name, name)))[0]!.id;
   const adminId = (await db.select({ id: user.id }).from(user).where(eq(user.username, USERS.admin.username)))[0]!.id;
   const admin = { userId: adminId, username: 'admin', name: 'Admin', role: 'admin', sessionId: 'e2e' };
-  const teacherId = await idOfName(USERS.teacher.name);
-  const teacher = { userId: teacherId, username: USERS.teacher.username, name: USERS.teacher.name, role: 'teacher', sessionId: 'e2e' };
+  const teacherName = spec.teacher ?? USERS.teacher.name;
+  if (spec.teacher && !(await db.select({ id: user.id }).from(user).where(eq(user.name, spec.teacher))).length) {
+    const { createAccount } = await import('../../src/modules/identity/service');
+    await createAccount(admin, { role: 'teacher', name: spec.teacher });
+  }
+  const teacherId = await idOfName(teacherName);
+  const teacher = { userId: teacherId, username: '', name: teacherName, role: 'teacher', sessionId: 'e2e' };
   const [k] = await db.select({ termId: klass.termId, firstDate: klass.firstDate }).from(klass).where(eq(klass.id, main.classId));
   const sunday = new Date(new Date(`${k!.firstDate}T00:00:00Z`).getTime() + 86_400_000).toISOString().slice(0, 10);
   const course = await createCourse(admin, { code: spec.code, name: spec.course, defaultLanguage: 'python' });
@@ -257,3 +262,6 @@ async function smallClass(spec: SmallClass): Promise<TeachingClass> {
 export const reportsClass = () => smallClass({ room: 'Reports room', code: 'PYR', course: 'Python Reports', startTime: '14:00' });
 // For the M5 exit journey.
 export const journeyClass = () => smallClass({ room: 'Journey room', code: 'PYJ', course: 'Python Journey', startTime: '16:00' });
+// A class the e2e teacher doesn't teach, for "not your class" checks.
+export const otherTeachersClass = () =>
+  smallClass({ room: 'Other room', code: 'PYO', course: 'Python Other', startTime: '11:00', teacher: 'Chenda Keo' });

@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import { CoverageCard } from '@/components/teaching/CoverageCard';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { getClass, listClasses } from '@/modules/academics/classes';
@@ -9,8 +8,7 @@ import { scheduleLabel, todayIn } from '@/modules/academics/schedule';
 import { getClubSettings } from '@/modules/club/service';
 import { listPeople } from '@/modules/identity/service';
 import { syllabusCoverage } from '@/modules/teaching/reports';
-import { ValidationError } from '@/server/errors';
-import { requireActor } from '@/server/guard';
+import { pageData, requireActor } from '@/server/guard';
 import { RosterManager } from './RosterManager';
 import { SessionsManager } from './SessionsManager';
 
@@ -19,8 +17,7 @@ export const metadata: Metadata = { title: 'Class' };
 export default async function ClassPage({ params }: { params: Promise<{ id: string }> }) {
   const actor = await requireActor('admin.area');
   const { id } = await params;
-  const c = await getClass(actor, id).catch((e) => (e instanceof ValidationError ? null : Promise.reject(e)));
-  if (!c) notFound();
+  const c = await pageData(getClass(actor, id));
   const [roster, students, termClasses, settings, coverage] = await Promise.all([
     listRoster(actor, id),
     listPeople(actor, 'student'),
