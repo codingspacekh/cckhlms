@@ -33,7 +33,15 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
   const assistants = c.teachers.filter((t) => t.role === 'assistant');
   return (
     <>
-      <PageHeader eyebrow={<Link href="/admin/classes">Classes</Link>} title={c.name} />
+      <PageHeader
+        eyebrow={<Link href="/admin/classes">Classes</Link>}
+        title={c.name}
+        actions={
+          <Link className="btn" href={`/admin/classes/${c.id}/reports`}>
+            Term reports
+          </Link>
+        }
+      />
       <section className="card summary" aria-label="Class summary">
         <div>
           <span className="k">Schedule</span>

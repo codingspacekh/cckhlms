@@ -8,8 +8,8 @@ const ROLES = ['admin', 'teacher', 'student'] as const;
 type Role = (typeof ROLES)[number];
 
 // true = always · false = never · 'own' = only for their own class: one a teacher teaches, or one a student is
-// enrolled in
-type Rule = boolean | 'own';
+// enrolled in · 'lead' = only the class's lead teacher, not its assistants (BR-08)
+type Rule = boolean | 'own' | 'lead';
 const MATRIX: Record<Action, Record<Role, Rule>> = {
   'admin.area': { admin: true, teacher: false, student: false },
   'teacher.area': { admin: false, teacher: true, student: false },
@@ -33,6 +33,8 @@ const MATRIX: Record<Action, Record<Role, Rule>> = {
   'work.save': { admin: false, teacher: false, student: 'own' },
   'work.submit': { admin: false, teacher: false, student: 'own' },
   'work.grade': { admin: false, teacher: 'own', student: false },
+  'termreport.write': { admin: false, teacher: 'own', student: false },
+  'termreport.amend': { admin: true, teacher: 'lead', student: false },
 };
 
 const actor = (role: string): Actor => ({ userId: 'u1', username: 'x', name: 'X', role, sessionId: 's1' });
@@ -50,7 +52,15 @@ describe('policy matrix', () => {
   for (const [action, row] of Object.entries(MATRIX) as [Action, Record<Role, Rule>][]) {
     for (const role of ROLES) {
       const rule = row[role];
-      if (rule === 'own') {
+      if (rule === 'lead') {
+        it(`${role} may use ${action} only as the class's lead teacher`, () => {
+          expect(can(actor(role), action, { classTeacherIds: ['u1'], classLeadIds: ['u1'] })).toBe(true);
+          expect(can(actor(role), action, { classTeacherIds: ['u1'], classLeadIds: ['someone-else'] })).toBe(false);
+          expect(can(actor(role), action, { classLeadIds: ['u1'] })).toBe(false); // not teaching it any more
+          expect(can(actor(role), action, other)).toBe(false);
+          expect(can(actor(role), action)).toBe(false);
+        });
+      } else if (rule === 'own') {
         it(`${role} may use ${action} for their own class only`, () => {
           expect(can(actor(role), action, own(role))).toBe(true);
           expect(can(actor(role), action, other)).toBe(false);

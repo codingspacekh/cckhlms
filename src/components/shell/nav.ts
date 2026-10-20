@@ -29,6 +29,7 @@ export type ClassLink = { id: string; name: string };
 export const CLASS_SECTIONS = [
   { path: '', label: 'Weeks' },
   { path: '/gradebook', label: 'Gradebook' },
+  { path: '/reports', label: 'Term reports' },
   { path: '/students', label: 'Students' },
   { path: '/syllabus', label: 'Syllabus' },
   { path: '/schedule', label: 'Schedule' },

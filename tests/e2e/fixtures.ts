@@ -193,3 +193,60 @@ export const paperQuiz = () =>
     week: 3,
     instructionsMd: 'Ten questions on loops.',
   });
+
+// A small class for the term-reports spec (M5): Sunday afternoons, the e2e student and the classmate, with the
+// end-term exam (paper) marked in week 2: Bopha Lim 72.5 / 100 (suggests Pass), Borey Sam 55 (suggests Fail).
+export async function reportsClass(): Promise<TeachingClass> {
+  const main = await teachingClass(); // creates the classmate account
+  const { db } = await import('../../src/db/client');
+  const { user, klass } = await import('../../src/db/schema');
+  const { eq } = await import('drizzle-orm');
+  const { createCourse } = await import('../../src/modules/academics/courses');
+  const { createClass } = await import('../../src/modules/academics/classes');
+  const { enrolStudent } = await import('../../src/modules/academics/enrolments');
+  const { saveAssessment } = await import('../../src/modules/assessments/service');
+  const { saveCell } = await import('../../src/modules/assessments/gradebook');
+  const { weeksOf } = await import('../../src/modules/teaching/weeks');
+
+  const students = [USERS.student.name, CLASSMATE];
+  const existing = await db.select({ id: klass.id, name: klass.name }).from(klass).where(eq(klass.room, 'Reports room'));
+  if (existing[0]) return { classId: existing[0].id, className: existing[0].name, topics: [], students };
+
+  const idOfName = async (name: string) => (await db.select({ id: user.id }).from(user).where(eq(user.name, name)))[0]!.id;
+  const adminId = (await db.select({ id: user.id }).from(user).where(eq(user.username, USERS.admin.username)))[0]!.id;
+  const admin = { userId: adminId, username: 'admin', name: 'Admin', role: 'admin', sessionId: 'e2e' };
+  const teacherId = await idOfName(USERS.teacher.name);
+  const teacher = { userId: teacherId, username: USERS.teacher.username, name: USERS.teacher.name, role: 'teacher', sessionId: 'e2e' };
+  const [k] = await db.select({ termId: klass.termId, firstDate: klass.firstDate }).from(klass).where(eq(klass.id, main.classId));
+  const sunday = new Date(new Date(`${k!.firstDate}T00:00:00Z`).getTime() + 86_400_000).toISOString().slice(0, 10);
+  const course = await createCourse(admin, { code: 'PYR', name: 'Python Reports', defaultLanguage: 'python' });
+  const r = await createClass(admin, {
+    courseId: course.id,
+    termId: k!.termId,
+    day: 'sun',
+    startTime: '14:00',
+    minutes: 90,
+    firstDate: sunday,
+    weeks: 10,
+    room: 'Reports room',
+    leadTeacherId: teacherId,
+    confirmClashes: true,
+  });
+  if (r.status !== 'created') throw new Error('reports class not created');
+  for (const name of students) await enrolStudent(admin, r.classId, await idOfName(name), { enrolledOn: sunday, confirmClashes: true });
+  const week2 = (await weeksOf(r.classId)).find((s) => s.week === 2)!.id;
+  const { id: exam } = await saveAssessment(teacher, week2, {
+    kind: 'exam',
+    title: 'End-term exam',
+    instructionsMd: '',
+    language: 'paper',
+    maxScore: 100,
+    dueMode: 'session_end',
+    allowLate: false,
+    latePenaltyPct: 0,
+    intent: 'publish',
+  });
+  await saveCell(teacher, exam, await idOfName(USERS.student.name), { value: '72.5', version: null });
+  await saveCell(teacher, exam, await idOfName(CLASSMATE), { value: '55', version: null });
+  return { classId: r.classId, className: 'Python Reports · Sun 14:00', topics: [], students };
+}
