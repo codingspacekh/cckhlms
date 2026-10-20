@@ -33,6 +33,7 @@ describe('startup', () => {
       'club_settings',
       'course',
       'enrolment',
+      'excusal',
       'lesson',
       'lesson_attachment',
       'lesson_topic',

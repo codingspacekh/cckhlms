@@ -6,6 +6,7 @@ import { StudentWorkspace } from '@/components/editor/StudentWorkspace';
 import { Pill } from '@/components/ui/Pill';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { studentProject } from '@/modules/assessments/projects';
+import { myMark } from '@/modules/assessments/gradebook';
 import { mySubmissions } from '@/modules/assessments/submissions';
 import { formatDue, KIND_LABEL, WORK_LANGUAGE_LABEL, zipNameFor } from '@/modules/assessments/rules';
 import { readAssessment } from '@/modules/assessments/service';
@@ -66,7 +67,7 @@ export default async function StudentWorkPage({ params }: { params: Promise<{ id
         dangerouslySetInnerHTML={{ __html: a.instructionsHtml || '<p>No instructions.</p>' }}
       />
       {a.language === 'paper' ? (
-        <p className="card small muted">This work is done on paper or in class. Your teacher enters the score.</p>
+        <PaperMark assessmentId={workId} maxScore={a.maxScore} latePenaltyPct={a.latePenaltyPct} />
       ) : (
         <Workspace
           classId={id}
@@ -128,8 +129,35 @@ async function Workspace(props: {
           counts: v.counts,
           feedbackHtml: v.feedbackHtml,
           returned: v.returned,
+          byTeacher: v.byTeacher,
         })),
       }}
     />
+  );
+}
+
+// Paper or in-class work: the mark the teacher entered in the gradebook, and their comment (FR-STU-06).
+async function PaperMark({ assessmentId, maxScore, latePenaltyPct }: { assessmentId: string; maxScore: number; latePenaltyPct: number }) {
+  const actor = await requireActor('student.area');
+  const m = await pageData(myMark(actor, assessmentId));
+  if (m.state === 'excused') return <p className="card small muted">Your teacher has excused you from this.</p>;
+  if (m.state !== 'graded')
+    return <p className="card small muted">This work is done on paper or in class. Your teacher enters the score.</p>;
+  return (
+    <section className="card stack" aria-labelledby="mark-title">
+      <div className="spread">
+        <h2 id="mark-title">Your mark</h2>
+        <span className="score tnum" data-testid="score">
+          {m.score} / {maxScore}
+        </span>
+      </div>
+      {m.counts !== m.score && (
+        <p className="small muted">
+          Handed in late, so {latePenaltyPct}% comes off: it counts as {m.counts}.
+        </p>
+      )}
+      {/* Sanitised by renderMarkdown on the server (src/lib/markdown.ts). */}
+      {m.feedbackHtml && <div className="md" dangerouslySetInnerHTML={{ __html: m.feedbackHtml }} />}
+    </section>
   );
 }

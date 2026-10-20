@@ -112,7 +112,14 @@ export async function rehearsalClass(): Promise<TeachingClass> {
 }
 
 // Published homework in the teaching class, made through the services (M4 specs).
-type HomeworkSpec = { title: string; language: 'python' | 'java' | 'web'; week: number; instructionsMd: string };
+type HomeworkSpec = {
+  title: string;
+  language: 'python' | 'java' | 'web' | 'paper';
+  week: number;
+  instructionsMd: string;
+  kind?: 'classwork' | 'homework' | 'exam';
+  dueMode?: 'next_session' | 'session_end';
+};
 async function publishedHomework(spec: HomeworkSpec): Promise<{ classId: string; workId: string; title: string }> {
   const c = await teachingClass();
   const { db } = await import('../../src/db/client');
@@ -129,12 +136,12 @@ async function publishedHomework(spec: HomeworkSpec): Promise<{ classId: string;
   const teacher = { userId: teacherId, username: USERS.teacher.username, name: USERS.teacher.name, role: 'teacher', sessionId: 'e2e' };
   const sessionId = (await weeksOf(c.classId)).find((s) => s.week === spec.week)!.id;
   const { id } = await saveAssessment(teacher, sessionId, {
-    kind: 'homework',
+    kind: spec.kind ?? 'homework',
     title: spec.title,
     instructionsMd: spec.instructionsMd,
     language: spec.language,
     maxScore: 10,
-    dueMode: 'next_session',
+    dueMode: spec.dueMode ?? 'next_session',
     allowLate: true,
     latePenaltyPct: 10,
     intent: 'publish',
@@ -175,3 +182,14 @@ export async function handIn(workId: string, studentName: string, files: { path:
   await saveDraft(student, workId, files);
   return submitWork(student, workId);
 }
+
+// A paper quiz in week 3 (already held, so it's due), for the gradebook spec.
+export const paperQuiz = () =>
+  publishedHomework({
+    title: 'Week 3 quiz',
+    language: 'paper',
+    kind: 'classwork',
+    dueMode: 'session_end',
+    week: 3,
+    instructionsMd: 'Ten questions on loops.',
+  });

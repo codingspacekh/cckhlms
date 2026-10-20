@@ -1,6 +1,7 @@
 // Local demo data for trying the LMS on your own machine (never on the server). Fills an EMPTY development
 // database with the people, terms, courses and classes from the P0 prototype, plus M3 teaching data for
-// Python Level 1: lessons, attendance, Q&A (one post waiting for review) and weekly reports.
+// Python Level 1: lessons, attendance, Q&A (one post waiting for review) and weekly reports; and M4 work:
+// homework with hand-ins (one marked, one to mark), Web homework, and a paper quiz in the gradebook.
 //   npm run db:up && npm run seed:dev && npm run dev   → http://lms.localhost:3000
 import { sql } from 'drizzle-orm';
 import { db, pool } from '../src/db/client';
@@ -9,6 +10,11 @@ import { createClass } from '../src/modules/academics/classes';
 import { createCourse, getCourse, setSyllabus } from '../src/modules/academics/courses';
 import { enrolStudent } from '../src/modules/academics/enrolments';
 import { createTerm, setTermStatus } from '../src/modules/academics/terms';
+import { saveCell } from '../src/modules/assessments/gradebook';
+import { gradeSubmission } from '../src/modules/assessments/grading';
+import { saveDraft } from '../src/modules/assessments/projects';
+import { saveAssessment, type AssessmentInput } from '../src/modules/assessments/service';
+import { submitWork } from '../src/modules/assessments/submissions';
 import { markAttendance } from '../src/modules/attendance/attendance';
 import { insertAccount } from '../src/modules/identity/service';
 import { classWeeks, saveLesson } from '../src/modules/teaching/lessons';
@@ -181,6 +187,38 @@ await acceptReply(teacher, q1.id, r1.id);
 await askQuestion(as(3), c1, 3, { body: 'Can I print my name 10 times with a loop?', code: 'for i in range(10):\nprint("Chenda")' });
 const rude = await askQuestion(as(6), c1, 3, { body: 'this lesson is so boring lol', code: '' });
 await reportPost(as(0), { type: 'question', id: rude.id }, 'Not a question');
+
+// M4: homework set in week 3 (due at week 4's start), a Web page to try the preview, and week 2's paper quiz.
+const setWork = async (week: number, input: Partial<AssessmentInput>) =>
+  (
+    await saveAssessment(teacher, await sessionOf(week), {
+      kind: 'homework',
+      title: '',
+      instructionsMd: '',
+      language: 'python',
+      maxScore: 10,
+      dueMode: 'next_session',
+      allowLate: true,
+      latePenaltyPct: 10,
+      intent: 'publish',
+      ...input,
+    })
+  ).id;
+const countdown = await setWork(3, {
+  title: 'Countdown to lift off',
+  instructionsMd: 'Use a **for loop** to count down from 10 to 1, then print `Lift off!`.',
+});
+await setWork(3, { title: 'My first web page', language: 'web', instructionsMd: 'Make a page with a button that says hello.' });
+const quiz = await setWork(2, { title: 'If / else quiz', kind: 'classwork', language: 'paper', dueMode: 'session_end' });
+const handIn = async (i: number, code: string) => {
+  await saveDraft(as(i), countdown, [{ path: 'main.py', content: code }]);
+  await submitWork(as(i), countdown);
+};
+await handIn(2, 'for i in range(10, 0, -1):\n    print(i)\nprint("Lift off!")');
+await gradeSubmission(teacher, countdown, students[2]!.id, { version: 1, score: '9', feedbackMd: 'Great loop! Try a `while` loop next.' });
+await handIn(3, 'for i in range(10, 0):\n    print(i)');
+const quizScores = ['8', '9.5', '7', '6', '10', '5', 'ex', '8.5', '9'];
+for (const [i, value] of quizScores.entries()) await saveCell(teacher, quiz, students[i]!.id, { value, version: null });
 
 console.log(`Demo data added. Every account uses the password "${PASSWORD}":
   admin · sophea, dara, vibol (teachers) · ${students.map((s) => s.username).join(', ')} (students)

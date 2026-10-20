@@ -26,6 +26,7 @@ export type SubmitPanel = {
     counts: number | null; // after the late penalty (BR-14)
     feedbackHtml: string; // sanitised on the server
     returned: boolean;
+    byTeacher: boolean; // a mark entered in the gradebook, not something they handed in
   }[]; // newest first
 };
 type Props = {
@@ -166,7 +167,9 @@ export function StudentWorkspace({
                 ? `Not submitted yet. Due ${submit.dueLabel}.`
                 : submit.mark === 'returned'
                   ? `Version ${latest.version} returned for a redo.`
-                  : `Version ${latest.version} submitted ${latest.at}${latest.late ? ', late' : ''}.${submit.canSubmit && !submit.late ? ` You can submit again until ${submit.dueLabel}.` : ''}`}
+                  : latest.byTeacher
+                    ? 'Your teacher entered a mark without a hand-in.'
+                    : `Version ${latest.version} submitted ${latest.at}${latest.late ? ', late' : ''}.${submit.canSubmit && !submit.late ? ` You can submit again until ${submit.dueLabel}.` : ''}`}
             </p>
           </div>
           <button type="button" className="btn primary" disabled={!submit.canSubmit || submitting} onClick={handIn}>
@@ -189,7 +192,7 @@ export function StudentWorkspace({
           <ul className="plain list" aria-label="Versions you submitted">
             {submit.versions.map((v) => (
               <li key={v.version} className="spread small">
-                <span>Version {v.version}</span>
+                <span>{v.byTeacher ? 'Mark from your teacher' : `Version ${v.version}`}</span>
                 <span className="cell-line tnum">
                   {v.at}
                   {v.late && <Pill tone="warn">Late</Pill>}

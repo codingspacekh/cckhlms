@@ -23,6 +23,7 @@ export type GradingVersion = {
   feedbackMd: string;
   gradedAt: Date | null;
   returnedAt: Date | null;
+  byTeacher: boolean; // entered in the gradebook: no files
 };
 export type GradingView = {
   work: {
@@ -99,6 +100,7 @@ export async function gradingView(actor: Actor | null, assessmentId: string, stu
       feedbackMd: v.feedbackMd,
       gradedAt: v.gradedAt,
       returnedAt: v.returnedAt,
+      byTeacher: v.byTeacher,
     })),
     mark: markOf(versions[0] ?? null),
     prev: pick(roster[i - 1]),

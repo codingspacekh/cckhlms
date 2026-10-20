@@ -1397,3 +1397,59 @@ td.text {
 .score-input {
   max-width: 8rem;
 }
+
+/* gradebook (FR-TCH-19): a spreadsheet-like grid; the name column stays put while the table scrolls */
+table.gradebook th,
+table.gradebook td {
+  padding: 6px 10px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+table.gradebook thead th {
+  vertical-align: bottom;
+}
+table.gradebook td.n .cell-line {
+  justify-content: flex-end;
+}
+table.gradebook thead th {
+  font-weight: 600;
+}
+table.gradebook thead th .sub {
+  display: block;
+  font-weight: 400;
+}
+table.gradebook .sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+  box-shadow: 1px 0 0 var(--line);
+}
+.gcell input {
+  width: 4.5rem;
+  padding: 5px 8px;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.gcell input[aria-invalid='true'] {
+  border-color: var(--bad);
+  box-shadow: 0 0 0 2px var(--bad-soft);
+}
+.gcell.missing input {
+  background: var(--bad-soft);
+}
+.gcell.excused input {
+  color: var(--muted);
+}
+.gstate {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+.gstate .late {
+  color: var(--warn-text);
+  font-weight: 600;
+}
