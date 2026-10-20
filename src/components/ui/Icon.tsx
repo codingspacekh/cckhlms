@@ -50,6 +50,12 @@ const ICONS = {
       <path d="M4 19.5A1.5 1.5 0 0 0 5.5 21H20" />
     </>
   ),
+  trend: (
+    <>
+      <path d="M3 17l6-6 4 4 8-8" />
+      <path d="M15 7h6v6" />
+    </>
+  ),
   layers: (
     <>
       <path d="m12 3 9 5-9 5-9-5z" />

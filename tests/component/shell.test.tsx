@@ -47,6 +47,12 @@ describe('Sidebar', () => {
     expect(within(nav).queryByRole('group', { name: 'Java Level 2 · Sat 14:00 sections' })).toBeNull();
   });
 
+  it('FR-STU-07: a student has My week and My progress', () => {
+    render(<Sidebar role="student" user={{ name: 'Bopha Lim', roleLabel: 'Student' }} />);
+    const nav = screen.getByRole('navigation', { name: 'Sections' });
+    expect(within(nav).getByRole('link', { name: 'My progress' }).getAttribute('href')).toBe('/student/progress');
+  });
+
   it('shows who is signed in and a sign-out button', () => {
     render(<Sidebar role="student" user={{ name: 'Bopha Lim', roleLabel: 'Student' }} />);
     expect(screen.getByText('Bopha Lim')).toBeTruthy();
