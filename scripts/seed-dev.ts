@@ -1,7 +1,8 @@
 // Local demo data for trying the LMS on your own machine (never on the server). Fills an EMPTY development
 // database with the people, terms, courses and classes from the P0 prototype, plus M3 teaching data for
 // Python Level 1: lessons, attendance, Q&A (one post waiting for review) and weekly reports; and M4 work:
-// homework with hand-ins (one marked, one to mark), Web homework, and a paper quiz in the gradebook.
+// homework with hand-ins (one marked, one to mark), Web homework, and a paper quiz in the gradebook; and M5:
+// draft term reports, one student flagged as needing support (see the admin dashboard and Statistics).
 //   npm run db:up && npm run seed:dev && npm run dev   → http://lms.localhost:3000
 import { sql } from 'drizzle-orm';
 import { db, pool } from '../src/db/client';
@@ -19,6 +20,8 @@ import { markAttendance } from '../src/modules/attendance/attendance';
 import { insertAccount } from '../src/modules/identity/service';
 import { classWeeks, saveLesson } from '../src/modules/teaching/lessons';
 import { acceptReply, askQuestion, replyToQuestion, reportPost } from '../src/modules/teaching/qa';
+import { saveTermReport } from '../src/modules/reporting/term-reports';
+import type { TermReportInput } from '../src/modules/reporting/term-report-rules';
 import { saveWeeklyReport } from '../src/modules/teaching/reports';
 import type { Actor } from '../src/server/actor';
 import { startup } from '../src/server/startup';
@@ -219,6 +222,21 @@ await gradeSubmission(teacher, countdown, students[2]!.id, { version: 1, score: 
 await handIn(3, 'for i in range(10, 0):\n    print(i)');
 const quizScores = ['8', '9.5', '7', '6', '10', '5', 'ex', '8.5', '9'];
 for (const [i, value] of quizScores.entries()) await saveCell(teacher, quiz, students[i]!.id, { value, version: null });
+
+// M5: draft term reports (mid-term, so not published); Chenda is flagged as needing support.
+const reportFor = (i: number, rating: TermReportInput['rating'], comment: string, supportNote = '') =>
+  saveTermReport(teacher, c1Enrolments[i]!, {
+    rating,
+    comment,
+    needsSupport: !!supportNote,
+    supportNote,
+    finalScore: '',
+    result: '',
+    reason: '',
+  });
+await reportFor(2, 'excellent', 'Helps others in Q&A. Ready for Level 2.');
+await reportFor(3, 'developing', 'Keeps trying; indentation still trips her up.', 'Extra practice with indentation and loops');
+await reportFor(4, 'good', 'Neat, careful work.');
 
 console.log(`Demo data added. Every account uses the password "${PASSWORD}":
   admin · sophea, dara, vibol (teachers) · ${students.map((s) => s.username).join(', ')} (students)

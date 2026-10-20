@@ -1,42 +1,20 @@
 import type { Metadata } from 'next';
-import { sql } from 'drizzle-orm';
-import { db } from '@/db/client';
-import { clubSettings, user } from '@/db/schema';
+import { AdminDashboardView } from '@/components/reporting/AdminDashboardView';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Tile } from '@/components/ui/Tile';
+import { formatDate } from '@/modules/academics/schedule';
+import { adminDashboard } from '@/modules/reporting/dashboard';
 import { requireActor } from '@/server/guard';
 
 export const metadata: Metadata = { title: 'Dashboard' };
 
-async function countRole(role: string) {
-  const [row] = await db
-    .select({ n: sql<number>`count(*)::int` })
-    .from(user)
-    .where(sql`${role} = any(string_to_array(${user.role}, ','))`);
-  return row?.n ?? 0;
-}
-
+// FR-ADM-10: what's running, how it's going, and what needs attention.
 export default async function AdminDashboard() {
-  await requireActor('admin.area');
-  const [admins, teachers, students, [settings]] = await Promise.all([
-    countRole('admin'),
-    countRole('teacher'),
-    countRole('student'),
-    db.select({ timeZone: clubSettings.timeZone }).from(clubSettings).limit(1),
-  ]);
+  const actor = await requireActor('admin.area');
+  const d = await adminDashboard(actor);
   return (
     <>
-      <PageHeader eyebrow="Club overview" title="Dashboard" />
-      <div className="grid g4">
-        <Tile label="Admins" value={admins} />
-        <Tile label="Teachers" value={teachers} />
-        <Tile label="Students" value={students} />
-        <Tile label="Club time zone" value={settings?.timeZone ?? '—'} note="All dates and due times use this" />
-      </div>
-      <section className="card">
-        <h2>Coming next</h2>
-        <p className="small muted">Classwork, homework and exams with the code editor arrive in M4; term reports and charts in M5.</p>
-      </section>
+      <PageHeader eyebrow={formatDate(d.today)} title="Dashboard" />
+      <AdminDashboardView d={d} />
     </>
   );
 }

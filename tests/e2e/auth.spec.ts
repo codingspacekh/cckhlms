@@ -71,17 +71,19 @@ test.describe('admin dashboard', () => {
   test('shows real numbers from the database', async ({ page }) => {
     await page.goto('/admin');
     const tile = (label: string) => page.locator('.tile', { has: page.getByText(label, { exact: true }) });
-    // Other specs add people, so compare with the database rather than fixed numbers.
+    // Other specs add classes and students, so compare with the database rather than fixed numbers.
     const pool = new Pool({ connectionString: E2E.databaseUrl });
-    const count = async (role: string) =>
-      String((await pool.query(`select count(*)::int as n from "user" where $1 = any(string_to_array(role, ','))`, [role])).rows[0].n);
-    const [admins, teachers, students] = [await count('admin'), await count('teacher'), await count('student')];
+    const one = async (sql: string) => String((await pool.query(sql)).rows[0].n);
+    const classes = await one(
+      `select count(*)::int as n from class c join term t on t.id = c.term_id where c.status = 'active' and t.status <> 'closed'`,
+    );
+    const students = await one(
+      `select count(distinct e.student_id)::int as n from enrolment e join class c on c.id = e.class_id join term t on t.id = c.term_id
+       where e.status = 'active' and c.status = 'active' and t.status <> 'closed'`,
+    );
     await pool.end();
-    expect(admins).toBe('1');
-    await expect(tile('Admins').locator('.v')).toHaveText(admins);
-    await expect(tile('Teachers').locator('.v')).toHaveText(teachers);
-    await expect(tile('Students').locator('.v')).toHaveText(students);
-    await expect(tile('Club time zone').locator('.v')).toHaveText('Asia/Phnom_Penh');
+    await expect(tile('Active classes').locator('.v')).toHaveText(classes);
+    await expect(tile('Students enrolled').locator('.v')).toHaveText(students);
   });
 });
 

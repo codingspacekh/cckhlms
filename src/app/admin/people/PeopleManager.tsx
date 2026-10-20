@@ -1,5 +1,6 @@
 'use client';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useActionState, useRef, useState, useTransition, type ReactNode } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -102,6 +103,11 @@ export function PeopleManager({ people, role, selfId, tabs }: { people: Person[]
                   </td>
                   <td>
                     <div className="row end nowrap">
+                      {role === 'student' && (
+                        <Link className="btn sm" href={`/admin/students/${p.id}`} aria-label={`Report for ${p.name}`}>
+                          Report
+                        </Link>
+                      )}
                       <button type="button" className="btn sm" disabled={pending} onClick={() => act(() => resetPasswordAction(p.id))}>
                         Reset password
                       </button>
