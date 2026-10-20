@@ -9,6 +9,7 @@ describe('classSectionActive', () => {
   it('highlights exactly one section per class page', () => {
     expect(active(base)).toEqual(['Weeks']);
     expect(active(`${base}/gradebook`)).toEqual(['Gradebook']);
+    expect(active(`${base}/stats`)).toEqual(['Statistics']);
     expect(active(`${base}/reports`)).toEqual(['Term reports']);
     expect(active(`${base}/students`)).toEqual(['Students']);
     expect(active(`${base}/syllabus`)).toEqual(['Syllabus']);

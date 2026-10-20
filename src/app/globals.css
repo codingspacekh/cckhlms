@@ -16,6 +16,8 @@
   --accent-ink: #ffffff;
   --s1: #2a78d6;
   --s2: #eb6834;
+  --grid: #edf0f3;
+  --axis: #cdd3db;
   --good: #0ca30c;
   --good-text: #056b05;
   --good-soft: #e7f5e7;
@@ -55,6 +57,8 @@
     --accent-ink: #06121f;
     --s1: #3987e5;
     --s2: #d95926;
+    --grid: #1e2633;
+    --axis: #344055;
     --good-text: #5bcb5b;
     --good-soft: #12301a;
     --warn-text: #f2c04f;
@@ -1200,6 +1204,231 @@ pre.code {
   inset: 0 auto 0 0;
   border-radius: 3px;
   background: var(--s1);
+}
+.meter > i.warn {
+  background: var(--warn);
+}
+.meter > i.bad {
+  background: var(--bad);
+}
+.meter > b {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 1.5px;
+  background: var(--ink-2);
+  opacity: 0.6;
+}
+
+/* charts (M5, the dataviz rules from P0): thin marks, hairline grid, one scale, hover + table view */
+.chart {
+  position: relative;
+}
+svg.c {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+svg.c .gl {
+  stroke: var(--grid);
+  stroke-width: 1;
+}
+svg.c .ax {
+  stroke: var(--axis);
+  stroke-width: 1;
+}
+svg.c text {
+  fill: var(--muted);
+  font: 11px var(--f);
+  font-variant-numeric: tabular-nums;
+}
+svg.c text.v,
+svg.c text.reflbl {
+  fill: var(--ink-2);
+  font-weight: 500;
+}
+svg.c .bar {
+  fill: var(--s1);
+}
+svg.c .hb:hover .bar,
+svg.c .hb:focus .bar {
+  fill: var(--accent-2);
+}
+svg.c .hb,
+svg.c .hx {
+  outline: none;
+}
+svg.c .hb:focus-visible rect.hit,
+svg.c .hx:focus-visible rect.hit {
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+svg.c .ref {
+  stroke: var(--ink-2);
+  stroke-width: 1;
+  opacity: 0.55;
+}
+svg.c .ln {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+svg.c .ln.s1,
+svg.c .dot.s1 {
+  stroke: var(--s1);
+}
+svg.c .ln.s2 {
+  stroke: var(--s2);
+}
+svg.c .dot {
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+svg.c .dot.s1 {
+  fill: var(--s1);
+  stroke: var(--surface);
+}
+svg.c .dot.s2 {
+  fill: var(--s2);
+}
+svg.c .wash {
+  fill: var(--s1);
+  opacity: 0.1;
+}
+svg.c .xh {
+  stroke: var(--axis);
+  stroke-width: 1;
+  opacity: 0;
+}
+svg.c .hx:hover .xh,
+svg.c .hx:focus .xh {
+  opacity: 1;
+}
+.legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  color: var(--ink-2);
+  margin-bottom: 8px;
+}
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.legend i,
+.tip .rw i {
+  width: 14px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--s1);
+}
+.legend i.s2,
+.tip .rw i.s2 {
+  background: var(--s2);
+}
+.hbars {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.hbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  align-items: center;
+}
+.hbar .l {
+  font-size: 0.85rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.hbar .val {
+  font-size: 0.85rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.hbar .track {
+  grid-column: 1 / -1;
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--surface-2);
+}
+.hbar .fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 4px;
+  background: var(--s1);
+}
+.hbar .tick {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 1.5px;
+  background: var(--ink-2);
+  opacity: 0.6;
+}
+.tip {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-sm);
+  box-shadow: 0 8px 24px rgb(16 24 40 / 0.14);
+  padding: 8px 10px;
+  font-size: 0.8rem;
+  min-width: 130px;
+  white-space: nowrap;
+  transform: translate(-50%, calc(-100% - 10px));
+}
+.tip .t {
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.tip .rw {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: space-between;
+}
+.tip .rw b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.tip .rw span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-2);
+}
+.tile svg.spark {
+  height: 28px;
+  margin-top: 2px;
+}
+.chart-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.chart-head > div {
+  flex: 1;
+  min-width: 0;
+}
+.chart-head p {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.chart-empty {
+  padding: 24px 0;
+  text-align: center;
 }
 .narrow-wide {
   max-width: 820px;
