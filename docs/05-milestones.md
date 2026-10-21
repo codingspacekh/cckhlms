@@ -326,6 +326,7 @@ The next milestone does not start until all four are true.
   1. a merged PR deploys to `lms.cckh.dev` on its own;
   2. the first **restore drill** from R2 is done and logged (runbook §6);
   3. the uptime alert reaches the owner.
+- **Repeat M7's server checks on the real server, before any real data** (owner's decision, 2026-10-21): the load test, the ZAP baseline and a disaster-recovery rehearsal onto a second server. The steps are in `docs/runbook.md` §8.
 - Until G1, the milestone gate (§3.5, point 2) is checked on a **local production build** and in CI, instead of on production.
 
 ### R1 — Pilot (one real class, ≥ 4 weeks)
@@ -490,6 +491,26 @@ The next milestone does not start until all four are true.
 - Playwright + axe: every screen in light and dark mode, at phone width, and by keyboard.
 
 **Exit criteria:** all checks pass and are recorded; the owner signs off the runbook.
+
+> **Result** (PRs #32–#36; each merged when its CI passed). Every check below ran against the production build on a laptop sized like the server; G1 repeats the server-side ones on Hetzner (runbook §8).
+> - **Privacy (NFR-07), #32:**
+>   - Admin downloads a student's data (JSON) or deletes their personal data. Deleting **anonymises**: personal data gone, marks kept under "Deleted student", certificates revoked, one transaction, audited without names.
+>   - Guardian contact is read only by admin code (a source scan); PostgreSQL logs errors without values; example phone numbers are fake.
+> - **Sign-in and containers, #33:**
+>   - The old limit of 5 sign-ins a minute per address would have locked out a class on one Wi-Fi. Now **failed** sign-ins are limited per username (5/min) and per address (10/min), and login slips get **3-word passwords** (~29 bits).
+>   - The app container is read-only with no capabilities; every container sets `no-new-privileges`; e2e no longer reuses a stray server.
+> - **Security review, #34:** OWASP **ASVS Level 1 met** (`docs/security-review.md`, 40 rows); **ZAP baseline: 0 high** anonymously and as each role. ZAP found that 17 forms sent their fields in the address before the page's script loaded, **the sign-in password included**: all post now. COOP/CORP added; the session cookie is checked `__Secure-`/`HttpOnly`/`Secure`/`SameSite=Lax`.
+> - **Load test (NFR-01/03), #35:** k6 with **450 people** (3× the weekend peak) on 2 shared CPUs: **page p95 434 ms, autosave p95 167 ms, 0 failures in 33,881 requests, nobody signed out**, app 398 MiB / db 111 MiB.
+>   - The first run failed (page p95 3.9 s). Fixes: one server process per vCPU (`infra/app/cluster.mjs`, start-up under a database lock), and keep-alive 95 s. Node's 5 s dropped about 1 autosave in 2,000, which users would have seen as 502s through cloudflared.
+> - **Accessibility, runbook, disaster recovery, #36:**
+>   - `zz-a11y-sweep.spec.ts` crawls **every screen** of each role (all 44 page types, checked against `src/app`) and passes axe in **light and dark** mode, fits a **360 px** phone, and has a skip link and a **visible focus** on everything Tab reaches.
+>   - **Disaster-recovery rehearsal** in a fresh Ubuntu 24.04 VM (2 vCPU, 4 GB), following runbook §4: **12½ minutes** from "server lost" to a checked restore (target 2 hours). It found three bugs, all fixed with tests:
+>     - `provision.sh` stopped on 24.04 (`/run/sshd`), so SSH hardening, the firewall and fail2ban were never set up;
+>     - **`deploy.sh` could never pass its health check** (no `APP_TAG` for `compose exec`), so the first real deploy would have failed (`infra/tests/deploy-script.sh`);
+>     - **lesson files were backed up but never restored**, and came back owned by root (`backup-restore.sh` now checks both).
+>   - The runbook is complete: version-aware commands, the full restore, alerts for sign-in limits and slow pages, software updates, renewals, the deletion log, and the **G1 go-live checklist** (§8).
+> - **Not done, on purpose:** the 4× repeated class-access queries per page (a 10–15 % CPU saving; it needs care after Server Actions); MFA for Admin (beyond ASVS L1).
+> - **Exit criterion:** all checks pass and are recorded here, in `docs/security-review.md` and in runbook §6. **The owner signs off the runbook and M7.**
 
 ### R2 — Club-wide launch
 - All classes of the next term (e.g. Term 2 · 2027) are set up and run on `lms.cckh.dev`. Teachers get a short walkthrough, and students get login slips.
