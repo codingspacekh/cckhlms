@@ -39,7 +39,8 @@ printf 'សួស្តី\n' > "$WORK/uploads/cd/cd56-ឯកសារ.txt"
 
 docker run --rm --entrypoint age-keygen "$IMG" > "$WORK/key.txt" 2>/dev/null
 RECIPIENT=$(grep -o 'age1[0-9a-z]*' "$WORK/key.txt")
-mkdir -p "$WORK/remote/cckhlms/daily" "$WORK/remote/cckhlms/weekly"
+# Made here, not by the containers (root), so the clean-up can delete what they write in them.
+mkdir -p "$WORK/remote/cckhlms/daily" "$WORK/remote/cckhlms/weekly" "$WORK/remote/cckhlms/uploads"
 # Older backups already in the remote, to check retention.
 for d in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17; do echo old > "$WORK/remote/cckhlms/daily/db-2026-09-${d}T020000Z.dump.age"; done
 for d in 01 02 03 04 05 06 07 08 09; do echo old > "$WORK/remote/cckhlms/weekly/db-2026-0${d#0}-01T020000Z.dump.age" 2>/dev/null || echo old > "$WORK/remote/cckhlms/weekly/db-2026-08-${d}T020000Z.dump.age"; done
