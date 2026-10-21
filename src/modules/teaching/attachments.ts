@@ -110,7 +110,7 @@ export async function openAttachment(
   opts: { now?: Date } = {},
 ): Promise<{ filename: string; contentType: string; inline: boolean; data: Buffer }> {
   const { a, classId, status, publishAt } = await findAttachment(id);
-  const ctx = await classAccess(classId);
+  const ctx = await classAccess(classId, 'read');
   assertCan(actor, 'lesson.read', ctx);
   // Teachers of the class see drafts; everyone else only what students can see.
   const visible = lessonState({ status: status as LessonStatus, publishAt }, opts.now ?? new Date()) === 'published';

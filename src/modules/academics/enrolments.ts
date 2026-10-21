@@ -1,5 +1,5 @@
 // Enrolments, transfers, rosters and "my classes" (FR-ADM-07/08, BR-17/18/19, FR-STU-01).
-import { and, asc, eq, inArray, ne, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, ne, or, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { z } from 'zod';
 import { db } from '@/db/client';
@@ -210,6 +210,18 @@ export type MyClass = {
   students: number;
   nextSession: { date: string; startTime: string; week: number | null } | null;
 };
+
+// A teacher's classes from earlier terms, newest first: archived, but still open to look at (FR-ADM-14).
+export async function pastClasses(actor: Actor | null): Promise<{ id: string; name: string; termName: string }[]> {
+  if (!actor?.role.split(',').includes('teacher')) return [];
+  return db
+    .select({ id: klass.id, name: klass.name, termName: term.name })
+    .from(classTeacher)
+    .innerJoin(klass, eq(klass.id, classTeacher.classId))
+    .innerJoin(term, eq(term.id, klass.termId))
+    .where(and(eq(classTeacher.userId, actor.userId), or(eq(klass.status, 'archived'), eq(term.status, 'closed'))))
+    .orderBy(desc(term.startDate), asc(klass.name));
+}
 
 // The classes a teacher teaches, or a student is in now (FR-STU-01). Nobody sees other people's classes.
 export async function myClasses(actor: Actor | null, opts: { now?: Date } = {}): Promise<MyClass[]> {

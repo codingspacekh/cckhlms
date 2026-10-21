@@ -35,5 +35,8 @@ export function isUniqueViolation(err: unknown, constraint: string): boolean {
 }
 
 export function assertCan(actor: Actor | null, action: Action, ctx: PolicyContext = {}): asserts actor is Actor {
-  if (!can(actor, action, ctx)) throw new ForbiddenError();
+  if (can(actor, action, ctx)) return;
+  if (ctx.classArchived && can(actor, action, { ...ctx, classArchived: false }))
+    throw new ForbiddenError('This class is archived, so it can be looked at but not changed.');
+  throw new ForbiddenError();
 }

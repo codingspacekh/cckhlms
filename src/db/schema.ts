@@ -214,6 +214,8 @@ export const klass = pgTable(
     room: text('room'),
     capacity: smallint('capacity'),
     status: text('status').notNull().default('active'),
+    // Set when the promotion wizard moved its students on (FR-ADM-13); a class is promoted once.
+    promotedAt: ts('promoted_at'),
     createdAt: ts('created_at').notNull().defaultNow(),
   },
   (t) => [
@@ -283,6 +285,8 @@ export const enrolment = pgTable(
     enrolledOn: date('enrolled_on').notNull(),
     endedOn: date('ended_on'),
     transferredFromId: text('transferred_from_id').references((): AnyPgColumn => enrolment.id, { onDelete: 'set null' }),
+    // The enrolment in last term's class that promotion moved the student on from (FR-ADM-13).
+    promotedFromId: text('promoted_from_id').references((): AnyPgColumn => enrolment.id, { onDelete: 'set null' }),
     createdAt: ts('created_at').notNull().defaultNow(),
   },
   (t) => [

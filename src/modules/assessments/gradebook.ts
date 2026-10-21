@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { db } from '@/db/client';
 import { assessment, course, enrolment, excusal, klass, submission, user } from '@/db/schema';
 import { renderMarkdown } from '@/lib/markdown';
-import { classAccess } from '@/modules/academics/access';
+import { classAccess, enrolledOrCompleted } from '@/modules/academics/access';
 import { getClubSettings } from '@/modules/club/service';
 import { weeksOf } from '@/modules/teaching/weeks';
 import type { Actor } from '@/server/actor';
@@ -104,13 +104,7 @@ export async function loadGradebook(classId: string, opts: Opts & { studentId?: 
       .select({ id: user.id, name: user.name, enrolmentId: enrolment.id, enrolledOn: enrolment.enrolledOn })
       .from(enrolment)
       .innerJoin(user, eq(user.id, enrolment.studentId))
-      .where(
-        and(
-          eq(enrolment.classId, classId),
-          eq(enrolment.status, 'active'),
-          opts.studentId ? eq(enrolment.studentId, opts.studentId) : undefined,
-        ),
-      )
+      .where(and(eq(enrolment.classId, classId), enrolledOrCompleted, opts.studentId ? eq(enrolment.studentId, opts.studentId) : undefined))
       .orderBy(asc(user.name)),
     db
       .select()
@@ -156,7 +150,7 @@ export async function loadGradebook(classId: string, opts: Opts & { studentId?: 
 }
 
 export async function gradebook(actor: Actor | null, classId: string, opts: Opts = {}): Promise<Gradebook> {
-  assertCan(actor, 'work.grade', await classAccess(classId));
+  assertCan(actor, 'work.grade', await classAccess(classId, 'read'));
   return { classId, ...(await loadGradebook(classId, opts)) };
 }
 
@@ -295,7 +289,7 @@ export async function myMark(
 ): Promise<{ state: 'graded' | 'excused' | null; score: number | null; counts: number | null; feedbackHtml: string }> {
   const [a] = await db.select().from(assessment).where(eq(assessment.id, assessmentId)).limit(1);
   if (!a) throw new ValidationError('That work no longer exists.');
-  assertCan(actor, 'work.submit', await classAccess(a.classId));
+  assertCan(actor, 'work.submit', await classAccess(a.classId, 'read'));
   const [[latest], [excused]] = await Promise.all([
     db
       .select()

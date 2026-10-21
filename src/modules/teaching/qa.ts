@@ -62,7 +62,7 @@ export async function lessonQuestions(
   week: number,
   opts: Opts = {},
 ): Promise<{ open: boolean; questions: QuestionView[]; toReview: number }> {
-  const ctx = await classAccess(classId);
+  const ctx = await classAccess(classId, 'read');
   assertCan(actor, 'lesson.read', ctx);
   const l = await visibleLesson(classId, week, opts.now ?? new Date());
   if (!l) return { open: false, questions: [], toReview: 0 };

@@ -4,7 +4,7 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { attendance, classReport, classReportTopic, enrolment, lesson, lessonTopic, syllabusTopic } from '@/db/schema';
-import { classAccess } from '@/modules/academics/access';
+import { classAccess, enrolledOrCompleted } from '@/modules/academics/access';
 import type { Kind } from '@/modules/assessments/rules';
 import type { AttendanceStatus } from '@/modules/attendance/rules';
 import { weeksOf } from '@/modules/teaching/weeks';
@@ -57,7 +57,7 @@ export async function classStatistics(actor: Actor | null, classId: string, opts
                 attendance.sessionId,
                 held.map((s) => s.id),
               ),
-              eq(enrolment.status, 'active'),
+              enrolledOrCompleted,
             ),
           )
       : [],

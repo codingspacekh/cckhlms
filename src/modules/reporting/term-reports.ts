@@ -75,7 +75,8 @@ function toRow(s: StudentStanding, r: ReportRow | undefined, passMark: number): 
   };
 }
 
-async function load(classId: string, opts: Opts) {
+// Not checked: callers check who is asking.
+export async function loadTermReports(classId: string, opts: Opts) {
   const standings = await loadStandings(classId, opts);
   const ids = standings.students.map((s) => s.enrolmentId);
   const reports = ids.length ? await db.select().from(studentReport).where(inArray(studentReport.enrolmentId, ids)) : [];
@@ -91,7 +92,7 @@ async function load(classId: string, opts: Opts) {
 export async function termReports(actor: Actor | null, classId: string, opts: Opts = {}): Promise<TermReports> {
   const access = await classAccess(classId);
   assertCan(actor, 'class.view', access);
-  const { standings, rows } = await load(classId, opts);
+  const { standings, rows } = await loadTermReports(classId, opts);
   return {
     classId,
     className: standings.className,
@@ -120,7 +121,7 @@ export async function saveTermReport(actor: Actor | null, enrolmentId: string, r
   if (!e) throw new ValidationError('That student isn’t in this class.');
   const access = await classAccess(e.classId);
   assertCan(actor, 'class.view', access);
-  const { standings, reports, rows } = await load(e.classId, opts);
+  const { standings, reports, rows } = await loadTermReports(e.classId, opts);
   const standing = standings.students.find((s) => s.enrolmentId === enrolmentId);
   if (!standing) throw new ValidationError('That student isn’t in this class.');
   const before = rows.find((r) => r.enrolmentId === enrolmentId)!;
@@ -181,7 +182,7 @@ export async function saveTermReport(actor: Actor | null, enrolmentId: string, r
 // report first. Each report's numbers are snapshotted and each publish is logged.
 export async function publishTermReports(actor: Actor | null, classId: string, opts: Opts = {}): Promise<{ published: number }> {
   assertCan(actor, 'termreport.write', await classAccess(classId));
-  const { standings, rows } = await load(classId, opts);
+  const { standings, rows } = await loadTermReports(classId, opts);
   const toPublish = rows.filter((r) => r.status !== 'published');
   if (!toPublish.length) throw new ValidationError('Every report is already published.');
   const unfinished = toPublish

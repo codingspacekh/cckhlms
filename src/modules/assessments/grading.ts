@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { db } from '@/db/client';
 import { enrolment, klass, submission, user } from '@/db/schema';
 import type { ProjectFile } from '@/lib/project/files';
-import { classAccess } from '@/modules/academics/access';
+import { classAccess, enrolledOrCompleted } from '@/modules/academics/access';
 import { weeksOf } from '@/modules/teaching/weeks';
 import type { Actor } from '@/server/actor';
 import { audit } from '@/server/audit';
@@ -44,9 +44,9 @@ export type GradingView = {
   next: { id: string; name: string } | null;
 };
 
-async function teacherOf(actor: Actor | null, assessmentId: string) {
+async function teacherOf(actor: Actor | null, assessmentId: string, purpose: 'change' | 'read' = 'change') {
   const a = await codeWork(assessmentId);
-  assertCan(actor, 'work.grade', await classAccess(a.classId));
+  assertCan(actor, 'work.grade', await classAccess(a.classId, purpose));
   return { a, actor };
 }
 
@@ -64,13 +64,13 @@ async function studentName(studentId: string) {
 
 // One student's work on one assessment, for marking.
 export async function gradingView(actor: Actor | null, assessmentId: string, studentId: string): Promise<GradingView> {
-  const { a } = await teacherOf(actor, assessmentId);
+  const { a } = await teacherOf(actor, assessmentId, 'read');
   const [roster, versions, [k], sessions] = await Promise.all([
     db
       .select({ id: user.id, name: user.name, username: user.username })
       .from(enrolment)
       .innerJoin(user, eq(user.id, enrolment.studentId))
-      .where(and(eq(enrolment.classId, a.classId), eq(enrolment.status, 'active')))
+      .where(and(eq(enrolment.classId, a.classId), enrolledOrCompleted))
       .orderBy(asc(user.name)),
     versionsOf(assessmentId, studentId),
     db.select({ name: klass.name }).from(klass).where(eq(klass.id, a.classId)),
