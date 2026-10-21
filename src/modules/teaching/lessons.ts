@@ -1,6 +1,6 @@
 // Weekly lesson notes (FR-TCH-01/02, FR-STU-02). One lesson per session; students see it once it's published
 // and its publish time (if any) has passed, worked out when read (ADR-08).
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/db/client';
 import { classSession, course, klass, lesson, lessonTopic, syllabusTopic } from '@/db/schema';
@@ -204,11 +204,21 @@ export async function saveLesson(
         contentMd: input.contentMd,
         status,
         publishAt,
+        publishedAt: status === 'published' ? now : null,
         authorId: actor.userId,
       })
       .onConflictDoUpdate({
         target: lesson.sessionId,
-        set: { title: input.title, contentMd: input.contentMd, status, publishAt, authorId: actor.userId, updatedAt: now },
+        set: {
+          title: input.title,
+          contentMd: input.contentMd,
+          status,
+          publishAt,
+          // Editing a published lesson keeps its time, so students aren't told about it again (FR-STU-09).
+          publishedAt: status === 'published' ? sql`coalesce(${lesson.publishedAt}, ${now.toISOString()}::timestamptz)` : null,
+          authorId: actor.userId,
+          updatedAt: now,
+        },
       })
       .returning({ id: lesson.id });
     await tx.delete(lessonTopic).where(eq(lessonTopic.lessonId, row!.id));

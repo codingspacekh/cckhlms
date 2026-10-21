@@ -316,6 +316,9 @@ export const lesson = pgTable(
     contentMd: text('content_md').notNull().default(''),
     status: text('status').notNull().default('draft'),
     publishAt: ts('publish_at'),
+    // When it was last published from a draft (FR-STU-09): edits to a published lesson keep it, so they don't
+    // notify again. Students see it from the later of this and publish_at.
+    publishedAt: ts('published_at'),
     authorId: text('author_id').references(() => user.id, { onDelete: 'set null' }),
     createdAt: ts('created_at').notNull().defaultNow(),
     updatedAt: ts('updated_at').notNull().defaultNow(),
@@ -492,6 +495,7 @@ export const assessment = pgTable(
     // FR-CODE-06: the template project copied into each student's draft. [] = the language's default template.
     starterFiles: jsonb('starter_files').$type<{ path: string; content: string }[]>().notNull().default([]),
     status: text('status').notNull().default('draft'),
+    publishedAt: ts('published_at'), // when it was last published from a draft (FR-STU-09), kept through edits
     authorId: text('author_id').references(() => user.id, { onDelete: 'set null' }),
     createdAt: ts('created_at').notNull().defaultNow(),
     updatedAt: ts('updated_at').notNull().defaultNow(),
@@ -638,4 +642,18 @@ export const certificate = pgTable(
       .where(sql`${t.revokedAt} is null`),
     check('certificate_revoked_complete', sql`(${t.revokedAt} is null) = (${t.revokedReason} is null)`),
   ],
+);
+
+// How far each person has read their notifications (FR-SYS-01), separately for the student and teacher areas.
+// The notifications themselves are worked out from lessons, work, marks and Q&A when read (ADR-08).
+export const notificationSeen = pgTable(
+  'notification_seen',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    area: text('area').notNull(),
+    seenAt: ts('seen_at').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.area] }), check('notification_seen_area_known', sql`${t.area} in ('student', 'teacher')`)],
 );

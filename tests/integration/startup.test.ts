@@ -38,6 +38,7 @@ describe('startup', () => {
       'lesson',
       'lesson_attachment',
       'lesson_topic',
+      'notification_seen',
       'post_report',
       'question',
       'rate_limit',

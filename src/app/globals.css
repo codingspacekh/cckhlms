@@ -308,6 +308,91 @@ svg.i {
 }
 .top .r {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+/* The notifications bell (FR-SYS-01), with how many are new. */
+.bell {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-sm);
+  color: var(--ink-2);
+}
+.bell:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+.bell .i {
+  width: 20px;
+  height: 20px;
+}
+.bell-count {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--bad-text);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+}
+.notes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.notes li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--line);
+}
+.notes li:first-child {
+  border-top: 0;
+}
+.notes li.unread {
+  background: color-mix(in srgb, var(--accent-soft) 45%, transparent);
+}
+.note-icon {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink-2);
+}
+.note-icon .i {
+  width: 16px;
+  height: 16px;
+}
+.note-icon.due_soon,
+.note-icon.returned,
+.note-icon.report {
+  background: var(--warn-soft);
+  color: var(--warn-text);
+}
+.note-icon.marked {
+  background: var(--good-soft);
+  color: var(--good-text);
+}
+.note-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 .crumb {
   font-size: 0.85rem;

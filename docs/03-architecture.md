@@ -187,7 +187,7 @@ erDiagram
     ENROLMENT ||--o| CERTIFICATE : earns
 
     USER ||--o{ PLAYGROUND_PROJECT : owns
-    USER ||--o{ NOTIFICATION : receives
+    USER ||--o{ NOTIFICATION_SEEN : "has read up to"
     USER ||--o{ AUDIT_LOG : performs
 ```
 
@@ -219,7 +219,7 @@ erDiagram
 | **CLASS_REPORT** | id, session_id, topics_covered (topic ids), attendance_summary (auto), comment, author_id |
 | **STUDENT_REPORT** | id, enrolment_id, performance_rating, comment, needs_support, support_note, exam_pct, classwork_pct, homework_pct, calculated_score (BR-12), final_score, adjustment_reason, result (pass/fail/pending), published_at, author_id |
 | **CERTIFICATE** | id, enrolment_id, verification_code (unique, random), template_version, issued_by, issued_at, revoked_at |
-| **NOTIFICATION** | id, user_id, type, payload (json), read_at |
+| **NOTIFICATION_SEEN** | user_id, area (student/teacher), seen_at. Notifications themselves aren't stored: they're worked out when read from lessons, work, marks and Q&A (ADR-08), so a scheduled lesson or "due soon" turns up on time. LESSON and ASSESSMENT keep `published_at` for this. |
 | **AUDIT_LOG** | id, actor_id, action, entity, entity_id, before (json), after (json), at |
 | **CLUB_SETTINGS** | single row: club_name, logo, time_zone (default `Asia/Phnom_Penh`), certificate_template_version |
 
