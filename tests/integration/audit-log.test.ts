@@ -15,6 +15,8 @@ import { auditEntries } from '@/modules/audit/audit-log';
 import { actionsIn, PAGE_SIZE, parseAuditFilters, SENSITIVE_GROUPS, type AuditFilters } from '@/modules/audit/rules';
 import { issueCertificate, reissueCertificate, revokeCertificate } from '@/modules/certificates/certificates';
 import { createAccount, resetPassword, setActive, signOutEverywhere } from '@/modules/identity/service';
+import { eraseStudent } from '@/modules/privacy/erase';
+import { exportStudentData } from '@/modules/privacy/export';
 import { promote } from '@/modules/promotion/promotion';
 import { publishTermReports, saveTermReport } from '@/modules/reporting/term-reports';
 import { weeksOf } from '@/modules/teaching/weeks';
@@ -141,6 +143,11 @@ beforeAll(async () => {
   const cert = await issueCertificate(admin, enrolmentOf[bopha.userId]!);
   const again = await reissueCertificate(admin, cert.id, 'Name spelled wrong.');
   await revokeCertificate(admin, again.id, 'Issued by mistake.');
+
+  // A student's data on request (NFR-07): downloaded, then deleted.
+  const leaving = await createAccount(admin, { role: 'student', name: 'Vanna Sok' });
+  await exportStudentData(admin, leaving.userId);
+  await eraseStudent(admin, leaving.userId, leaving.username);
 
   // A sign-in, and an entry whose person has since been deleted.
   await audit({ actorId: bopha.userId, action: 'auth.sign_in', ip: '203.0.113.7' });

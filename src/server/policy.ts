@@ -67,6 +67,8 @@ export const ACTIONS = {
   'audit.view': hasRole('admin'),
   // The playground (FR-CODE-07): students' own projects, outside any class. Each one is found by its owner only.
   'playground.use': hasRole('student'),
+  // A student's data on request (NFR-07): Admin downloads it, or deletes their personal data.
+  'student.data': hasRole('admin'),
 } satisfies Record<string, Rule>;
 
 export type Action = keyof typeof ACTIONS;

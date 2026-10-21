@@ -193,7 +193,7 @@ describe('the admin dashboard', () => {
 describe('the admin’s student report (FR-ADM-09)', () => {
   it('each class: standing, attendance, homework, scores by task, improvement and the teacher’s report', async () => {
     const r = await adminStudentReport(admin, chenda.userId, { now: NOW });
-    expect(r.student).toEqual({ id: chenda.userId, name: 'Chenda Ouk', username: expect.any(String) });
+    expect(r.student).toEqual({ id: chenda.userId, name: 'Chenda Ouk', username: expect.any(String), erasedAt: null });
     expect(r.classes).toHaveLength(1);
     expect(r.classes[0]).toMatchObject({
       className: 'Python Level 1 · Sat 09:00',

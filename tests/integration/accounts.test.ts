@@ -47,7 +47,7 @@ afterAll(async () => {
 
 describe('creating accounts', () => {
   it('creates a student with a suggested username and a one-time password that works', async () => {
-    const r = await createAccount(admin, { role: 'student', name: 'Bopha Lim', guardianName: 'Mr Lim', guardianPhone: '012 345 678' });
+    const r = await createAccount(admin, { role: 'student', name: 'Bopha Lim', guardianName: 'Mr Lim', guardianPhone: '012 000 001' });
     expect(r.username).toBe('bopha.l');
     expect(r.password).toMatch(/^[a-z]+-[a-z]+-\d{2}$/);
     expect((await signIn('bopha.l', r.password)).status).toBe(200);
@@ -56,7 +56,7 @@ describe('creating accounts', () => {
        join student_profile p on p.user_id = u.id join account a on a.user_id = u.id where u.id = $1`,
       [r.userId],
     );
-    expect(rows[0]).toMatchObject({ role: 'student', guardian_name: 'Mr Lim', guardian_phone: '012 345 678' });
+    expect(rows[0]).toMatchObject({ role: 'student', guardian_name: 'Mr Lim', guardian_phone: '012 000 001' });
     expect(rows[0].password).not.toContain(r.password);
     expect((await lastAudit('account.create')).entity_id).toBe(r.userId);
   });

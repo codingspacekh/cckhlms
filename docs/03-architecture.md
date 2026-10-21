@@ -195,7 +195,7 @@ erDiagram
 
 | Entity | Key fields |
 |---|---|
-| **USER** | id, username (unique, used to log in), password_hash, display_name, avatar_url, must_change_password (default false), status (active/inactive), last_login_at, created_at |
+| **USER** | id, username (unique, used to log in), password_hash, display_name, avatar_url, must_change_password (default false), status (active/inactive), last_login_at, created_at, erased_at (a student's personal data deleted on request, NFR-07: the row stays as "Deleted student") |
 | **USER_ROLE** | user_id, role (`admin` / `teacher` / `student`) |
 | **STUDENT_PROFILE** | user_id, date_of_birth, school_grade, guardian_name, guardian_phone, notes (admin-only) |
 | **TEACHER_PROFILE** | user_id, phone, bio |

@@ -38,7 +38,10 @@ export type AdminClassReport = {
 
 export async function adminStudentReport(actor: Actor | null, studentId: string, opts: Opts = {}) {
   assertCan(actor, 'admin.area');
-  const [student] = await db.select({ id: user.id, name: user.name, username: user.username }).from(user).where(eq(user.id, studentId));
+  const [student] = await db
+    .select({ id: user.id, name: user.name, username: user.username, erasedAt: user.erasedAt })
+    .from(user)
+    .where(eq(user.id, studentId));
   if (!student) throw new ValidationError('That student no longer exists.');
   const rows = await db
     .select({
@@ -99,6 +102,10 @@ export async function adminStudentReport(actor: Actor | null, studentId: string,
       ? [{ termName: r.termName, termStart: r.termStart, score: (r.report.finalScore ?? r.report.calculatedScore)! }]
       : [],
   );
-  return { student: { id: student.id, name: student.name, username: student.username ?? '' }, classes, terms: termChanges(published) };
+  return {
+    student: { id: student.id, name: student.name, username: student.username ?? '', erasedAt: student.erasedAt },
+    classes,
+    terms: termChanges(published),
+  };
 }
 export type AdminStudentReport = Awaited<ReturnType<typeof adminStudentReport>>;

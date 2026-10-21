@@ -27,7 +27,7 @@ async function signIn(browser: Browser, username: string, password: string, ip: 
   return { page, ctx };
 }
 
-const CSV = 'name,username,guardian name,guardian phone\nSreymom Keo,,Mrs Keo,012 222 333\nRatana Chhim,ratana,,\nសុខា ពេជ្រ,,,\n';
+const CSV = 'name,username,guardian name,guardian phone\nSreymom Keo,,Mrs Keo,012 000 003\nRatana Chhim,ratana,,\nសុខា ពេជ្រ,,,\n';
 let slip = { username: '', password: '' };
 
 test('Admin checks a CSV, fixes it, imports it into a class and prints the slips', async ({ page }) => {

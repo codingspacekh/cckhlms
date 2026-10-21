@@ -27,6 +27,8 @@ export const AUDIT_ACTIONS: Record<string, { label: string; group: AuditGroup }>
   'account.deactivate': { label: 'Switched off an account', group: 'accounts' },
   'account.reactivate': { label: 'Switched an account back on', group: 'accounts' },
   'account.sign_out_everywhere': { label: 'Signed someone out everywhere', group: 'accounts' },
+  'student.export': { label: 'Downloaded a student’s data', group: 'accounts' },
+  'student.erase': { label: 'Deleted a student’s personal data', group: 'accounts' },
   'submission.submit': { label: 'Handed in work', group: 'marks' },
   'submission.grade': { label: 'Marked work', group: 'marks' },
   'submission.return': { label: 'Sent work back for a redo', group: 'marks' },

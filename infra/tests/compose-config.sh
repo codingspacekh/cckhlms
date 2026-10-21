@@ -15,6 +15,8 @@ assert c["networks"]["internal"].get("internal") is True, "internal network must
 assert set(s["cloudflared"]["networks"]) == {"edge"}, "cloudflared only needs the edge network"
 assert all(v.get("restart") == "unless-stopped" for v in s.values()), "every service restarts automatically"
 assert all(v.get("mem_limit") for v in s.values()), "every service has a memory limit"
+# NFR-07: an error like a unique violation would log the value (a username) in its DETAIL line.
+assert "log_error_verbosity=terse" in s["db"]["command"], "PostgreSQL must log errors without the values in them"
 '
 if APP_TAG=t docker compose -f compose.prod.yaml config >/dev/null 2>&1; then echo "FAIL: missing secrets were not detected"; exit 1; fi
-echo "PASS: compose config valid, no published ports, db internal-only, restarts + memory limits, missing secrets refused"
+echo "PASS: compose config valid, no published ports, db internal-only, restarts + memory limits, terse db errors, missing secrets refused"

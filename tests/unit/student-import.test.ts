@@ -18,9 +18,9 @@ describe('parseCsv', () => {
   });
 
   it('reads semicolons when the header uses them (Excel in some languages)', () => {
-    expect(parseCsv('name;guardian phone\nBopha Lim;012 345 678')).toEqual([
+    expect(parseCsv('name;guardian phone\nBopha Lim;012 000 001')).toEqual([
       { line: 1, cells: ['name', 'guardian phone'] },
-      { line: 2, cells: ['Bopha Lim', '012 345 678'] },
+      { line: 2, cells: ['Bopha Lim', '012 000 001'] },
     ]);
   });
 
@@ -32,12 +32,12 @@ describe('parseCsv', () => {
 describe('checkImport', () => {
   it('suggests usernames for blank ones, keeps the ones given, and reads headers loosely', () => {
     const r = checkImport(
-      csv('Full Name,Username,Guardian_Name,GUARDIAN PHONE,Notes', 'Bopha Lim,,Mr Lim,012 345 678,', 'Chenda Ouk,Chenda.O,,,Shy'),
+      csv('Full Name,Username,Guardian_Name,GUARDIAN PHONE,Notes', 'Bopha Lim,,Mr Lim,012 000 001,', 'Chenda Ouk,Chenda.O,,,Shy'),
       none,
     );
     expect(r.errors).toEqual([]);
     expect(r.rows).toEqual([
-      { line: 2, name: 'Bopha Lim', username: 'bopha.l', suggested: true, guardianName: 'Mr Lim', guardianPhone: '012 345 678' },
+      { line: 2, name: 'Bopha Lim', username: 'bopha.l', suggested: true, guardianName: 'Mr Lim', guardianPhone: '012 000 001' },
       { line: 3, name: 'Chenda Ouk', username: 'chenda.o', suggested: false, notes: 'Shy' },
     ]);
   });

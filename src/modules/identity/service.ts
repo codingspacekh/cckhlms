@@ -10,13 +10,28 @@ import { assertCan, ValidationError } from '@/server/errors';
 import { accountInputSchema, generatePassword, suggestUsername, type AccountInput } from './rules';
 
 export type Role = 'student' | 'teacher' | 'admin';
-export type Person = { id: string; name: string; username: string; role: string; active: boolean; guardianPhone: string | null };
+export type Person = {
+  id: string;
+  name: string;
+  username: string;
+  role: string;
+  active: boolean;
+  erased: boolean; // their personal data was deleted on request (NFR-07)
+  guardianPhone: string | null;
+};
 
 const hasRole = (role: string) => sql`${role} = any(string_to_array(${user.role}, ','))`;
 
 async function findUser(userId: string) {
   const [u] = await db.select().from(user).where(eq(user.id, userId)).limit(1);
   if (!u) throw new ValidationError('That account no longer exists.');
+  return u;
+}
+
+// An anonymised student (NFR-07) stays switched off, with no password.
+async function findLiveUser(userId: string) {
+  const u = await findUser(userId);
+  if (u.erasedAt) throw new ValidationError('This student’s personal data has been deleted.');
   return u;
 }
 
@@ -78,7 +93,7 @@ export async function createAccount(actor: Actor | null, raw: AccountInput) {
 
 export async function resetPassword(actor: Actor | null, userId: string) {
   assertCan(actor, 'accounts.manage');
-  const target = await findUser(userId);
+  const target = await findLiveUser(userId);
   const password = generatePassword();
   const ctx = await auth.$context;
   await ctx.internalAdapter.updatePassword(userId, await ctx.password.hash(password));
@@ -89,7 +104,7 @@ export async function resetPassword(actor: Actor | null, userId: string) {
 
 export async function setActive(actor: Actor | null, userId: string, active: boolean) {
   assertCan(actor, 'accounts.manage');
-  const target = await findUser(userId);
+  const target = await findLiveUser(userId);
   if (!active) {
     if (userId === actor.userId) throw new ValidationError("You can't switch off your own account.");
     if ((target.role ?? '').split(',').includes('admin')) {
@@ -129,6 +144,7 @@ export async function listPeople(actor: Actor | null, role: Role): Promise<Perso
       username: user.username,
       role: user.role,
       banned: user.banned,
+      erasedAt: user.erasedAt,
       guardianPhone: studentProfile.guardianPhone,
     })
     .from(user)
@@ -141,6 +157,7 @@ export async function listPeople(actor: Actor | null, role: Role): Promise<Perso
     username: r.username ?? '',
     role: r.role ?? '',
     active: !r.banned,
+    erased: r.erasedAt !== null,
     guardianPhone: r.guardianPhone,
   }));
 }

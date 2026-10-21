@@ -77,7 +77,7 @@ afterAll(async () => {
 
 const FILE = [
   'name,username,guardian name,guardian phone,notes',
-  'Chenda Ouk,,Mrs Ouk,012 111 222,',
+  'Chenda Ouk,,Mrs Ouk,012 000 002,',
   'Kosal Meas,kosal,,,Joined late',
   'សុខ ចាន់,,,,',
 ].join('\n');
@@ -153,7 +153,7 @@ describe('importing', () => {
       role: 'student',
       email: 'chenda.o@users.cckh.invalid',
       guardian_name: 'Mrs Ouk',
-      guardian_phone: '012 111 222',
+      guardian_phone: '012 000 002',
     });
     expect(chenda.password).not.toContain(r.slips[0]!.password);
     expect((await one(`select notes from student_profile p join "user" u on u.id = p.user_id where u.username = 'kosal'`)).notes).toBe(

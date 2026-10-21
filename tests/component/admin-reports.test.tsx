@@ -84,7 +84,7 @@ const standing = {
   homework: { handedIn: 0, expected: 0, percent: null },
 };
 const report: AdminStudentReport = {
-  student: { id: 's1', name: 'Bopha Lim', username: 'bopha.l' },
+  student: { id: 's1', name: 'Bopha Lim', username: 'bopha.l', erasedAt: null },
   classes: [
     {
       classId: 'c1',
