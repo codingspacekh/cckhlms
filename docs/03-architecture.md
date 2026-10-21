@@ -437,7 +437,7 @@ flowchart LR
 | Service | Image | Reachable from | Persistent volume | Notes |
 |---|---|---|---|---|
 | `cloudflared` | Cloudflare `cloudflared` | outbound only | — | Routes `lms.cckh.dev` → `app:3000` and `preview.cckh.dev` → `preview:8080`. |
-| `app` | Our Next.js image (standalone output) | `cloudflared` only | `uploads` | Strict CSP; runs DB migrations on start; `/api/health`. Memory limit ≈1 GB. |
+| `app` | Our Next.js image (standalone output) | `cloudflared` only | `uploads` | Strict CSP; runs DB migrations on start (one process at a time, under a database lock); `/api/health`. **Two server processes** (`WEB_WORKERS=2`, one per vCPU; M7 load test) and idle connections kept 95 s, longer than cloudflared's 90 s. Read-only, no capabilities. Memory limit ≈1 GB. |
 | `preview` | Small static web server (unprivileged nginx) serving `frame.html` + its script | `cloudflared` only | — | Own permissive CSP so students' scripts run; sets no cookies; accepts files from `https://lms.cckh.dev` only (`postMessage` origin check). |
 | `db` | PostgreSQL (current major version) | internal network only | `pgdata` | Never exposed; only `app` and `backup` can reach it. |
 | `backup` | Small image with `pg_dump`, `age`, `rclone` | — | — | Schedule in §9.5. |

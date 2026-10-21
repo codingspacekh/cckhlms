@@ -1,13 +1,14 @@
 // Runs once when the server starts (src/instrumentation.ts): the settings check, migrations, the club
 // settings row, and the first admin if there is none yet.
 import { like } from 'drizzle-orm';
-import { db } from '@/db/client';
+import { db, pool } from '@/db/client';
 import { runMigrations } from '@/db/migrate';
 import { clubSettings, user } from '@/db/schema';
 import { configProblems } from './config';
 import { seedUser } from './seed';
 
 type Bootstrap = { username: string; password: string } | null;
+const STARTUP_LOCK = 724_519_001; // any fixed number, the same in every process
 
 function bootstrapFromEnv(): Bootstrap {
   const { BOOTSTRAP_ADMIN_USERNAME: username, BOOTSTRAP_ADMIN_PASSWORD: password } = process.env;
@@ -19,11 +20,19 @@ export async function startup(opts: { bootstrapAdmin?: Bootstrap } = {}) {
   if (problems.length) throw new Error(`The server settings need fixing:\n- ${problems.join('\n- ')}`);
   const bootstrap = opts.bootstrapAdmin !== undefined ? opts.bootstrapAdmin : bootstrapFromEnv();
   if (bootstrap && bootstrap.password.length < 12) throw new Error('The first admin password must be at least 12 characters.');
-  await runMigrations();
-  await db.insert(clubSettings).values({ id: 1 }).onConflictDoNothing();
-  if (bootstrap) {
-    const admins = await db.select({ id: user.id }).from(user).where(like(user.role, '%admin%')).limit(1);
-    if (admins.length === 0) await seedUser({ ...bootstrap, name: 'Club Admin', role: 'admin' });
+  // The app runs one server process per CPU (M7), and they start together: one at a time does the database part.
+  const lock = await pool.connect();
+  try {
+    await lock.query('select pg_advisory_lock($1)', [STARTUP_LOCK]);
+    await runMigrations();
+    await db.insert(clubSettings).values({ id: 1 }).onConflictDoNothing();
+    if (bootstrap) {
+      const admins = await db.select({ id: user.id }).from(user).where(like(user.role, '%admin%')).limit(1);
+      if (admins.length === 0) await seedUser({ ...bootstrap, name: 'Club Admin', role: 'admin' });
+    }
+  } finally {
+    await lock.query('select pg_advisory_unlock($1)', [STARTUP_LOCK]).catch(() => undefined);
+    lock.release();
   }
 }
 

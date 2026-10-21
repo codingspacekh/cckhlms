@@ -9,6 +9,7 @@ prototype
 docs
 tests
 infra
+!infra/app/cluster.mjs
 .env
 .env.*
 *.md
