@@ -99,6 +99,8 @@ export const clubSettings = pgTable(
     id: smallint('id').primaryKey().default(1),
     clubName: text('club_name').notNull().default('CCKH Coding Club'),
     timeZone: text('time_zone').notNull().default('Asia/Phnom_Penh'),
+    // The name printed on the signature line of certificates (FR-ADM-11).
+    certificateSigner: text('certificate_signer').notNull().default('Club Director'),
     updatedAt: ts('updated_at').notNull().defaultNow(),
   },
   (t) => [check('club_settings_single_row', sql`${t.id} = 1`)],
@@ -608,5 +610,32 @@ export const studentReport = pgTable(
     check('student_report_final_score_range', sql`${t.finalScore} between 0 and 100`),
     check('student_report_support_note', sql`${t.needsSupport} or ${t.supportNote} = ''`),
     check('student_report_published_complete', sql`${t.publishedAt} is null or (${t.result} is not null and ${t.rating} is not null)`),
+  ],
+);
+
+// A certificate for a student's class (FR-ADM-11, BR-05/06). The PDF is drawn on demand from the club's design
+// (template_version keeps an old certificate looking as it did). Issued only for a Pass unless Admin gives a
+// reason; reissuing revokes the old one, so an enrolment has at most one valid certificate.
+export const certificate = pgTable(
+  'certificate',
+  {
+    id: text('id').primaryKey(),
+    enrolmentId: text('enrolment_id')
+      .notNull()
+      .references(() => enrolment.id, { onDelete: 'restrict' }),
+    code: text('code').notNull().unique(),
+    templateVersion: smallint('template_version').notNull(),
+    overrideReason: text('override_reason'), // why it was issued without a Pass (BR-05)
+    issuedBy: text('issued_by').references(() => user.id, { onDelete: 'set null' }),
+    issuedAt: ts('issued_at').notNull().defaultNow(),
+    revokedAt: ts('revoked_at'),
+    revokedBy: text('revoked_by').references(() => user.id, { onDelete: 'set null' }),
+    revokedReason: text('revoked_reason'),
+  },
+  (t) => [
+    uniqueIndex('certificate_one_valid')
+      .on(t.enrolmentId)
+      .where(sql`${t.revokedAt} is null`),
+    check('certificate_revoked_complete', sql`(${t.revokedAt} is null) = (${t.revokedReason} is null)`),
   ],
 );

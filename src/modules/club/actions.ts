@@ -9,6 +9,7 @@ export async function updateSettingsAction(_prev: FormResult | null, form: FormD
     await updateClubSettings(await currentActor(), {
       clubName: formText(form, 'clubName') ?? '',
       timeZone: formText(form, 'timeZone') ?? '',
+      certificateSigner: formText(form, 'certificateSigner') ?? '',
     });
     revalidatePath('/', 'layout');
     return { ok: true, message: 'Settings saved.' };

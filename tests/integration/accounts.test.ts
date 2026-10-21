@@ -137,18 +137,44 @@ describe('managing accounts', () => {
 });
 
 describe('club settings (FR-ADM-16)', () => {
-  it('updates the club name and time zone, and records who changed them', async () => {
-    await updateClubSettings(admin, { clubName: 'CCKH Weekend Coding Club', timeZone: 'Asia/Bangkok' });
-    expect(await getClubSettings()).toEqual({ clubName: 'CCKH Weekend Coding Club', timeZone: 'Asia/Bangkok' });
-    expect((await lastAudit('settings.update')).detail).toMatchObject({ timeZone: 'Asia/Bangkok' });
-    await updateClubSettings(admin, { clubName: 'CCKH Coding Club', timeZone: 'Asia/Phnom_Penh' });
+  it('updates the club name, time zone and certificate signer, and records who changed them', async () => {
+    expect(await getClubSettings()).toEqual({
+      clubName: 'CCKH Coding Club',
+      timeZone: 'Asia/Phnom_Penh',
+      certificateSigner: 'Club Director',
+    });
+    await updateClubSettings(admin, {
+      clubName: 'CCKH Weekend Coding Club',
+      timeZone: 'Asia/Bangkok',
+      certificateSigner: 'Sokha Chea, Director',
+    });
+    expect(await getClubSettings()).toEqual({
+      clubName: 'CCKH Weekend Coding Club',
+      timeZone: 'Asia/Bangkok',
+      certificateSigner: 'Sokha Chea, Director',
+    });
+    expect((await lastAudit('settings.update')).detail).toMatchObject({
+      timeZone: 'Asia/Bangkok',
+      certificateSigner: 'Sokha Chea, Director',
+    });
+    await updateClubSettings(admin, { clubName: 'CCKH Coding Club', timeZone: 'Asia/Phnom_Penh', certificateSigner: 'Club Director' });
+  });
+
+  it('needs a name for the certificates', async () => {
+    await expect(updateClubSettings(admin, { clubName: 'X', timeZone: 'Asia/Phnom_Penh', certificateSigner: ' ' })).rejects.toThrow(
+      'Enter the name that signs the certificates.',
+    );
   });
 
   it('refuses an unknown time zone', async () => {
-    await expect(updateClubSettings(admin, { clubName: 'X', timeZone: 'Mars/Base_One' })).rejects.toThrow(ValidationError);
+    await expect(
+      updateClubSettings(admin, { clubName: 'X', timeZone: 'Mars/Base_One', certificateSigner: 'Club Director' }),
+    ).rejects.toThrow(ValidationError);
   });
 
   it('only lets Admin change settings', async () => {
-    await expect(updateClubSettings(teacher, { clubName: 'Mine', timeZone: 'Asia/Phnom_Penh' })).rejects.toThrow(ForbiddenError);
+    await expect(updateClubSettings(teacher, { clubName: 'Mine', timeZone: 'Asia/Phnom_Penh', certificateSigner: 'Me' })).rejects.toThrow(
+      ForbiddenError,
+    );
   });
 });

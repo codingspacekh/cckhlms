@@ -266,10 +266,10 @@ export const journeyClass = () => smallClass({ room: 'Journey room', code: 'PYJ'
 export const otherTeachersClass = () =>
   smallClass({ room: 'Other room', code: 'PYO', course: 'Python Other', startTime: '11:00', teacher: 'Chenda Keo' });
 
-// For the promotion spec (FR-ADM-13): a Sunday class with two students of its own (so promoting it doesn't move
-// the shared e2e accounts), its exam marked (Nita Ung 80, Pich Ros 40) and its term reports published, plus the
-// two classes they can move to in Term 1 · 2029.
-export async function promotionClass(): Promise<TeachingClass & { next: string; repeat: string }> {
+// For the term-end specs (certificates, promotion): a Sunday class with two students of its own (so promoting it
+// doesn't move the shared e2e accounts), its exam marked (Nita Ung 80, Pich Ros 40) and its term reports
+// published, plus the two classes they can move to in Term 1 · 2029. Nita can sign in (stateFile('nita')).
+export async function termEndClass(): Promise<TeachingClass & { next: string; repeat: string }> {
   const main = await teachingClass();
   const { db } = await import('../../src/db/client');
   const { user, klass } = await import('../../src/db/schema');
@@ -347,6 +347,7 @@ export async function promotionClass(): Promise<TeachingClass & { next: string; 
     ['Pich Ros', '40', 'fail'],
   ] as const) {
     const a = await createAccount(admin, { role: 'student', name });
+    if (name === 'Nita Ung') await saveSignedInState('nita', a.username, a.password, 41);
     const e = await enrolStudent(admin, classId, a.userId, { enrolledOn: sunday, confirmClashes: true });
     if (e.status !== 'enrolled') throw new Error(`${name} not enrolled`);
     await saveCell(teacher, exam, a.userId, { value: score, version: null });

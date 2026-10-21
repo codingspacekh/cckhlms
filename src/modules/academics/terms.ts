@@ -83,3 +83,10 @@ export async function setTermStatus(actor: Actor | null, id: string, status: Ter
     }
   });
 }
+
+// The two latest terms that have started by `today` (a club-time date), newest first: what the term-end pages
+// (Promotion, Certificates) work on. By date, not status, so a term that wasn't marked active still counts.
+export async function latestStartedTerms(today: string): Promise<string[]> {
+  const rows = await db.select({ id: term.id }).from(term).where(lte(term.startDate, today)).orderBy(desc(term.startDate)).limit(2);
+  return rows.map((r) => r.id);
+}
