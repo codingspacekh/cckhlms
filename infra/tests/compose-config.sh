@@ -25,6 +25,7 @@ for n in ("app", "preview", "cloudflared"):
 for n in ("app", "preview"):
     assert s[n].get("read_only") is True, n + " must run read-only"
 assert {t.split(":")[0] for t in s["app"].get("tmpfs", [])} == {"/tmp", "/app/.next/cache"}, "app tmpfs: /tmp and the Next cache"
+assert s["backup"]["environment"].get("UPLOADS_OWNER") == "100:101", "restored lesson files must go to the app user (Dockerfile)"
 '
 if APP_TAG=t docker compose -f compose.prod.yaml config >/dev/null 2>&1; then echo "FAIL: missing secrets were not detected"; exit 1; fi
 echo "PASS: compose config valid, no published ports, db internal-only, restarts + memory limits, terse db errors, read-only app + preview, no capabilities, no-new-privileges, missing secrets refused"

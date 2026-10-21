@@ -78,6 +78,7 @@ services:
       PGDATABASE: lms
       PGPASSWORD: ${POSTGRES_PASSWORD}
       AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:?set in .env}
+      UPLOADS_OWNER: '100:101' # the app's user (Dockerfile): restored lesson files belong to it
       BACKUP_REMOTE: r2:${R2_BUCKET:?set in .env}
       BACKUP_PING_URL: ${BACKUP_PING_URL:-}
       RCLONE_CONFIG_R2_TYPE: s3

@@ -48,8 +48,10 @@ PermitRootLogin no
 PasswordAuthentication no
 KbdInteractiveAuthentication no
 CONF
+# Ubuntu 24.04 starts sshd on demand (ssh.socket), so its run directory may not exist yet (M7 DR rehearsal).
+install -d -m 755 /run/sshd
 sshd -t
-systemctl reload ssh
+systemctl try-reload-or-restart ssh
 
 # Firewall: SSH only. Web traffic arrives through the Cloudflare Tunnel (outbound), so 80/443 stay closed.
 # Docker-published ports would bypass ufw; compose.prod.yaml publishes none (tested in CI).

@@ -3,7 +3,10 @@
 # reports it, otherwise roll back to the previous version. Keeps the last 3 versions of each image.
 set -eu
 TAG=${1:?usage: deploy.sh <git-sha>}
-cd /opt/cckhlms
+# compose.prod.yaml needs APP_TAG for every command, including the health check's `exec` (M7 DR rehearsal: without
+# it the check never saw the new version, so every deploy timed out).
+export APP_TAG="$TAG"
+cd "${APP_DIR:-/opt/cckhlms}"
 COMPOSE="docker compose -f compose.prod.yaml"
 PREV=$(cat .deployed-tag 2>/dev/null || true)
 
@@ -12,7 +15,7 @@ health_version() {
 }
 
 echo "deploying $TAG (previous: ${PREV:-none})"
-APP_TAG=$TAG $COMPOSE up -d --remove-orphans
+$COMPOSE up -d --remove-orphans
 
 i=0
 v=""
@@ -25,7 +28,7 @@ done
 
 if [ "$v" != "$TAG" ]; then
   echo "new version did not become healthy" >&2
-  APP_TAG=$TAG $COMPOSE logs --tail 50 app >&2 || true
+  $COMPOSE logs --tail 50 app >&2 || true
   if [ -n "$PREV" ]; then
     echo "rolling back to $PREV" >&2
     APP_TAG=$PREV $COMPOSE up -d --remove-orphans

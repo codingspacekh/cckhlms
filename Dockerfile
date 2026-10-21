@@ -19,7 +19,8 @@ ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
 ENV KEEP_ALIVE_TIMEOUT=95000
 ARG GIT_SHA=dev
 ENV GIT_SHA=$GIT_SHA
-RUN addgroup -S app && adduser -S -G app app && mkdir -p /app/uploads && chown app:app /app/uploads
+# uid/gid fixed: restored lesson files are given to this user (UPLOADS_OWNER in compose.prod.yaml).
+RUN addgroup -S -g 101 app && adduser -S -u 100 -G app app && mkdir -p /app/uploads && chown app:app /app/uploads
 COPY --from=build --chown=app:app /app/.next/standalone ./
 COPY --from=build --chown=app:app /app/.next/static ./.next/static
 COPY --from=build --chown=app:app /app/drizzle ./drizzle
