@@ -92,6 +92,7 @@ Cloudflare → `cckh.dev` → **Security → WAF → Rate limiting rules → Cre
 | OS updates | Security updates install automatically. Monthly on a weekday: `ssh deploy@SERVER_IP 'sudo apt-get update && sudo apt-get upgrade -y'`, then `sudo reboot` if it says a restart is required. Containers come back by themselves. | Monthly |
 | App won't start: "The server settings need fixing" | `docker compose -f compose.prod.yaml logs app` lists each problem (for example a secret shorter than 32 characters, or an `http://` address). Fix `/opt/cckhlms/.env` as in *Rotate a secret*. | When a deploy fails its health check |
 | Rotate a secret | Edit `/opt/cckhlms/.env`, then `APP_TAG=$(cat .deployed-tag) docker compose -f compose.prod.yaml up -d`. Changing `BETTER_AUTH_SECRET` signs everyone out. | If leaked |
+| A guardian asks for a student's data, or for it to be deleted (NFR-07) | People → the student's **Report** → *Personal data*. **Download their data** gives a JSON file; send it to the guardian only. **Delete personal data…** asks for the username and can't be undone: their marks stay under "Deleted student", their certificates are revoked. Backups keep the old data until they expire (at most 8 weeks), so a restore can bring it back: write the student's id (from the address bar, not their name) and the date in §7, and after any restore delete each one listed there again. | On request |
 | Pay / renew | Hetzner monthly; `cckh.dev` yearly. Budget: $100 covers ≈13–16 months; set a reminder 3 months before. | — |
 
 **Never deploy on Saturday or Sunday** (classes). The workflow refuses unless *force* is ticked.
@@ -144,3 +145,10 @@ On Docker Desktop/Colima for Mac, use `-e PGHOST=host.docker.internal` instead o
 | Date | Backup restored | Rows (users) | Time taken | By | Notes |
 |---|---|---|---|---|---|
 | | | | | | first drill (M1) |
+
+## 7. Deletion requests log
+
+Students whose personal data was deleted (NFR-07). Ids only, never names. After a restore from backup, open `/admin/students/<id>` for each row newer than the backup and delete again.
+
+| Date | Student id | Done by |
+|---|---|---|

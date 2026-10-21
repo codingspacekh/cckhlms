@@ -113,7 +113,9 @@ export function PeopleManager({
                   <td className="mono">{p.username}</td>
                   {role === 'student' && <td>{p.guardianPhone ?? '—'}</td>}
                   <td>
-                    {p.active ? (
+                    {p.erased ? (
+                      <Pill icon="x">Personal data deleted</Pill>
+                    ) : p.active ? (
                       <Pill tone="good" icon="check">
                         Active
                       </Pill>
@@ -128,9 +130,11 @@ export function PeopleManager({
                           Report
                         </Link>
                       )}
-                      <button type="button" className="btn sm" disabled={pending} onClick={() => act(() => resetPasswordAction(p.id))}>
-                        Reset password
-                      </button>
+                      {!p.erased && (
+                        <button type="button" className="btn sm" disabled={pending} onClick={() => act(() => resetPasswordAction(p.id))}>
+                          Reset password
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="btn sm ghost"
@@ -139,7 +143,7 @@ export function PeopleManager({
                       >
                         Sign out everywhere
                       </button>
-                      {p.id !== selfId && (
+                      {p.id !== selfId && !p.erased && (
                         <button
                           type="button"
                           className="btn sm ghost"

@@ -476,6 +476,18 @@ The next milestone does not start until all four are true.
 - Privacy check: no real student data in the repo, seeds or logs; guardian data visible only to Admin; data export/delete for one student works.
 - Accessibility sweep (keyboard, contrast, phone width) on every screen; runbook complete (alerts, updates, restore, renewals).
 
+**Owner's decisions (2026-10-21):**
+- **Deleting a student's data anonymises it** (NFR-07 with the retention table in docs/02). Their name, username, guardian contact, password, sessions, drafts, Playground projects and the text they wrote are erased. Their marks, attendance and results stay, under "Deleted student", so class statistics and the audit log stay true. Their certificates are revoked.
+- **Server checks run locally first:** k6 and ZAP against the production containers limited to the server's size (2 CPUs, 4 GB), and the disaster-recovery rehearsal in a fresh Linux VM. **G1 repeats all three on the real server.**
+- Each M7 PR merges when its CI passes; the owner signs off M7 as a whole.
+
+**Tests first:**
+- Integration: an Admin export holds everything stored about one student, and only that student; deleting their data erases every personal field listed above in one transaction, keeps their marks in the class's numbers, revokes their certificates, and writes an audit row with no name; only Admin can do either. More than 5 failed sign-ins for one username in a minute are refused, from any IP.
+- Unit: no file outside the admin screens reads guardian contact; the policy matrix covers the new actions; the ASVS checklist rows are each Met, N/A or an Action with a reason.
+- Infrastructure: the app container runs read-only with no capabilities and `no-new-privileges`; PostgreSQL logs errors without the values in them.
+- ZAP baseline against the production build: no high findings. k6 at ~450 virtual users: p95 < 500 ms, no errors, no valid session treated as signed out.
+- Playwright + axe: every screen in light and dark mode, at phone width, and by keyboard.
+
 **Exit criteria:** all checks pass and are recorded; the owner signs off the runbook.
 
 ### R2 — Club-wide launch

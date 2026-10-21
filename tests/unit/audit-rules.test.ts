@@ -54,6 +54,8 @@ describe('the actions', () => {
       'certificate.issue',
       'certificate.reissue',
       'certificate.revoke',
+      'student.export',
+      'student.erase',
     ])
       expect(sensitive.has(a), a).toBe(true);
     expect(sensitive.has('auth.sign_in')).toBe(false);

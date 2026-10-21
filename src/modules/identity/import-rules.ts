@@ -8,7 +8,7 @@ type Column = (typeof COLUMNS)[number];
 const ALIASES: Record<string, Column> = { 'full name': 'name', 'student name': 'name' };
 
 // The header and one example row, for "Download the template". The BOM makes Excel open it as UTF-8.
-export const IMPORT_TEMPLATE = '\uFEFFname,username,guardian name,guardian phone,notes\r\nBopha Lim,,Mr Lim,012 345 678,\r\n';
+export const IMPORT_TEMPLATE = '\uFEFFname,username,guardian name,guardian phone,notes\r\nBopha Lim,,Mr Lim,012 000 001,\r\n';
 
 export type ImportRow = {
   line: number;

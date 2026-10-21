@@ -37,6 +37,8 @@ export const user = pgTable('user', {
   banned: boolean('banned'),
   banReason: text('ban_reason'),
   banExpires: ts('ban_expires'),
+  // When a student's personal data was deleted on request (NFR-07); the row stays as "Deleted student".
+  erasedAt: ts('erased_at'),
 });
 
 export const session = pgTable(

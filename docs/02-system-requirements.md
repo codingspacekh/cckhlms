@@ -192,6 +192,7 @@ Detailed entity model is in `03-architecture.md §5`.
 | Certificates | Verification record kept permanently; PDF re-generated on demand. |
 | Audit log | At least 2 years. |
 | Backups | 14 daily + 8 weekly encrypted copies, off-site. |
+| A student's data on request (NFR-07) | Admin downloads it as a file. Deleting it **anonymises** the student: their name, username, guardian contact, password, drafts, Playground projects and the text they wrote go; their marks, attendance and results stay under "Deleted student", so class records above stay true. Backups keep the old data until they expire (at most 8 weeks). |
 
 ---
 
