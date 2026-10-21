@@ -161,17 +161,49 @@ describe('sessions by role (FR-AUTH-10)', () => {
   });
 });
 
+// Only failed tries count, so a whole class can sign in together from the club's one Wi-Fi address; a username
+// and an address each have their own limit (M7), so guessing is slow from one address or from many.
 describe('brute force (FR-AUTH-11)', () => {
-  it('refuses the 6th wrong password from the same address within a minute', async () => {
-    const ip = freshIp();
-    const statuses: number[] = [];
-    for (let i = 0; i < 6; i++) statuses.push((await signIn('bopha.l', `wrong-${i}`, ip)).status);
-    expect(statuses.slice(0, 5).every((s) => s === 401)).toBe(true);
-    expect(statuses[5]).toBe(429);
+  it('refuses a username after 5 failed tries in a minute, from any address', async () => {
+    for (let i = 0; i < 5; i++) expect((await signIn('sophea', `wrong-${i}`)).status).toBe(401);
+    const res = await call('/sign-in/username', { body: { username: 'Sophea', password: 'teacher-pass-1234' } });
+    expect(res.status).toBe(429);
+    expect((await res.json()).message).toBe('Too many tries for this username. Wait a minute and try again.');
   });
 
-  it('does not block a different address', async () => {
-    expect((await signIn('bopha.l', 'wrong-again', freshIp())).status).toBe(401);
+  it('lets the username try again a minute later', async () => {
+    await pool.query(`update sign_in_failure set window_start = window_start - interval '61 seconds' where key = 'user:sophea'`);
+    expect((await signIn('sophea', 'teacher-pass-1234')).status).toBe(200);
+  });
+
+  it('forgets a username’s failed tries once the right password is used', async () => {
+    for (let i = 0; i < 4; i++) expect((await signIn('sophea', `wrong-${i}`)).status).toBe(401);
+    expect((await signIn('sophea', 'teacher-pass-1234')).status).toBe(200);
+    for (let i = 0; i < 4; i++) expect((await signIn('sophea', `wrong-${i}`)).status).toBe(401);
+  });
+
+  it('refuses an address after 10 failed tries in a minute, whatever the usernames', async () => {
+    const ip = freshIp();
+    for (let i = 0; i < 10; i++) expect((await signIn(`nobody${i}`, 'guess-1234', ip)).status).toBe(401);
+    expect((await signIn('admin', 'admin-pass-1234', ip)).status).toBe(429);
+    expect((await signIn('admin', 'admin-pass-1234', freshIp())).status).toBe(200);
+  });
+
+  it('doesn’t let a right password clear the address’s count', async () => {
+    const ip = freshIp();
+    for (let i = 0; i < 9; i++) await signIn(`nobody${i}`, 'guess-1234', ip);
+    expect((await signIn('admin', 'admin-pass-1234', ip)).status).toBe(200);
+    expect((await signIn('nobody9', 'guess-1234', ip)).status).toBe(401);
+    expect((await signIn('nobody10', 'guess-1234', ip)).status).toBe(429);
+  });
+
+  it('lets a class of 30 sign in together from one address, with a few typos', async () => {
+    const ip = freshIp();
+    const kids = Array.from({ length: 30 }, (_, i) => ({ username: `kid${i}`, password: `kid-pass-${1000 + i}` }));
+    for (const k of kids) await seedUser({ ...k, name: `Kid ${k.username}`, role: 'student' });
+    for (const k of kids.slice(0, 3)) expect((await signIn(k.username, 'typo-typo', ip)).status).toBe(401);
+    const statuses = await Promise.all(kids.map((k) => signIn(k.username, k.password, ip).then((r) => r.status)));
+    expect(statuses.filter((st) => st !== 200)).toEqual([]);
   });
 });
 

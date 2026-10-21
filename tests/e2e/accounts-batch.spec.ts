@@ -67,6 +67,17 @@ test('Admin checks a CSV, fixes it, imports it into a class and prints the slips
   await expect(first).toBeVisible();
   await page.emulateMedia({ media: 'screen' });
 
+  // The longest password (word-word-word-NN, 29 characters) stays on one line, inside its slip, at a phone's width.
+  await page.setViewportSize({ width: 360, height: 740 });
+  await first.getByTestId('slip-password').evaluate((el) => (el.textContent = 'umbrella-mountain-pumpkin-42'));
+  for (const id of ['slip-username', 'slip-password']) {
+    const text = (await first.getByTestId(id).boundingBox())!;
+    const card = (await first.locator('.slip').boundingBox())!;
+    expect(text.height, id).toBeLessThan(24);
+    expect(text.x + text.width, id).toBeLessThanOrEqual(card.x + card.width);
+  }
+  await page.setViewportSize({ width: 1280, height: 720 });
+
   await page.getByRole('button', { name: 'Done' }).click();
   await expect(page).toHaveURL(/\/admin\/people\?role=student$/);
   await expect(page.getByRole('row', { name: /Ratana Chhim/ })).toBeVisible();

@@ -94,6 +94,14 @@ export const rateLimit = pgTable('rate_limit', {
   lastRequest: bigint('last_request', { mode: 'number' }).notNull(),
 });
 
+// Failed sign-ins in the current minute, per username ('user:…') and per address ('ip:…') (FR-AUTH-11, M7). Only
+// failures count, so a class can sign in together from one address; src/server/sign-in-limit.ts.
+export const signInFailure = pgTable('sign_in_failure', {
+  key: text('key').primaryKey(),
+  count: integer('count').notNull(),
+  windowStart: ts('window_start').notNull(),
+});
+
 // One row only (id = 1). Every date and due time in the LMS is worked out in this time zone (BR-19).
 export const clubSettings = pgTable(
   'club_settings',

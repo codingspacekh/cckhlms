@@ -49,7 +49,7 @@ describe('creating accounts', () => {
   it('creates a student with a suggested username and a one-time password that works', async () => {
     const r = await createAccount(admin, { role: 'student', name: 'Bopha Lim', guardianName: 'Mr Lim', guardianPhone: '012 000 001' });
     expect(r.username).toBe('bopha.l');
-    expect(r.password).toMatch(/^[a-z]+-[a-z]+-\d{2}$/);
+    expect(r.password).toMatch(/^[a-z]+-[a-z]+-[a-z]+-\d{2}$/);
     expect((await signIn('bopha.l', r.password)).status).toBe(200);
     const { rows } = await pool.query(
       `select u.role, p.guardian_name, p.guardian_phone, a.password from "user" u
