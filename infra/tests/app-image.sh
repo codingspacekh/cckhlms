@@ -20,7 +20,7 @@ docker run -d --name it-db --network "$NET" -e POSTGRES_USER=lms -e POSTGRES_PAS
 until docker exec it-db pg_isready -h 127.0.0.1 -U lms -d lms >/dev/null 2>&1; do sleep 1; done
 # The same lock-down as compose.prod.yaml: read-only image, no capabilities, no-new-privileges.
 docker run -d --name it-app --network "$NET" --read-only --tmpfs /tmp --tmpfs /app/.next/cache \
-  --cap-drop ALL --security-opt no-new-privileges:true -v it-uploads:/app/uploads \
+  --cap-drop ALL --security-opt no-new-privileges:true -v it-uploads:/app/uploads -e WEB_WORKERS=2 \
   -e DATABASE_URL=postgres://lms:pw@it-db:5432/lms -e BETTER_AUTH_URL=https://lms.example.test \
   -e BETTER_AUTH_SECRET=image-test-secret-0123456789abcdefghij -e PREVIEW_ORIGIN=https://preview.example.test \
   -e BOOTSTRAP_ADMIN_USERNAME=admin -e BOOTSTRAP_ADMIN_PASSWORD=image-test-admin-pw \
@@ -38,6 +38,11 @@ case "$health" in *'"ok":true'*"\"version\":\"$SHA\""*) ;; *) echo "FAIL: app no
 
 admins=$(docker exec it-db psql -U lms -d lms -tAc "select count(*) from \"user\" where role = 'admin'")
 [ "$admins" = 1 ] || { echo "FAIL: expected 1 admin, got $admins"; exit 1; }
+[ "$(docker exec it-app printenv KEEP_ALIVE_TIMEOUT)" = 95000 ] || { echo "FAIL: idle connections must outlast cloudflared's 90 s"; exit 1; }
+# A primary (node cluster.mjs) and two server processes (Next.js names them next-server).
+servers=$(docker exec it-app ps | grep -c 'next-server' || true)
+primary=$(docker exec it-app ps | grep -c 'node cluster.mjs' || true)
+[ "$servers" = 2 ] && [ "$primary" = 1 ] || { echo "FAIL: expected 1 primary and 2 server processes"; docker exec it-app ps; exit 1; }
 user=$(docker exec it-app id -un)
 [ "$user" != root ] || { echo "FAIL: app runs as root"; exit 1; }
 hsts=$(docker exec it-app wget -qS -O /dev/null http://127.0.0.1:3000/login 2>&1 | grep -i 'strict-transport-security' || true)
@@ -58,7 +63,12 @@ done
 docker exec it-app sh -c 'touch /app/uploads/.w && rm /app/uploads/.w' || { echo "FAIL: uploads not writable"; exit 1; }
 if docker exec it-app sh -c 'touch /app/server.js' 2>/dev/null; then echo "FAIL: the image is writable"; exit 1; fi
 if docker logs it-app 2>&1 | grep -q 'EROFS'; then echo "FAIL: the app tried to write to the read-only image"; docker logs it-app | grep EROFS | head; exit 1; fi
-echo "PASS: app image (version $SHA, migrations + first admin, non-root user '$user', HSTS on, secure session cookie, read-only, no capabilities)"
+# If one server process dies, the container stops, so Docker restarts it whole (infra/app/cluster.mjs).
+docker exec it-app sh -c 'kill $(ps | awk "/next-server/ {print \$1; exit}")'
+i=0
+while [ "$(docker inspect -f '{{.State.Running}}' it-app)" = true ] && [ $i -lt 20 ]; do i=$((i + 1)); sleep 1; done
+[ "$(docker inspect -f '{{.State.Running}}' it-app)" = false ] || { echo "FAIL: the container kept running with a server process gone"; exit 1; }
+echo "PASS: app image (version $SHA, migrations + first admin, non-root user '$user', HSTS on, secure session cookie, read-only, no capabilities, 2 server processes, stops if one dies)"
 
 # The preview image, locked down the same way, serves the frame with its CSP.
 docker build -q -t "cckhlms-preview:$SHA" -f infra/preview/Dockerfile . >/dev/null

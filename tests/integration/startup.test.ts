@@ -1,4 +1,6 @@
 // Start-up: migrations, club settings (FR-ADM-16) and the first admin (docs/05 M1).
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { Pool } from 'pg';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { pool as appPool } from '@/db/client';
@@ -61,6 +63,16 @@ describe('startup', () => {
   it('is safe to run on every start', async () => {
     await startup({ bootstrapAdmin: null });
     await expect(startup({ bootstrapAdmin: null })).resolves.toBeUndefined();
+  });
+
+  // M7: the app runs one server process per CPU, and they all start at once.
+  it('is safe when several server processes start at the same time', async () => {
+    const admin = { username: 'admin', password: 'admin-password-123' };
+    await Promise.all([startup({ bootstrapAdmin: admin }), startup({ bootstrapAdmin: admin }), startup({ bootstrapAdmin: admin })]);
+    const journal = JSON.parse(readFileSync(join(process.cwd(), 'drizzle/meta/_journal.json'), 'utf8')) as { entries: unknown[] };
+    expect((await pool.query(`select count(*)::int as n from drizzle.__drizzle_migrations`)).rows[0].n).toBe(journal.entries.length);
+    expect((await pool.query(`select count(*)::int as n from "user" where role = 'admin'`)).rows[0].n).toBe(1);
+    expect((await pool.query(`select count(*)::int as n from club_settings`)).rows[0].n).toBe(1);
   });
 
   it('stores the club time zone, Asia/Phnom_Penh by default', async () => {

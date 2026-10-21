@@ -33,6 +33,7 @@ services:
       PREVIEW_ORIGIN: https://${PREVIEW_HOST:-preview.cckh.dev}
       BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-}
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      WEB_WORKERS: '2' # one server process per vCPU (M7 load test)
     volumes: [uploads:/app/uploads]
     networks: [internal, edge]
     mem_limit: 1g
