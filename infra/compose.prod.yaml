@@ -16,6 +16,7 @@ services:
     volumes: [pgdata:/var/lib/postgresql]
     networks: [internal]
     mem_limit: 768m
+    security_opt: ['no-new-privileges:true']
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U lms -d lms']
       interval: 5s
@@ -35,6 +36,12 @@ services:
     volumes: [uploads:/app/uploads]
     networks: [internal, edge]
     mem_limit: 1g
+    # Locked down (M7): the image can't be changed, and the app needs no Linux capabilities. It writes only to its
+    # uploads volume and two small in-memory folders (infra/tests/app-image.sh runs it this way).
+    read_only: true
+    tmpfs: ['/tmp:size=64m', '/app/.next/cache:size=64m']
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
 
   preview:
     image: cckhlms-preview:${APP_TAG:?set by deploy.sh}
@@ -45,6 +52,8 @@ services:
       PREVIEW_PORT: '8080'
     networks: [edge]
     mem_limit: 128m
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
 
   cloudflared:
     image: cloudflare/cloudflared:2026.9.3
@@ -54,6 +63,8 @@ services:
       TUNNEL_TOKEN: ${TUNNEL_TOKEN:?set in .env}
     networks: [edge]
     mem_limit: 128m
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
 
   backup:
     image: cckhlms-backup:${APP_TAG:?set by deploy.sh}
@@ -77,6 +88,7 @@ services:
     volumes: [uploads:/uploads:ro]
     networks: [internal, edge]
     mem_limit: 256m
+    security_opt: ['no-new-privileges:true']
 
 networks:
   internal: { internal: true }

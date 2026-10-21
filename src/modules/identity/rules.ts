@@ -1,9 +1,10 @@
 // Account rules shared by the service and the forms (FR-AUTH-03/07, FR-ADM-01/02, FR-ADM-16).
 import { z } from 'zod';
 
-// Short, familiar words: students copy these from a paper login slip. Login is rate-limited per IP
-// (app + Cloudflare), so readability wins over length here. Admin can reset any password at once.
-const WORDS = (
+// Short, familiar words: students copy these from a paper login slip. Three words and two digits give about
+// 29 bits (M7, owner's decision): with failed sign-ins limited per username and per address (sign-in-limit.ts),
+// guessing any one of the club's accounts takes years. Admin can reset any password at once.
+export const PASSWORD_WORDS = (
   'apple bamboo banana basket beach berry bike bird boat bread brick bridge brush bubble bucket bunny cactus camel ' +
   'candle canoe carrot castle cat cloud clover coconut comet cookie coral crayon cricket crown cupcake daisy desert ' +
   'dolphin donut dragon drum duck eagle earth falcon feather fern fiddle flame flower forest fox frog galaxy garden ' +
@@ -18,8 +19,10 @@ const WORDS = (
 
 const randomInt = (max: number) => crypto.getRandomValues(new Uint32Array(1))[0]! % max;
 
+const word = () => PASSWORD_WORDS[randomInt(PASSWORD_WORDS.length)];
+
 export function generatePassword(): string {
-  return `${WORDS[randomInt(WORDS.length)]}-${WORDS[randomInt(WORDS.length)]}-${10 + randomInt(90)}`;
+  return `${word()}-${word()}-${word()}-${10 + randomInt(90)}`;
 }
 
 const USERNAME_RE = /^[a-z0-9_](?:[a-z0-9_.]*[a-z0-9_])?$/;

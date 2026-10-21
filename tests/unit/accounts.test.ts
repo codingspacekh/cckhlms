@@ -1,17 +1,30 @@
 // FR-AUTH-03/07, FR-ADM-01/02/16: generated passwords and usernames, input rules, time zones.
 import { describe, expect, it } from 'vitest';
-import { accountInputSchema, generatePassword, isValidTimeZone, suggestUsername, usernameSchema } from '@/modules/identity/rules';
+import {
+  accountInputSchema,
+  generatePassword,
+  isValidTimeZone,
+  PASSWORD_WORDS,
+  suggestUsername,
+  usernameSchema,
+} from '@/modules/identity/rules';
 
 describe('generatePassword', () => {
-  it('makes a readable password that is long enough (word-word-NN)', () => {
+  it('makes a readable password that is long enough (word-word-word-NN)', () => {
     for (let i = 0; i < 50; i++) {
       const p = generatePassword();
-      expect(p).toMatch(/^[a-z]+-[a-z]+-\d{2}$/);
+      expect(p).toMatch(/^[a-z]+-[a-z]+-[a-z]+-\d{2}$/);
       expect(p.length).toBeGreaterThanOrEqual(10);
     }
   });
   it('rarely repeats', () => {
     expect(new Set(Array.from({ length: 300 }, generatePassword)).size).toBeGreaterThan(290);
+  });
+  // M7: guessing one password in 500 from one address, at 10 failed tries a minute, takes years, not hours.
+  it('has at least 2^28 possibilities, from distinct short words', () => {
+    expect(new Set(PASSWORD_WORDS).size).toBe(PASSWORD_WORDS.length);
+    expect(PASSWORD_WORDS.every((w) => /^[a-z]{2,8}$/.test(w))).toBe(true);
+    expect(Math.log2(PASSWORD_WORDS.length ** 3 * 90)).toBeGreaterThanOrEqual(28);
   });
 });
 

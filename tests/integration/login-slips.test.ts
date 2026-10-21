@@ -129,7 +129,7 @@ describe('new passwords for the slips', () => {
     expect(await sessionsOf(bopha.id)).toBe(0);
     expect(await signIn('bopha.l', bopha.password)).toBe(401);
     for (const s of slips) {
-      expect(s.password).toMatch(/^[a-z]+-[a-z]+-\d{2}$/);
+      expect(s.password).toMatch(/^[a-z]+-[a-z]+-[a-z]+-\d{2}$/);
       expect(await signIn(s.username, s.password)).toBe(200);
     }
     const logged = await pool.query(

@@ -45,7 +45,7 @@ Do these in order. Each step says what it produces; keep everything marked 🔑 
    - `preview.cckh.dev` → Service `HTTP`, URL `preview:8080`
 
 ### 2.4 Login rate limit at the edge
-Cloudflare → `cckh.dev` → **Security → WAF → Rate limiting rules → Create**: if *URI Path starts with* `/api/auth/`, *same IP*, more than **20 requests in 10 seconds** → **Block for 10 seconds**. (The app also limits sign-ins to 5 per minute per IP; this is the outer layer.)
+Cloudflare → `cckh.dev` → **Security → WAF → Rate limiting rules → Create**: if *URI Path starts with* `/api/auth/`, *same IP*, more than **60 requests in 10 seconds** → **Block for 10 seconds**. Loose on purpose: a whole class signs in together from the club's one Wi-Fi address. The app limits *failed* sign-ins to 5 a minute per username and 10 a minute per address (`src/server/sign-in-limit.ts`); this rule is the outer layer against floods.
 
 ### 2.5 Backups (R2 + age)
 1. Cloudflare **R2 → Create bucket** `cckhlms-backups` (location: Asia-Pacific). Note the **Account ID**.

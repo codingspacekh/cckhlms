@@ -141,7 +141,7 @@ describe('importing', () => {
       ['សុខ ចាន់', 'user1'],
     ]);
     for (const s of r.slips) {
-      expect(s.password).toMatch(/^[a-z]+-[a-z]+-\d{2}$/);
+      expect(s.password).toMatch(/^[a-z]+-[a-z]+-[a-z]+-\d{2}$/);
       expect(await signIn(s.username, s.password)).toBe(200);
     }
     const chenda = await one(

@@ -14,10 +14,16 @@ export function SlipCard({ slip, clubName, site, className }: { slip: SlipData; 
       {className && <span className="slip-class">{className}</span>}
       <span>Name: {slip.name}</span>
       <span>
-        Username: <span data-testid="slip-username">{slip.username}</span>
+        Username:{' '}
+        <span className="secret" data-testid="slip-username">
+          {slip.username}
+        </span>
       </span>
       <span>
-        Password: <span data-testid="slip-password">{slip.password}</span>
+        Password:{' '}
+        <span className="secret" data-testid="slip-password">
+          {slip.password}
+        </span>
       </span>
     </div>
   );

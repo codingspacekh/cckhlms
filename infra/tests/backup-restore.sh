@@ -32,7 +32,8 @@ mkdir -p "$WORK/remote/cckhlms/daily" "$WORK/remote/cckhlms/weekly"
 for d in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17; do echo old > "$WORK/remote/cckhlms/daily/db-2026-09-${d}T020000Z.dump.age"; done
 for d in 01 02 03 04 05 06 07 08 09; do echo old > "$WORK/remote/cckhlms/weekly/db-2026-0${d#0}-01T020000Z.dump.age" 2>/dev/null || echo old > "$WORK/remote/cckhlms/weekly/db-2026-08-${d}T020000Z.dump.age"; done
 
-run() { docker run --rm --network "$NET" -v "$WORK/remote:/remote" -v "$WORK/key.txt:/keys/key.txt:ro" \
+# no-new-privileges, as in compose.prod.yaml.
+run() { docker run --rm --network "$NET" --security-opt no-new-privileges:true -v "$WORK/remote:/remote" -v "$WORK/key.txt:/keys/key.txt:ro" \
   -e RCLONE_CONFIG_R2_TYPE=local -e BACKUP_REMOTE=r2:/remote/cckhlms -e PGUSER=lms -e PGPASSWORD=pw -e PGDATABASE=lms "$@"; }
 
 run -e PGHOST=bt-src -e AGE_RECIPIENT="$RECIPIENT" -e BACKUP_WEEKLY=1 "$IMG" backup-now

@@ -17,11 +17,14 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [['github'], ['list']] : [['list']],
   use: { baseURL: E2E.lms, trace: 'retain-on-failure' },
+  // Never reuse a server that is already running: one left over from an interrupted run (or `npm run dev`'s preview
+  // on :3102) has another build or another LMS address, and the tests would quietly run against it. A port in use
+  // stops the run instead; free it with `lsof -ti tcp:3100,3102 | xargs kill`.
   webServer: [
     {
       command: 'node scripts/ensure-db.mjs && sh scripts/start-standalone.sh',
       url: 'http://localhost:3100/api/health',
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       timeout: 90_000,
       env: {
         DATABASE_URL: E2E.databaseUrl,
@@ -34,7 +37,7 @@ export default defineConfig({
     {
       command: 'node preview/server.mjs',
       url: 'http://localhost:3102/health',
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       env: { LMS_ORIGIN: E2E.lms, PREVIEW_PORT: '3102' },
     },
   ],

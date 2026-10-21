@@ -45,6 +45,7 @@ describe('startup', () => {
       'rate_limit',
       'reply',
       'session',
+      'sign_in_failure',
       'student_profile',
       'student_report',
       'submission',
