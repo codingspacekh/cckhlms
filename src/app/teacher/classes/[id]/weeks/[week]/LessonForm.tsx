@@ -63,7 +63,7 @@ export function LessonForm({ classId, sessionId, syllabus, lesson, schedule, tim
 
   return (
     <div className="grid g2 start">
-      <form className="card stack" aria-label="Lesson note" onSubmit={submit} noValidate>
+      <form method="post" className="card stack" aria-label="Lesson note" onSubmit={submit} noValidate>
         <input type="hidden" name="classId" value={classId} />
         <input type="hidden" name="sessionId" value={sessionId} />
         <label className="f">

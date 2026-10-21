@@ -86,7 +86,7 @@ export function FileTree({ paths, current, readOnly = false, onOpen, onAdd, onRe
         </div>
       )}
       {mode && (
-        <form className="stack-sm tree-form" aria-label={mode === 'add' ? 'New file' : 'Rename file'} onSubmit={submit}>
+        <form method="post" className="stack-sm tree-form" aria-label={mode === 'add' ? 'New file' : 'Rename file'} onSubmit={submit}>
           <label className="f">
             File name
             <input

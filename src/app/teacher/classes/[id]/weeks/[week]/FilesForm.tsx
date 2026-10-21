@@ -79,7 +79,7 @@ export function FilesForm({ classId, sessionId, lessonSaved, attachments }: Prop
         </ul>
       )}
       {lessonSaved ? (
-        <form className="row" onSubmit={upload} aria-label="Upload files">
+        <form method="post" className="row" onSubmit={upload} aria-label="Upload files">
           <label className="f grow">
             Add files
             <input ref={input} type="file" name="file" multiple />

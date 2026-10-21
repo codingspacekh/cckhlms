@@ -129,7 +129,7 @@ export function RosterManager({ classId, roster, candidates, otherClasses, today
 
       <dialog ref={dialog} className="dialog" aria-labelledby="roster-dialog-title" onClose={() => setTarget(null)}>
         {target && (
-          <form className="stack" onSubmit={submit}>
+          <form method="post" className="stack" onSubmit={submit}>
             <h2 id="roster-dialog-title">{mode === 'withdraw' ? `Withdraw ${target.name}` : `Move ${target.name}`}</h2>
             {mode === 'move' && (
               <label className="f">

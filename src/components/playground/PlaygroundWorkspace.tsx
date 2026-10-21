@@ -43,7 +43,7 @@ export function PlaygroundWorkspace({ id, name, initial, savedAt, nonce, java, p
         </div>
         <ProjectEditor initial={initial} nonce={nonce} java={java} previewOrigin={previewOrigin} zipName={zipName} onChange={changed} />
       </section>
-      <form className="card stack narrow-form" aria-labelledby="rename-title" onSubmit={rename}>
+      <form method="post" className="card stack narrow-form" aria-labelledby="rename-title" onSubmit={rename}>
         <h2 id="rename-title">Rename project</h2>
         <label className="f">
           Name

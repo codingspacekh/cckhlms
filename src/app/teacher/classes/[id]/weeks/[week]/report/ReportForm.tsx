@@ -23,7 +23,7 @@ export function ReportForm({ classId, report }: Props) {
   }
 
   return (
-    <form className="card stack narrow-wide" aria-label="Weekly report" onSubmit={submit}>
+    <form method="post" className="card stack narrow-wide" aria-label="Weekly report" onSubmit={submit}>
       <div className="stack-sm">
         <h2>Attendance</h2>
         {a ? (

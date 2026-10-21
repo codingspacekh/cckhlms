@@ -171,7 +171,7 @@ export function CertificatesManager({ classId, published, rows }: { classId: str
 
       <dialog ref={dialog} className="dialog" aria-labelledby="cert-dialog-title" onClose={() => setTarget(null)}>
         {target && (
-          <form className="stack" onSubmit={submit}>
+          <form method="post" className="stack" onSubmit={submit}>
             <h2 id="cert-dialog-title">
               {TITLE[target.mode]}: {target.row.name}
             </h2>

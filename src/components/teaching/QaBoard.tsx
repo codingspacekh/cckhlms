@@ -150,7 +150,7 @@ export function QaBoard({ classId, week, role, open, questions, timeZone }: Prop
       <h2 id="qa-title">Questions</h2>
       {!open && <p className="card small muted">Questions open once the lesson is published.</p>}
       {open && !teacher && (
-        <form className="card stack" aria-label="Ask a question" onSubmit={ask}>
+        <form method="post" className="card stack" aria-label="Ask a question" onSubmit={ask}>
           <label className="f">
             Your question
             <textarea name="body" rows={3} maxLength={4000} placeholder="What are you stuck on?" required />
@@ -223,7 +223,7 @@ export function QaBoard({ classId, week, role, open, questions, timeZone }: Prop
                   </ul>
                 )}
                 {q.state === 'visible' && (
-                  <form className="row" onSubmit={(e) => answer(e, q.id)} aria-label={`Reply to ${q.author}`}>
+                  <form method="post" className="row" onSubmit={(e) => answer(e, q.id)} aria-label={`Reply to ${q.author}`}>
                     <input
                       type="text"
                       name="body"
@@ -245,7 +245,7 @@ export function QaBoard({ classId, week, role, open, questions, timeZone }: Prop
       )}
       <dialog ref={dialog} className="dialog" aria-labelledby="report-title" onClose={() => setReporting(null)}>
         {reporting && (
-          <form className="stack" onSubmit={report}>
+          <form method="post" className="stack" onSubmit={report}>
             <h2 id="report-title">Report this {reporting.type}</h2>
             <p className="small muted">
               It will be hidden from other students until a teacher checks it. {reporting.author} won&apos;t see who reported it.

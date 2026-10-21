@@ -23,6 +23,10 @@ const config: NextConfig = {
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=()' },
+          // M7 (ZAP baseline): a window this site opens, or that opens it, can't reach it, and other sites can't load
+          // its responses. (No COEP: the LMS needs no cross-origin isolation, and the preview frame is another site.)
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
         ],
       },
     ];
