@@ -610,6 +610,7 @@ label.f {
   font-weight: 500;
 }
 input[type='text'],
+input[type='search'],
 input[type='password'] {
   background: var(--surface);
   border: 1px solid var(--line-2);
@@ -676,6 +677,9 @@ input:focus {
 }
 .tw {
   overflow-x: auto;
+  /* Holds absolutely positioned children (an sr-only column heading), so they scroll with the table instead of
+     widening the page on a phone. */
+  position: relative;
 }
 table {
   border-collapse: collapse;
@@ -1822,4 +1826,30 @@ table.gradebook .sticky-col {
 .gstate .late {
   color: var(--warn-text);
   font-weight: 600;
+}
+
+/* Audit log (FR-SYS-02) */
+.audit-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+@media (max-width: 900px) {
+  .audit-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 520px) {
+  .audit-filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.audit-table td {
+  vertical-align: top;
+}
+.audit-lines {
+  font-size: 0.8rem;
+  display: grid;
+  gap: 2px;
 }

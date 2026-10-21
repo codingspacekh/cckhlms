@@ -215,12 +215,12 @@ erDiagram
 | **ASSESSMENT** | id, class_id, session_id (week set), type (classwork/homework/exam), title, instructions_md, language (python/java/web/none), starter_files (json), attachments, max_score, due_at (default: next session start), allow_late, late_penalty_pct, status (draft/published/closed) |
 | **SUBMISSION** | id, assessment_id, enrolment_id, status (draft/submitted/late/graded/returned/excused), files (json: `[{path, content}]`, e.g. `src/com/club/Main.java`), submitted_at, score, feedback_md, graded_by, graded_at |
 | **SUBMISSION_VERSION** | id, submission_id, files (json), submitted_at |
-| **PLAYGROUND_PROJECT** *(phase 2)* | id, owner_id, name, language, files (json), updated_at |
+| **PLAYGROUND_PROJECT** | id, owner_id, name (unique per student, any capitals), language (python/java/web), files (json), created_at, updated_at. A student's own projects (FR-CODE-07), at most 10 each, autosaved and checked against the same project limits as work. Found by its owner only; not audited, like a draft. |
 | **CLASS_REPORT** | id, session_id, topics_covered (topic ids), attendance_summary (auto), comment, author_id |
 | **STUDENT_REPORT** | id, enrolment_id, performance_rating, comment, needs_support, support_note, exam_pct, classwork_pct, homework_pct, calculated_score (BR-12), final_score, adjustment_reason, result (pass/fail/pending), published_at, author_id |
 | **CERTIFICATE** | id, enrolment_id, verification_code (unique, random), template_version, issued_by, issued_at, revoked_at |
 | **NOTIFICATION_SEEN** | user_id, area (student/teacher), seen_at. Notifications themselves aren't stored: they're worked out when read from lessons, work, marks and Q&A (ADR-08), so a scheduled lesson or "due soon" turns up on time. LESSON and ASSESSMENT keep `published_at` for this. |
-| **AUDIT_LOG** | id, actor_id, action, entity, entity_id, before (json), after (json), at |
+| **AUDIT_LOG** | id, at, actor_id, action, entity, entity_id, detail (json: what changed, e.g. a score before → after, a reason), ip. Only ever added to. Admin reads it on **Audit log** (FR-SYS-02), in words, filtered by kind of action, person and dates; `src/modules/audit/rules.ts` names every action the code records (a unit test reads the source to keep it complete). |
 | **CLUB_SETTINGS** | single row: club_name, logo, time_zone (default `Asia/Phnom_Penh`), certificate_template_version |
 
 **Design notes**

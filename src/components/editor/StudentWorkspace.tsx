@@ -1,12 +1,12 @@
 'use client';
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { Pill } from '@/components/ui/Pill';
 import type { ProjectFile } from '@/lib/project/files';
-import { toClubTime } from '@/modules/academics/schedule';
 import type { Mark } from '@/modules/assessments/rules';
 import { saveDraftAction } from '@/modules/assessments/project-actions';
 import { submitWorkAction } from '@/modules/assessments/submission-actions';
 import { ProjectEditor } from './ProjectEditor';
+import { SaveStatus, useAutosave } from './useAutosave';
 
 // What the student has handed in so far, its mark, and whether they can hand it in now (worked out on the
 // server).
@@ -41,12 +41,9 @@ type Props = {
   timeZone: string;
   submit: SubmitPanel;
 };
-type SaveState = { kind: 'idle' | 'saving' } | { kind: 'saved'; at: string } | { kind: 'error'; text: string };
 
-const AUTOSAVE_MS = 1000;
-
-// FR-CODE-05 · FR-STU-05 · FR-STU-06: the student's project, saved about a second after they stop typing, and
-// handed in with "Submit" (which saves first, so the last change is always in it); their mark and feedback.
+// FR-CODE-05 · FR-STU-05 · FR-STU-06: the student's project, saved as they type (useAutosave), and handed in with
+// "Submit" (which saves first, so the last change is always in it); their mark and feedback.
 export function StudentWorkspace({
   classId,
   assessmentId,
@@ -59,54 +56,9 @@ export function StudentWorkspace({
   timeZone,
   submit,
 }: Props) {
-  const [state, setState] = useState<SaveState>(savedAt ? { kind: 'saved', at: savedAt } : { kind: 'idle' });
+  const { state, changed, flush } = useAutosave((files) => saveDraftAction(assessmentId, files), savedAt);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [submitting, startSubmit] = useTransition();
-  const pending = useRef<ProjectFile[] | null>(null);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const inFlight = useRef<Promise<boolean> | null>(null);
-
-  // Saves what's pending; resolves to false if a save failed. A save already running is waited for.
-  async function flush(): Promise<boolean> {
-    if (timer.current) clearTimeout(timer.current);
-    if (inFlight.current && !(await inFlight.current)) return false;
-    const files = pending.current;
-    if (!files) return true;
-    pending.current = null;
-    setState({ kind: 'saving' });
-    inFlight.current = saveDraftAction(assessmentId, files).then((r) => {
-      setState(r.ok ? { kind: 'saved', at: r.data!.savedAt } : { kind: 'error', text: r.error });
-      return r.ok;
-    });
-    const ok = await inFlight.current;
-    inFlight.current = null;
-    return pending.current ? flush() : ok; // typed again while saving
-  }
-
-  function changed(files: ProjectFile[], now: boolean) {
-    pending.current = files;
-    if (timer.current) clearTimeout(timer.current);
-    if (now) void flush();
-    else timer.current = setTimeout(() => void flush(), AUTOSAVE_MS);
-  }
-
-  // Leaving with unsaved changes: save at once when the tab is hidden, and ask before the page unloads.
-  useEffect(() => {
-    const onHide = () => {
-      if (document.visibilityState === 'hidden' && pending.current) void flush();
-    };
-    const onLeave = (e: BeforeUnloadEvent) => {
-      if (pending.current || inFlight.current) e.preventDefault();
-    };
-    document.addEventListener('visibilitychange', onHide);
-    window.addEventListener('beforeunload', onLeave);
-    return () => {
-      if (timer.current) clearTimeout(timer.current);
-      document.removeEventListener('visibilitychange', onHide);
-      window.removeEventListener('beforeunload', onLeave);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- flush reads refs only
-  }, []);
 
   function handIn() {
     setResult(null);
@@ -146,15 +98,7 @@ export function StudentWorkspace({
       <section className="stack" aria-labelledby="project-title">
         <div className="spread">
           <h2 id="project-title">Your project</h2>
-          <span className="small muted" role={state.kind === 'error' ? 'alert' : 'status'} data-testid="save-state">
-            {state.kind === 'saving'
-              ? 'Saving…'
-              : state.kind === 'saved'
-                ? `Saved at ${toClubTime(new Date(state.at), timeZone).time}`
-                : state.kind === 'error'
-                  ? `Not saved: ${state.text}`
-                  : 'Your work is saved as you type.'}
-          </span>
+          <SaveStatus state={state} timeZone={timeZone} />
         </div>
         <ProjectEditor initial={initial} nonce={nonce} java={java} previewOrigin={previewOrigin} zipName={zipName} onChange={changed} />
       </section>

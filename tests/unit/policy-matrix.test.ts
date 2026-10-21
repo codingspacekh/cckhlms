@@ -38,6 +38,8 @@ const MATRIX: Record<Action, Record<Role, Rule>> = {
   'termreport.amend': { admin: true, teacher: 'lead', student: false },
   'certificates.manage': { admin: true, teacher: false, student: false },
   'certificate.download': { admin: true, teacher: false, student: 'self' },
+  'audit.view': { admin: true, teacher: false, student: false },
+  'playground.use': { admin: false, teacher: false, student: true },
 };
 
 // The actions that change a class's teaching or students' work: refused once the class is archived.

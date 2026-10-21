@@ -2,7 +2,7 @@
 import { act, cleanup, render, screen } from '@testing-library/react';
 import { createRef } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { CodeArea, type CodeAreaHandle } from '@/components/editor/CodeArea';
+import { CodeArea, documentNonce, type CodeAreaHandle } from '@/components/editor/CodeArea';
 
 afterEach(cleanup);
 const box = (path: string) => screen.getByRole('textbox', { name: `Code for ${path}` });
@@ -35,5 +35,22 @@ describe('CodeArea', () => {
     cleanup();
     render(<CodeArea path="b.txt" doc="look only" nonce="n" resetKey={0} readOnly onChange={onChange} />);
     expect(box('b.txt').getAttribute('contenteditable')).toBe('false');
+  });
+});
+
+describe('the CSP nonce for the editor’s styles', () => {
+  it('is the one the page was first loaded with, not a later request’s', () => {
+    expect(documentNonce('from-this-request')).toBe('from-this-request'); // no scripts: the page's own
+    const first = document.createElement('script');
+    first.nonce = 'first-load';
+    const later = document.createElement('script');
+    later.nonce = 'later';
+    document.head.append(first, later);
+    try {
+      expect(documentNonce('from-this-request')).toBe('first-load');
+    } finally {
+      first.remove();
+      later.remove();
+    }
   });
 });
