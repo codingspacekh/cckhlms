@@ -5,9 +5,11 @@ import { PREVIEW_ORIGIN } from '@/server/preview-origin';
 const HTTPS = (process.env.BETTER_AUTH_URL ?? '').startsWith('https://');
 
 // Development only: `next dev` prints http://localhost:3000, but sign-in accepts only BETTER_AUTH_URL's origin
-// (lms.localhost), so send localhost there instead of letting sign-in fail.
-export function devRedirect(url: URL, authUrl: string | undefined): URL | null {
-  if (!authUrl) return null;
+// (lms.localhost), so send localhost there instead of letting sign-in fail. Only pages the browser opens
+// (Sec-Fetch-Mode: navigate): after a Server Action redirects, Next fetches the new page from localhost itself,
+// and sent to another host that fetch would drop the cookie and render the page signed out.
+export function devRedirect(url: URL, authUrl: string | undefined, fetchMode: string | null): URL | null {
+  if (!authUrl || fetchMode !== 'navigate') return null;
   const lms = new URL(authUrl);
   if (url.host === lms.host || !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)) return null;
   return new URL(url.pathname + url.search, lms.origin);
@@ -17,7 +19,7 @@ export function proxy(request: NextRequest) {
   const dev = process.env.NODE_ENV === 'development';
   // `next dev` reports request.url as localhost whatever the browser asked for, so use the Host header.
   const asked = () => new URL(request.nextUrl.pathname + request.nextUrl.search, `http://${request.headers.get('host')}`);
-  const redirect = dev ? devRedirect(asked(), process.env.BETTER_AUTH_URL) : null;
+  const redirect = dev ? devRedirect(asked(), process.env.BETTER_AUTH_URL, request.headers.get('sec-fetch-mode')) : null;
   if (redirect) return NextResponse.redirect(redirect, 307);
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
   const csp = [
