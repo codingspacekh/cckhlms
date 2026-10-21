@@ -40,8 +40,8 @@ flowchart LR
 | **M4** ✅ | Assessments | Classwork/homework/exams, multi-file editor, Web preview, submissions, grading, gradebook | FR-TCH-07…12, 19 · FR-STU-05, 06 · FR-CODE-01…06 | 8 days |
 | **G1** ⏳ | Go live | Owner's server and Cloudflare set-up (runbook §2); first deploy, restore drill, uptime alert | NFR-04 | 1–2 hours |
 | — | **R1: Pilot** | One real class uses the LMS on production for at least 4 weeks | | |
-| **M5** | Reports & statistics | 60/30/10 overall score, end-term exam, term reports with pass/fail, charts for all three roles, admin dashboard | FR-TCH-15…18 · FR-ADM-09, 10 · FR-STU-07 | 6 days |
-| **M6** | Term operations | Certificates + `/verify`, promotion wizard, login slips, CSV import, notifications, audit log, playground | FR-ADM-11…14 · FR-AUTH-08, 09 · FR-STU-08, 09 · FR-SYS-01, 02 · FR-CODE-07 | 6 days |
+| **M5** ✅ | Reports & statistics | 60/30/10 overall score, end-term exam, term reports with pass/fail, charts for all three roles, admin dashboard | FR-TCH-15…18 · FR-ADM-09, 10 · FR-STU-07 | 6 days |
+| **M6** ✅ | Term operations | Certificates + `/verify`, promotion wizard, login slips, CSV import, notifications, audit log, playground | FR-ADM-11…14 · FR-AUTH-08, 09 · FR-STU-08, 09 · FR-SYS-01, 02 · FR-CODE-07 | 6 days |
 | **M7** | Hardening | ASVS L1 review, ZAP, k6 load test, disaster-recovery rehearsal, runbook, privacy check | NFR-01…12 | 5 days |
 | — | **R2: Club-wide launch** | Every class of the next term runs on `lms.cckh.dev` | | |
 
@@ -399,8 +399,8 @@ The next milestone does not start until all four are true.
 
 **Exit criteria:** the owner checks the pilot class's standings against a spreadsheet with **zero differences**, and the teacher can explain every number on the term report.
 
-### M6 — Term operations (6 days)
-> **Result** (PRs #26–#30, stacked: merge in order). Built before G1 and R1, like M4 and M5: running the pilot class's real end of term on production (the exit criterion) happens at the end of R1.
+### M6 — Term operations (6 days) — ✅ DONE 2026-10-21 (owner signed off; PRs #26–#30 merged) · pilot class's end of term on production at the end of R1
+> **Result** (PRs #26–#30, merged in order). Built before G1 and R1, like M4 and M5: running the pilot class's real end of term on production (the exit criterion) happens at the end of R1.
 > - **Archive and promotion (FR-ADM-13/14, BR-07), #26:**
 >   - closing a term archives its classes: they can be read but not changed (`whileOpen()` in the policy), and teachers find them under Past classes;
 >   - the **promotion wizard** pre-selects the next level's class for passed students and a repeat class for the others, and moves everyone in **one transaction** with one audit row listing every move;
@@ -449,6 +449,7 @@ The next milestone does not start until all four are true.
 >   - **a phone scans the QR code** (decoded from the downloaded PDF), opens the link signed out and sees **"Valid"**;
 >   - the audit log shows each step.
 > - **Exit criterion:** until G1 and the pilot (R1), the owner checks it on a local production build (or `npm run seed:dev` + `npm run dev`). Running the pilot class's end of term fully in the LMS on production is done at the end of R1.
+> - **Security exception (owner's decision, 2026-10-21):** markdown-it **15.0.3** is pinned although it was 5 days old (rule: ≥ 2 weeks), because it fixes two high advisories against 15.0.2 (GHSA-gfr2-rv44-r23c, GHSA-vfgh-jcmw-g37q) that failed `npm audit` in CI. One applied to our options: a crafted Q&A post could take quadratic time to render.
 
 **Goal:** the end of term runs inside the LMS.
 
