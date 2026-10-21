@@ -190,7 +190,7 @@ function ReportForm({
   const parts = `exam ${score(row.parts.exam)} · classwork ${score(row.parts.classwork)} · homework ${score(row.parts.homework)}`;
 
   return (
-    <form className="stack" onSubmit={submit} aria-labelledby="report-dialog-title">
+    <form method="post" className="stack" onSubmit={submit} aria-labelledby="report-dialog-title">
       <h2 id="report-dialog-title">Term report: {row.name}</h2>
       <p className="small muted tnum">
         {row.live === null ? 'No score yet: nothing has been marked.' : `Calculated ${score(row.live)} · ${parts}`}

@@ -26,6 +26,9 @@ test('LMS pages send a strict, per-request CSP and security headers', async ({ r
   expect(a.headers()['x-content-type-options']).toBe('nosniff');
   expect(a.headers()['referrer-policy']).toBe('strict-origin-when-cross-origin');
   expect(a.headers()['permissions-policy']).toContain('camera=()');
+  // M7 (ZAP): no other site's window can hold a reference to ours, and no other site can load our responses.
+  expect(a.headers()['cross-origin-opener-policy']).toBe('same-origin');
+  expect(a.headers()['cross-origin-resource-policy']).toBe('same-origin');
   expect(a.headers()['x-powered-by']).toBeUndefined();
 });
 

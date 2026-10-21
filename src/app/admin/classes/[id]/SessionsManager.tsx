@@ -145,7 +145,7 @@ export function SessionsManager({ classId, weeks, defaultStart, defaultMinutes, 
 
       <dialog ref={dialog} className="dialog" aria-labelledby="session-dialog-title" onClose={() => setTarget(null)}>
         {target && (
-          <form className="stack" onSubmit={submit}>
+          <form method="post" className="stack" onSubmit={submit}>
             <h2 id="session-dialog-title">{title}</h2>
             <p className="small muted">
               {target.week ? `Week ${target.week} · ` : ''}

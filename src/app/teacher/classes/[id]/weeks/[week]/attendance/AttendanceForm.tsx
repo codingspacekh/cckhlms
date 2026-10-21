@@ -170,7 +170,7 @@ export function AttendanceForm({ classId, sessionId, rows, taken: takenAtLoad }:
       </div>
       <dialog ref={dialog} className="dialog" aria-labelledby="note-title" onClose={() => setNoteFor(null)}>
         {noteFor && (
-          <form className="stack" onSubmit={saveNote}>
+          <form method="post" className="stack" onSubmit={saveNote}>
             <h2 id="note-title">Note for {noteFor.name}</h2>
             {!taken && <p className="small muted">Saving a note also saves everyone else as present.</p>}
             <label className="f">

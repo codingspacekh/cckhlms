@@ -157,7 +157,7 @@ function WorkForm({
   const title = row ? `Edit ${row.title}` : 'Set new work';
 
   return (
-    <form className="stack" onSubmit={submit} aria-labelledby="work-form-title">
+    <form method="post" className="stack" onSubmit={submit} aria-labelledby="work-form-title">
       <h2 id="work-form-title">{title}</h2>
       <input type="hidden" name="classId" value={classId} />
       <input type="hidden" name="sessionId" value={sessionId} />

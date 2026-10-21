@@ -55,6 +55,7 @@ export function PersonalData({ studentId, username, erasedOn }: { studentId: str
 
       <dialog ref={dialog} className="dialog" aria-labelledby="erase-title">
         <form
+          method="post"
           className="stack"
           onSubmit={(e) => {
             e.preventDefault();

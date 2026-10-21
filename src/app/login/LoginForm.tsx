@@ -36,7 +36,7 @@ export function LoginForm() {
   }
 
   return (
-    <form className="stack" onSubmit={submit} noValidate>
+    <form method="post" className="stack" onSubmit={submit} noValidate>
       <label className="f">
         Username
         <input name="username" type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} required />

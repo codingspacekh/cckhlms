@@ -34,7 +34,7 @@ export function GradeForm({ target, studentName, maxScore, late, latePenaltyPct,
   const typed = /^\d+(\.\d+)?$/.test(value.trim()) ? Number(value) : null;
   const scoreError = result && !result.ok && result.field === 'score';
   return (
-    <form className="card stack" onSubmit={submit} aria-labelledby="mark-title">
+    <form method="post" className="card stack" onSubmit={submit} aria-labelledby="mark-title">
       <h2 id="mark-title">Mark version {target.version}</h2>
       <label className="f">
         Score (out of {maxScore})

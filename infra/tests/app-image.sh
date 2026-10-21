@@ -47,10 +47,18 @@ for path in /login /verify/0000; do
   code=$(docker exec it-app wget -qS -O /dev/null "http://127.0.0.1:3000$path" 2>&1 | awk '/HTTP\//{print $2}' | tail -1)
   [ "$code" = 200 ] || { echo "FAIL: $path returned $code on a read-only image"; docker logs it-app | tail -30; exit 1; }
 done
+# ASVS V3.4: served as https, the session cookie is __Secure-, HttpOnly, Secure and SameSite=Lax.
+cookie=$(docker exec it-app wget -qS -O /dev/null --header 'content-type: application/json' \
+  --header 'origin: https://lms.example.test' --header 'cf-connecting-ip: 198.18.0.1' \
+  --post-data '{"username":"admin","password":"image-test-admin-pw"}' \
+  http://127.0.0.1:3000/api/auth/sign-in/username 2>&1 | grep -i 'set-cookie: __Secure-better-auth.session_token=' || true)
+for flag in HttpOnly Secure 'SameSite=Lax'; do
+  case "$cookie" in *"$flag"*) ;; *) echo "FAIL: session cookie lacks $flag: $cookie"; exit 1 ;; esac
+done
 docker exec it-app sh -c 'touch /app/uploads/.w && rm /app/uploads/.w' || { echo "FAIL: uploads not writable"; exit 1; }
 if docker exec it-app sh -c 'touch /app/server.js' 2>/dev/null; then echo "FAIL: the image is writable"; exit 1; fi
 if docker logs it-app 2>&1 | grep -q 'EROFS'; then echo "FAIL: the app tried to write to the read-only image"; docker logs it-app | grep EROFS | head; exit 1; fi
-echo "PASS: app image (version $SHA, migrations + first admin, non-root user '$user', HSTS on, read-only, no capabilities)"
+echo "PASS: app image (version $SHA, migrations + first admin, non-root user '$user', HSTS on, secure session cookie, read-only, no capabilities)"
 
 # The preview image, locked down the same way, serves the frame with its CSP.
 docker build -q -t "cckhlms-preview:$SHA" -f infra/preview/Dockerfile . >/dev/null
