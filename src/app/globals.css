@@ -41,8 +41,10 @@
   --code-tag: #a72a2a;
   --code-attr: #875800;
 }
+/* Dark: the system setting, unless the person picked a theme with the top bar switch (data-theme on <html>,
+   from the theme cookie). The two blocks hold the same tokens; tests/unit/theme.test.ts keeps them in step. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --page: #0b0f16;
     --surface: #141a24;
     --surface-2: #1a2230;
@@ -76,6 +78,39 @@
     color-scheme: dark;
   }
 }
+:root[data-theme='dark'] {
+  --page: #0b0f16;
+  --surface: #141a24;
+  --surface-2: #1a2230;
+  --line: #232c3a;
+  --line-2: #2e3849;
+  --ink: #e8ecf3;
+  --ink-2: #aeb7c6;
+  --muted: #8f99aa;
+  --accent: #5598e7;
+  --accent-2: #6da7ec;
+  --accent-soft: #17263d;
+  --accent-ink: #06121f;
+  --s1: #3987e5;
+  --s2: #d95926;
+  --grid: #1e2633;
+  --axis: #344055;
+  --good-text: #5bcb5b;
+  --good-soft: #12301a;
+  --warn-text: #f2c04f;
+  --warn-soft: #33280f;
+  --bad-text: #f28484;
+  --bad-soft: #3a1717;
+  --code-keyword: #c99bf0;
+  --code-string: #8fd18a;
+  --code-number: #f5a96b;
+  --code-comment: #8f99aa;
+  --code-def: #7fb2f0;
+  --code-type: #f2c04f;
+  --code-tag: #f28484;
+  --code-attr: #f2c04f;
+  color-scheme: dark;
+}
 
 html,
 body {
@@ -90,7 +125,7 @@ html {
 body {
   background: var(--page);
   color: var(--ink);
-  font: 14.5px/1.55 var(--f);
+  font: 450 14.5px/1.55 var(--f);
   -webkit-font-smoothing: antialiased;
 }
 :focus-visible {
@@ -102,7 +137,7 @@ h1,
 h2,
 h3 {
   line-height: 1.25;
-  font-weight: 600;
+  font-weight: 650;
   text-wrap: balance;
 }
 h1 {
@@ -185,7 +220,7 @@ svg.i {
   padding: 2px 6px;
 }
 .brand b {
-  font-weight: 600;
+  font-weight: 650;
   font-size: 1rem;
 }
 .brand small {
@@ -212,7 +247,7 @@ svg.i {
 .nav .sec {
   font-size: 0.72rem;
   color: var(--muted);
-  font-weight: 500;
+  font-weight: 550;
   padding: 8px 10px 4px;
 }
 .nav a {
@@ -222,7 +257,7 @@ svg.i {
   padding: 8px 10px;
   border-radius: var(--r-sm);
   color: var(--ink-2);
-  font-weight: 500;
+  font-weight: 550;
   text-decoration: none;
 }
 .nav a:hover {
@@ -268,7 +303,7 @@ svg.i {
   flex: 1;
 }
 .me .n {
-  font-weight: 600;
+  font-weight: 650;
   font-size: 0.88rem;
   line-height: 1.2;
   overflow-wrap: anywhere;
@@ -285,7 +320,7 @@ svg.i {
   color: var(--ink-2);
   display: grid;
   place-items: center;
-  font-weight: 600;
+  font-weight: 650;
   font-size: 0.8rem;
   flex: none;
 }
@@ -312,8 +347,9 @@ svg.i {
   align-items: center;
   gap: 12px;
 }
-/* The notifications bell (FR-SYS-01), with how many are new. */
-.bell {
+/* The notifications bell (FR-SYS-01), with how many are new, and the light/dark switch beside it. */
+.bell,
+.theme-switch {
   position: relative;
   display: inline-grid;
   place-items: center;
@@ -322,11 +358,16 @@ svg.i {
   border-radius: var(--r-sm);
   color: var(--ink-2);
 }
-.bell:hover {
+.theme-switch {
+  cursor: pointer;
+}
+.bell:hover,
+.theme-switch:hover {
   background: var(--surface-2);
   color: var(--ink);
 }
-.bell .i {
+.bell .i,
+.theme-switch .i {
   width: 20px;
   height: 20px;
 }
@@ -341,7 +382,7 @@ svg.i {
   background: var(--bad-text);
   color: #fff;
   font-size: 0.7rem;
-  font-weight: 600;
+  font-weight: 650;
   line-height: 18px;
   text-align: center;
 }
@@ -400,7 +441,7 @@ svg.i {
 }
 .crumb strong {
   color: var(--ink);
-  font-weight: 500;
+  font-weight: 550;
 }
 main#main {
   padding: 24px 28px 48px;
@@ -509,11 +550,11 @@ main#main {
 .tile .k {
   font-size: 0.82rem;
   color: var(--ink-2);
-  font-weight: 500;
+  font-weight: 550;
 }
 .tile .v {
   font-size: 1.9rem;
-  font-weight: 600;
+  font-weight: 650;
   letter-spacing: -0.02em;
   line-height: 1.1;
   overflow-wrap: anywhere;
@@ -532,7 +573,7 @@ main#main {
   align-items: center;
   gap: 5px;
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: 550;
   border-radius: 999px;
   padding: 2px 9px;
   background: var(--surface-2);
@@ -572,7 +613,7 @@ main#main {
   padding: 8px 14px;
   border-radius: var(--r-sm);
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 550;
   font-size: 0.9rem;
   color: var(--ink);
   text-decoration: none;
@@ -607,7 +648,7 @@ label.f {
   gap: 6px;
   font-size: 0.85rem;
   color: var(--ink-2);
-  font-weight: 500;
+  font-weight: 550;
 }
 input[type='text'],
 input[type='search'],
@@ -618,7 +659,7 @@ input[type='password'] {
   padding: 9px 11px;
   color: var(--ink);
   font: inherit;
-  font-weight: 400;
+  font-weight: 450;
   width: 100%;
 }
 input:focus {
@@ -658,7 +699,7 @@ input:focus {
 .tabs a {
   padding: 10px 12px;
   color: var(--muted);
-  font-weight: 500;
+  font-weight: 550;
   text-decoration: none;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
@@ -696,7 +737,7 @@ td {
 th {
   font-size: 0.75rem;
   color: var(--muted);
-  font-weight: 500;
+  font-weight: 550;
   white-space: nowrap;
 }
 tbody tr:last-child td,
@@ -704,7 +745,7 @@ tbody tr:last-child th {
   border-bottom: 0;
 }
 .strong {
-  font-weight: 500;
+  font-weight: 550;
 }
 .grid.g21 {
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
@@ -749,7 +790,7 @@ input[type='number'] {
   padding: 9px 11px;
   color: var(--ink);
   font: inherit;
-  font-weight: 400;
+  font-weight: 450;
   width: 100%;
 }
 select:focus,
@@ -778,7 +819,7 @@ textarea {
 }
 .slip b {
   font-family: var(--f);
-  font-weight: 600;
+  font-weight: 650;
 }
 /* A password copied from paper must not break across lines (up to 29 characters: word-word-word-NN). */
 .slip .secret {
@@ -905,7 +946,7 @@ td .sub,
   padding: 5px 11px;
   border-radius: 6px;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 550;
   color: var(--ink-2);
 }
 .seg label:has(input:checked) {
@@ -924,7 +965,7 @@ fieldset.f {
 fieldset.f legend {
   font-size: 0.85rem;
   color: var(--ink-2);
-  font-weight: 500;
+  font-weight: 550;
   margin-bottom: 6px;
 }
 .sessions {
@@ -984,7 +1025,7 @@ tr.off th {
   color: var(--muted);
 }
 tbody th {
-  font-weight: 500;
+  font-weight: 550;
   text-align: left;
 }
 /* Tailwind's reset sets margin: 0 on everything, which undoes the browser's centring of modal dialogs. */
@@ -1137,7 +1178,7 @@ article h3 {
   border: 1px solid var(--line-2);
   border-radius: 999px;
   font-size: 0.82rem;
-  font-weight: 400;
+  font-weight: 450;
   color: var(--ink-2);
   cursor: pointer;
 }
@@ -1152,7 +1193,7 @@ article h3 {
 .sched summary {
   cursor: pointer;
   font-size: 0.88rem;
-  font-weight: 500;
+  font-weight: 550;
   color: var(--ink-2);
   margin-bottom: 10px;
 }
@@ -1182,7 +1223,7 @@ article h3 {
 input[type='file'] {
   font: inherit;
   font-size: 0.85rem;
-  font-weight: 400;
+  font-weight: 450;
   color: var(--ink-2);
 }
 .row:has(> .grow) {
@@ -1269,7 +1310,7 @@ tbody tr.off th {
 td a,
 th a {
   color: var(--accent);
-  font-weight: 500;
+  font-weight: 550;
   text-decoration: none;
 }
 td a:hover,
@@ -1392,7 +1433,7 @@ svg.c text {
 svg.c text.v,
 svg.c text.reflbl {
   fill: var(--ink-2);
-  font-weight: 500;
+  font-weight: 550;
 }
 svg.c .bar {
   fill: var(--s1);
@@ -1494,7 +1535,7 @@ svg.c .hx:focus .xh {
 }
 .hbar .val {
   font-size: 0.85rem;
-  font-weight: 500;
+  font-weight: 550;
   font-variant-numeric: tabular-nums;
 }
 .hbar .track {
@@ -1543,7 +1584,7 @@ svg.c .hx:focus .xh {
   justify-content: space-between;
 }
 .tip .rw b {
-  font-weight: 600;
+  font-weight: 650;
   font-variant-numeric: tabular-nums;
 }
 .tip .rw span {
@@ -1679,7 +1720,7 @@ td.text {
 .tree button.file[aria-current='true'] {
   background: var(--accent-soft);
   color: var(--accent);
-  font-weight: 500;
+  font-weight: 550;
 }
 .tree li[data-depth='1'] > *,
 .tree li.folder[data-depth='1'] {
@@ -1766,7 +1807,7 @@ td.text {
 /* marking (FR-TCH-11/12, FR-STU-06) */
 .score {
   font-size: 1.4rem;
-  font-weight: 650;
+  font-weight: 700;
   white-space: nowrap;
 }
 .card.warn-card {
@@ -1790,11 +1831,11 @@ table.gradebook td.n .cell-line {
   justify-content: flex-end;
 }
 table.gradebook thead th {
-  font-weight: 600;
+  font-weight: 650;
 }
 table.gradebook thead th .sub {
   display: block;
-  font-weight: 400;
+  font-weight: 450;
 }
 table.gradebook .sticky-col {
   position: sticky;
@@ -1829,7 +1870,7 @@ table.gradebook .sticky-col {
 }
 .gstate .late {
   color: var(--warn-text);
-  font-weight: 600;
+  font-weight: 650;
 }
 
 /* Audit log (FR-SYS-02) */

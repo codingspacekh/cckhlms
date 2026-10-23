@@ -5,6 +5,7 @@ import { Bell } from './Bell';
 import type { ClassLink, Role } from './nav';
 import { ScrollReset } from './ScrollReset';
 import { Sidebar } from './Sidebar';
+import { ThemeSwitch } from './ThemeSwitch';
 
 const ROLE_LABEL: Record<Role, string> = { admin: 'Admin', teacher: 'Teacher', student: 'Student' };
 
@@ -40,6 +41,7 @@ export async function AppShell({ role, name, crumb, classes, notifications, chil
           </div>
           <div className="r">
             <span className="small muted">{today}</span>
+            <ThemeSwitch />
             {notifications && <Bell {...notifications} />}
           </div>
         </header>
