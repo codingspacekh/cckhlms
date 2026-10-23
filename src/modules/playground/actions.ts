@@ -1,7 +1,7 @@
 'use server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import type { ProjectFile } from '@/lib/project/files';
+import type { SentFile } from '@/lib/project/save';
 import { formText, toResult, type FormResult } from '@/server/action-result';
 import { currentActor } from '@/server/guard';
 import { createProject, deleteProject, renameProject, saveProject } from './playground';
@@ -15,7 +15,7 @@ export async function createProjectAction(_prev: FormResult | null, form: FormDa
 }
 
 // Autosave from the editor (FR-CODE-05). No revalidation: the page already shows what was typed.
-export async function saveProjectAction(id: string, files: ProjectFile[]): Promise<FormResult<{ savedAt: string }>> {
+export async function saveProjectAction(id: string, files: SentFile[]): Promise<FormResult<{ savedAt: string }>> {
   return toResult(async () => {
     const { savedAt } = await saveProject(await currentActor(), id, files);
     return { ok: true, data: { savedAt: savedAt.toISOString() } };

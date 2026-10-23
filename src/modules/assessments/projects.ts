@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { db } from '@/db/client';
 import { assessment, workDraft } from '@/db/schema';
 import { checkProject, LIMITS, normalisePath, ProjectError, type ProjectFile } from '@/lib/project/files';
+import { filledIn } from '@/lib/project/save';
 import { classAccess } from '@/modules/academics/access';
 import type { Actor } from '@/server/actor';
 import { audit } from '@/server/audit';
@@ -16,6 +17,29 @@ import { readAssessment, type AssessmentView } from './service';
 const filesSchema = z
   .array(z.object({ path: z.string().max(LIMITS.maxPathLength), content: z.string() }))
   .max(LIMITS.maxFiles, `A project can have at most ${LIMITS.maxFiles} files.`);
+
+const sentSchema = z
+  .array(
+    z.union([
+      z.object({ path: z.string().max(LIMITS.maxPathLength), content: z.string() }),
+      z.object({ path: z.string().max(LIMITS.maxPathLength), sameAs: z.string().max(LIMITS.maxPathLength) }),
+    ]),
+  )
+  .max(LIMITS.maxFiles, `A project can have at most ${LIMITS.maxFiles} files.`);
+
+// An autosave (src/lib/project/save.ts): pictures already saved come as { path, sameAs }, filled in from the saved
+// copy (read only when needed), then checked like any other files.
+export async function sentFiles(raw: unknown, saved: () => Promise<ProjectFile[]>): Promise<ProjectFile[]> {
+  const parsed = sentSchema.safeParse(raw);
+  if (!parsed.success) throw new ValidationError(parsed.error.issues[0]?.message ?? 'Those files can’t be saved.', 'files');
+  if (!parsed.data.some((f) => 'sameAs' in f)) return validFiles(parsed.data);
+  try {
+    return validFiles(filledIn(parsed.data, await saved()));
+  } catch (e) {
+    if (e instanceof ProjectError) throw new ValidationError(e.message, 'files');
+    throw e;
+  }
+}
 
 // The files as sent by the browser, checked as a project: safe paths, allowed types, the limits.
 export function validFiles(raw: unknown): ProjectFile[] {
@@ -53,7 +77,7 @@ export async function saveStarterFiles(actor: Actor | null, assessmentId: string
   if (!a) throw new ValidationError('That work no longer exists.');
   assertCan(actor, 'assessment.write', await classAccess(a.classId));
   if (a.language === 'paper') throw new ValidationError('This work is done on paper, so it has no files.');
-  const files = validFiles(raw);
+  const files = await sentFiles(raw, async () => a.starterFiles);
   await db.transaction(async (tx) => {
     await tx.update(assessment).set({ starterFiles: files, updatedAt: new Date() }).where(eq(assessment.id, assessmentId));
     await audit(
@@ -90,7 +114,14 @@ export async function saveDraft(actor: Actor | null, assessmentId: string, raw: 
   const a = await codeWork(assessmentId);
   assertCan(actor, 'work.save', await classAccess(a.classId));
   if (a.status !== 'published') throw new ValidationError('That work no longer exists.');
-  const files = validFiles(raw);
+  const files = await sentFiles(raw, async () => {
+    const [d] = await db
+      .select({ files: workDraft.files })
+      .from(workDraft)
+      .where(and(eq(workDraft.assessmentId, assessmentId), eq(workDraft.studentId, actor.userId)))
+      .limit(1);
+    return d?.files ?? starterOf(a);
+  });
   const savedAt = new Date();
   await db
     .insert(workDraft)

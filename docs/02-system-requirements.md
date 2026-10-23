@@ -115,8 +115,8 @@ Languages: **Python 3**, **Java** (multi-file, packages), **Web (HTML/CSS/JS)**.
 | ID | Requirement | Pri |
 |---|---|---|
 | FR-CODE-01 | In-browser editor with syntax highlighting, line numbers, auto-indent, bracket matching, light/dark theme, for Python, Java, HTML, CSS and JavaScript. | M |
-| FR-CODE-02 | **Multi-file projects** with a file tree: create, rename, delete files and folders. Java packages map to folders (e.g. `src/com/club/game/Main.java`). Limits: e.g. 30 files, 200 KB of text per submission. | M |
-| FR-CODE-03 | **Upload** files or a `.zip` into the project (e.g. code written in VS Code/IntelliJ), and **download** the project as a `.zip`. | M |
+| FR-CODE-02 | **Multi-file projects** with a file tree: create, rename, delete files and folders. Java packages map to folders (e.g. `src/com/club/game/Main.java`). Limits: e.g. 30 files, 200 KB of text per submission. Web projects can also hold **pictures** (`.png .jpg .gif .webp .svg`, up to 300 KB each and 1 MB in all; bigger photos are made smaller in the browser), which the preview shows (added 2026-10-23). | M |
+| FR-CODE-03 | **Upload** files, a **folder** or a `.zip` into the project (e.g. code written in VS Code/IntelliJ), and **download** the project as a `.zip`. | M |
 | FR-CODE-04 | **Web:** live preview of the project (`index.html` + linked CSS/JS files and other pages) in a sandboxed frame served from a **separate preview origin** (`preview.cckh.dev`), plus a console panel showing `console.log` output and JS errors. Students' inline scripts and event handlers work. Runs entirely in the browser. | M |
 | FR-CODE-05 | Auto-save drafts while typing. | M |
 | FR-CODE-06 | Teachers provide **starter files** (a template project) that are copied into each student's project. | M |

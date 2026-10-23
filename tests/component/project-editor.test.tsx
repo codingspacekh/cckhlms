@@ -165,12 +165,56 @@ describe('ProjectEditor', () => {
       true,
     );
     await upload(fileOf('virus.exe', 'MZ'));
-    await waitFor(() => expect(screen.getByRole('alert').textContent).toMatch(/code and text files/));
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toMatch(/code, text and picture files/));
+  });
+
+  it('adds a picture, shows it instead of code, and says how to use it in the page', async () => {
+    const onChange = vi.fn();
+    const web = [{ path: 'index.html', content: '<h1>Hi</h1>' }];
+    render(<ProjectEditor initial={web} nonce="n" zipName="p" previewOrigin="http://preview.localhost:3102" onChange={onChange} />);
+    await upload(fileOf('cat.png', new Uint8Array([137, 80, 78, 71])));
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('Added cat.png.'));
+    expect(onChange).toHaveBeenLastCalledWith([web[0], { path: 'cat.png', content: 'data:image/png;base64,iVBORw==' }], true);
+    expect(screen.getByRole('img', { name: 'The picture cat.png' }).getAttribute('src')).toBe('data:image/png;base64,iVBORw==');
+    expect(screen.getByText('<img src="cat.png" alt="…">')).toBeTruthy();
+    expect(screen.queryByLabelText('Code for cat.png')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'index.html' }));
+    expect(screen.getByLabelText('Code for index.html')).toBeTruthy();
+  });
+
+  it('adds a folder, keeping its folders and leaving out what a project can’t hold', async () => {
+    const onChange = vi.fn();
+    render(<ProjectEditor initial={[{ path: 'index.html', content: 'old' }]} nonce="n" zipName="p" onChange={onChange} />);
+    const inFolder = (path: string, data: Uint8Array | string) => {
+      const f = fileOf(path.split('/').pop()!, data);
+      Object.defineProperty(f, 'webkitRelativePath', { value: path });
+      return f;
+    };
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Upload folder'), {
+        target: {
+          files: [
+            inFolder('my-site/index.html', 'new'),
+            inFolder('my-site/images/cat.png', new Uint8Array([1])),
+            inFolder('my-site/.DS_Store', 'junk'),
+            inFolder('my-site/plan.docx', 'doc'),
+          ],
+        },
+      });
+    });
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toBe(
+        'Added 2 files from the folder. Left out plan.docx: a project can’t hold that type.',
+      ),
+    );
+    expect(onChange.mock.lastCall![0].map((f: { path: string }) => f.path)).toEqual(['index.html', 'images/cat.png']);
+    expect(onChange.mock.lastCall![0][0].content).toBe('new');
   });
 
   it('read-only: no upload or file changes, but the .zip can be downloaded', () => {
     render(<ProjectEditor initial={java} nonce="n" zipName="p" java readOnly />);
     expect(screen.queryByLabelText('Upload files or .zip')).toBeNull();
+    expect(screen.queryByLabelText('Upload folder')).toBeNull();
     expect(screen.queryByRole('button', { name: 'New file' })).toBeNull();
     expect(screen.queryByTestId('package-warning')).toBeNull();
     expect(screen.getByRole('button', { name: 'Download .zip' })).toBeTruthy();

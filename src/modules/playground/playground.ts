@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { db } from '@/db/client';
 import { playgroundProject, user } from '@/db/schema';
 import type { ProjectFile } from '@/lib/project/files';
-import { validFiles } from '@/modules/assessments/projects';
+import { sentFiles } from '@/modules/assessments/projects';
 import { defaultStarter } from '@/modules/assessments/rules';
 import type { Actor } from '@/server/actor';
 import { assertCan, isUniqueViolation, ValidationError } from '@/server/errors';
@@ -85,8 +85,8 @@ export async function openProject(actor: Actor | null, id: string) {
 
 // Autosave: the files are checked as a project (safe paths, allowed types, the limits) before anything is written.
 export async function saveProject(actor: Actor | null, id: string, raw: unknown): Promise<{ savedAt: Date }> {
-  await mine(actor, id);
-  const files = validFiles(raw);
+  const p = await mine(actor, id);
+  const files = await sentFiles(raw, async () => p.files as ProjectFile[]);
   // The database's clock, like created_at, so the list's order never depends on two clocks agreeing.
   const [saved] = await db
     .update(playgroundProject)
