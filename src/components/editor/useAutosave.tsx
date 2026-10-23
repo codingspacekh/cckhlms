@@ -1,20 +1,23 @@
 'use client';
 // Autosave for a project (FR-CODE-05), shared by a student's work and their Playground projects: typing is saved
 // about a second after it stops, a whole-file change at once, and the last change before the tab is hidden. Leaving
-// with a change not saved yet asks first.
+// with a change not saved yet asks first. Pictures already saved are sent by name only (src/lib/project/save.ts).
 import { useEffect, useRef, useState } from 'react';
 import type { ProjectFile } from '@/lib/project/files';
+import { forSaving, isShortened, type SentFile } from '@/lib/project/save';
 import { toClubTime } from '@/modules/academics/schedule';
 import type { FormResult } from '@/server/action-result';
 
 type SaveState = { kind: 'idle' | 'saving' } | { kind: 'saved'; at: string } | { kind: 'error'; text: string };
-type Save = (files: ProjectFile[]) => Promise<FormResult<{ savedAt: string }>>;
+type Save = (files: SentFile[]) => Promise<FormResult<{ savedAt: string }>>;
 
 const AUTOSAVE_MS = 1000;
 
-export function useAutosave(save: Save, savedAt: string | null) {
+// `initial`: the files the page opened with, which the server has (a saved draft, or the starter files).
+export function useAutosave(save: Save, savedAt: string | null, initial: ProjectFile[]) {
   const [state, setState] = useState<SaveState>(savedAt ? { kind: 'saved', at: savedAt } : { kind: 'idle' });
   const pending = useRef<ProjectFile[] | null>(null);
+  const saved = useRef(initial);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inFlight = useRef<Promise<boolean> | null>(null);
 
@@ -26,10 +29,14 @@ export function useAutosave(save: Save, savedAt: string | null) {
     if (!files) return true;
     pending.current = null;
     setState({ kind: 'saving' });
-    inFlight.current = save(files).then((r) => {
+    inFlight.current = (async () => {
+      const sent = forSaving(files, saved.current);
+      let r = await save(sent);
+      if (!r.ok && isShortened(sent)) r = await save(files); // the server's copy changed (another tab): send it all
+      if (r.ok) saved.current = files;
       setState(r.ok ? { kind: 'saved', at: r.data!.savedAt } : { kind: 'error', text: r.error });
       return r.ok;
-    });
+    })();
     const ok = await inFlight.current;
     inFlight.current = null;
     return pending.current ? flush() : ok; // typed again while saving

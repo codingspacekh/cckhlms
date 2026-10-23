@@ -20,7 +20,7 @@ type Props = {
 };
 
 export function PlaygroundWorkspace({ id, name, initial, savedAt, nonce, java, previewOrigin, zipName, timeZone }: Props) {
-  const { state, changed } = useAutosave((files) => saveProjectAction(id, files), savedAt);
+  const { state, changed } = useAutosave((files) => saveProjectAction(id, files), savedAt, initial);
   const [newName, setNewName] = useState(name);
   const [renamed, setRenamed] = useState<{ ok: boolean; text: string } | null>(null);
   const [renaming, start] = useTransition();

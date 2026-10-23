@@ -56,7 +56,7 @@ export function StudentWorkspace({
   timeZone,
   submit,
 }: Props) {
-  const { state, changed, flush } = useAutosave((files) => saveDraftAction(assessmentId, files), savedAt);
+  const { state, changed, flush } = useAutosave((files) => saveDraftAction(assessmentId, files), savedAt, initial);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [submitting, startSubmit] = useTransition();
 

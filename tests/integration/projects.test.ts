@@ -10,7 +10,7 @@ import { createTerm } from '@/modules/academics/terms';
 import { saveDraft, saveStarterFiles, studentProject, teacherProject } from '@/modules/assessments/projects';
 import { saveAssessment, type AssessmentInput } from '@/modules/assessments/service';
 import { createAccount } from '@/modules/identity/service';
-import { LIMITS } from '@/lib/project/files';
+import { imageDataUrl, LIMITS } from '@/lib/project/files';
 import { weeksOf } from '@/modules/teaching/weeks';
 import type { Actor } from '@/server/actor';
 import { ForbiddenError, ValidationError } from '@/server/errors';
@@ -136,6 +136,30 @@ describe('a student’s draft (FR-CODE-05)', () => {
     await expect(saveDraft(bopha, draft, starter)).rejects.toBeInstanceOf(ValidationError);
   });
 
+  it('keeps pictures, and fills in the ones autosave sends by name from the saved copy', async () => {
+    const id = await work({ language: 'web' });
+    const cat = imageDataUrl('cat.png', new Uint8Array([137, 80, 78, 71]));
+    const withCat = [
+      { path: 'index.html', content: '<img src="images/cat.png">' },
+      { path: 'images/cat.png', content: cat },
+    ];
+    // The teacher's starter picture can be named before the student's first save…
+    await saveStarterFiles(sophea, id, withCat);
+    await saveDraft(bopha, id, [
+      { path: 'index.html', content: '<h1>Hi</h1>' },
+      { path: 'images/cat.png', sameAs: 'images/cat.png' },
+    ]);
+    expect((await studentProject(bopha, id)).files).toEqual([{ path: 'index.html', content: '<h1>Hi</h1>' }, withCat[1]]);
+    // …and the draft's picture after it, under a new name too.
+    await saveDraft(bopha, id, [withCat[0]!, { path: 'kitty.png', sameAs: 'images/cat.png' }]);
+    expect((await studentProject(bopha, id)).files).toEqual([withCat[0], { path: 'kitty.png', content: cat }]);
+    // A picture the saved copy doesn't have is refused, so the browser sends it in full.
+    await expect(saveDraft(bopha, id, [withCat[0]!, { path: 'dog.png', sameAs: 'dog.png' }])).rejects.toThrow(/picture is damaged/);
+    await expect(saveDraft(bopha, id, [{ path: 'cat.png', content: 'data:image/gif;base64,R0lG' }])).rejects.toBeInstanceOf(
+      ValidationError,
+    );
+  });
+
   it('checks the project limits and paths on the server', async () => {
     const id = await work();
     const refused = async (files: { path: string; content: string }[]) => {
@@ -145,7 +169,7 @@ describe('a student’s draft (FR-CODE-05)', () => {
     };
     expect(await refused([])).toMatch(/at least one file/);
     expect(await refused([{ path: '../evil.java', content: '' }])).toMatch(/outside the project/);
-    expect(await refused([{ path: 'game.exe', content: '' }])).toMatch(/code and text files/);
+    expect(await refused([{ path: 'game.exe', content: '' }])).toMatch(/code, text and picture files/);
     expect(await refused([{ path: 'big.java', content: 'x'.repeat(LIMITS.maxBytes + 1) }])).toMatch(/KB of code/);
     expect(await refused(Array.from({ length: LIMITS.maxFiles + 1 }, (_, i) => ({ path: `F${i}.java`, content: '' })))).toMatch(
       /at most 30 files/,

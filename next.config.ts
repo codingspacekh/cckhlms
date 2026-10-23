@@ -7,7 +7,12 @@ const config: NextConfig = {
   // The dev-tools badge (bottom left, development only) added an invisible 46px block under every page, so
   // pages scrolled a little further than their content. Errors still show in the dev overlay.
   devIndicators: false,
-  experimental: { authInterrupts: true }, // forbidden() → real 403 pages
+  experimental: {
+    authInterrupts: true, // forbidden() → real 403 pages
+    // A project's first save with pictures: 1 MB of pictures (a third more as text) plus 200 KB of code. Later
+    // autosaves send saved pictures by name only (src/lib/project/save.ts).
+    serverActions: { bodySizeLimit: '2mb' },
+  },
   // The certificate PDF reads its fonts from disk (src/modules/certificates/template.tsx).
   outputFileTracingIncludes: {
     '/api/certificates/*': [

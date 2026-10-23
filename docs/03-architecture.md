@@ -230,7 +230,7 @@ erDiagram
 - **Gradebook** (FR-TCH-19) writes the same SUBMISSION rows: for paper or in-class work the teacher's score creates a submission with no files. One table backs both grading screens.
 - **Late enrolment** (BR-17): every score/attendance query filters by `enrolment.enrolled_on`. This is enforced in the SQL views, so no screen can forget it.
 - **Time** (BR-19): sessions store a local `date` + `start_time`; `due_at` is `timestamptz` (UTC), computed from the club time zone.
-- Submission files are stored as JSON text in Postgres (code is small: limit ≈200 KB per submission), so no file storage is used for code.
+- Submission files are stored as JSON text in Postgres (code is small: limit ≈200 KB per submission), so no file storage is used for code. Pictures in a project (added 2026-10-23) are stored the same way, as `data:` URLs, with their own limit (300 KB each, 1 MB in all). Autosave sends a picture the server already has as `{ path, sameAs }`, so typing doesn't re-send it (`src/lib/project/save.ts`).
 - Soft deletes / status fields instead of hard deletes (FR-AUTH-04, BR-07).
 - Indexes on: `enrolment(class_id)`, `enrolment(student_id)`, `submission(assessment_id)`, `attendance(session_id)`, `session(class_id, week_no)`, `session(date)`, `question(lesson_id)`.
 
@@ -264,7 +264,7 @@ No SQL views after all (M5, 2026-10-20): due times are worked out from the sessi
 - **File tree** on the left (create / rename / delete files and folders), **CodeMirror** tabs on the right.
 - **Java packages:** folders map to packages (`src/com/club/game/Main.java`). The editor warns if a file's `package` line doesn't match its folder. This is a common beginner mistake, and catching it in the browser costs nothing.
 - **Starter files:** the teacher's template project is copied into the student's project the first time it is opened.
-- **Upload:** individual files or a `.zip`, unpacked in the browser. Only text files with allowed extensions (`.py .java .html .css .js .json .txt .md`) are accepted. Limits: ~30 files, ~200 KB in total.
+- **Upload:** individual files, a folder, or a `.zip`, unpacked in the browser. Only text files with allowed extensions (`.py .java .html .css .js .json .txt .md`) and pictures (`.png .jpg .jpeg .gif .webp .svg`) are accepted; a folder's other files are left out and named. Limits: ~30 files, ~200 KB of text, 300 KB per picture and 1 MB of pictures; PNG/JPEG/WebP photos over the limit are scaled down in the browser first. The preview swaps each picture path in the HTML, CSS (relative to the CSS file) and JS strings for its `data:` URL.
 - **Download:** the whole project as a `.zip`, zipped in the browser. Teachers use this to open a submission in their IDE, and students use it to continue at home.
 - **Auto-save** of the draft every few seconds of idle time, and on leaving the page.
 

@@ -44,6 +44,35 @@ describe('buildPreviewDocument', () => {
     expect(doc).toContain('<\\/script><b>x</b>');
   });
 
+  it('puts the project’s pictures in the page, wherever the page names them', () => {
+    const cat = 'data:image/png;base64,Y2F0';
+    const bg = 'data:image/jpeg;base64,Ymc=';
+    const doc = buildPreviewDocument(
+      [
+        {
+          path: 'index.html',
+          content:
+            '<head><link rel="stylesheet" href="css/style.css"></head><img src="images/cat.png" alt="cat"><img src=\'./images/cat.png\'>' +
+            '<div style="background: url(images/bg.jpg)"></div><img src="images/missing.png"><img src="https://x.example/cat.png">' +
+            '<script src="game.js"></script>',
+        },
+        { path: 'css/style.css', content: 'body{background:url("../images/bg.jpg")}' },
+        { path: 'game.js', content: 'const img = new Image(); img.src = "images/cat.png"; const s = `/images/cat.png`;' },
+        { path: 'images/cat.png', content: cat },
+        { path: 'images/bg.jpg', content: bg },
+      ],
+      BRIDGE,
+    );
+    expect(doc).toContain(`<img src="${cat}" alt="cat">`);
+    expect(doc).toContain(`<img src='${cat}'>`);
+    expect(doc).toContain(`url(${bg})`);
+    expect(doc).toContain(`body{background:url("${bg}")}`); // ../ from the CSS file's folder
+    expect(doc).toContain(`img.src = "${cat}"`);
+    expect(doc).toContain(`const s = \`${cat}\``);
+    expect(doc).toContain('src="images/missing.png"');
+    expect(doc).toContain('src="https://x.example/cat.png"');
+  });
+
   it('shows a friendly message when there is no index.html', () => {
     expect(buildPreviewDocument([{ path: 'a.js', content: '' }], BRIDGE)).toContain('Add an index.html file');
   });
