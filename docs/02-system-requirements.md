@@ -97,6 +97,7 @@
 | ID | Requirement | Pri |
 |---|---|---|
 | FR-TCH-21 | **Today** dashboard (added 2026-10-24, M8): the teacher's next class first (time, room, students, that week's lesson, Take attendance); before class: who was away last week, how many handed in the latest homework, questions waiting; new work to mark; this weekend's classes. | S |
+| FR-TCH-22 | **Lesson note editor** (added 2026-10-24, M9): the weekly lesson note is written in a word-processor-style editor instead of a Markdown box: headings, bold, italic, code in a sentence, links, lists, **code blocks** with a language, **pictures** (upload, drag in or paste a screenshot; Small/Medium/Full size and a caption) and **tip boxes**, from a toolbar or by typing `/`. Markdown shortcuts still work. Drafts save by themselves; a **Student view** shows the note exactly as students will see it. The note is still stored as Markdown (BR-22). | S |
 
 ### 1.4 Student (STU)
 
@@ -113,6 +114,7 @@
 | FR-STU-09 | Receive in-app notifications: new lesson, new homework, due soon, graded, question answered. | S |
 | FR-STU-10 | **Report** a question or reply as inappropriate. Once reported, it is hidden from students until a teacher reviews it. | S |
 | FR-STU-11 | **Term puzzle** (added 2026-10-24, M8): on "My week", one puzzle piece per weekly session of each class, filled in as the student earns it (BR-21). | S |
+| FR-STU-12 | **Readable lesson notes** (added 2026-10-24, M9): a lesson note reads like a book page: reading width, larger text and line spacing, code blocks with colours, line numbers and a **Copy** button, pictures with captions, and tip boxes. | S |
 
 ### 1.5 Embedded Code Editor (CODE)
 
@@ -166,6 +168,7 @@ Languages: **Python 3**, **Java** (multi-file, packages), **Web (HTML/CSS/JS)**.
 | BR-19 | **Time:** all timestamps are stored in UTC; session dates/times and due dates are entered and shown in the club time zone. "Next session", "due" and "late" are always worked out in the club time zone. |
 | BR-20 | A reported Q&A post is hidden from students (shown to the author as "under review") until a teacher restores or removes it. |
 | BR-21 | **Term puzzle piece** (FR-STU-11): a past week's piece is **earned** when the student came to that week's session (present, late or excused) and every piece of work set that week that is already due has been handed in or excused. Otherwise it reads **Away** (absent) or **Not yet** (work missing, so handing it in late still earns the piece). The next session's piece is **This week**, later ones **Coming up**. Cancelled sessions have no piece; weeks before the student joined read **Joined later**. The puzzle never affects scores, pass/fail or certificates. |
+| BR-22 | **Lesson note content** (FR-TCH-22): a note is stored as Markdown, so notes written before M9 open unchanged. A tip box is `> [!TIP]`; a picture is `![caption](/api/files/<id>#small\|medium\|full)`, its caption also being its text for screen readers. Pictures are PNG, JPEG, GIF or WebP, shrunk in the browser to at most 1600 px wide and 2 MB, up to 20 per note; they are lesson files marked *in the note*, so they don't appear in or count towards the 10 files to download. A picture taken out of the note is deleted when the note is saved. Students can open a picture only when they can read the note. Only **drafts** save by themselves: a published or scheduled note changes only when the teacher presses Update, so students never see half-written changes. |
 
 ---
 
