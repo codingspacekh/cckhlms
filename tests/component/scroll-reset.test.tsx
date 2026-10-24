@@ -54,6 +54,17 @@ describe('ScrollReset', () => {
     expect(scrollTo).toHaveBeenLastCalledWith(0, 120);
   });
 
+  it('remembers a scroll made before the page’s script started', () => {
+    Object.defineProperty(window, 'scrollY', { value: 450, configurable: true }); // scrolled while still loading
+    const { rerender } = render(<ScrollReset />);
+    pathname = '/teacher/classes/c1/weeks/3';
+    rerender(<ScrollReset />);
+    window.dispatchEvent(new PopStateEvent('popstate')); // Back
+    pathname = '/teacher/classes/c1';
+    rerender(<ScrollReset />);
+    expect(scrollTo).toHaveBeenLastCalledWith(0, 450);
+  });
+
   it('on Back, keeps trying while the page is still too short to reach the old position', () => {
     let grow = () => {};
     const disconnect = vi.fn();

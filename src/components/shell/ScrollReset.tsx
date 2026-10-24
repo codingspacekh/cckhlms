@@ -37,6 +37,7 @@ export function ScrollReset() {
     // Scroll events arrive after a navigation has committed, so `current` already names the page they belong to.
     const onScroll = () => saved.current.set(current.current, window.scrollY);
     const onPop = () => (backOrForward.current = true);
+    onScroll(); // someone may have scrolled before this script started, when there was no listener yet
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('popstate', onPop);
     return () => {

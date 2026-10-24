@@ -22,7 +22,7 @@ type Opts = { now?: Date };
 
 async function classInfo(classId: string) {
   const [c] = await db
-    .select({ id: klass.id, name: klass.name, courseId: klass.courseId, courseName: course.name })
+    .select({ id: klass.id, name: klass.name, courseId: klass.courseId, courseName: course.name, language: course.defaultLanguage })
     .from(klass)
     .innerJoin(course, eq(course.id, klass.courseId))
     .where(eq(klass.id, classId))
@@ -107,6 +107,7 @@ export type LessonEditor = {
   syllabus: { id: string; title: string }[];
   attachments: AttachmentRow[];
   timeZone: string;
+  codeLanguage: string;
 };
 
 export async function lessonForEdit(actor: Actor | null, classId: string, week: number, opts: Opts = {}): Promise<LessonEditor> {
@@ -127,6 +128,8 @@ export async function lessonForEdit(actor: Actor | null, classId: string, week: 
     classId,
     className: c.name,
     courseName: c.courseName,
+    // For new code blocks in the note: a web course writes HTML.
+    codeLanguage: c.language === 'web' ? 'html' : c.language,
     session: { id: s.id, date: s.date, startTime: s.startTime, minutes: s.minutes, week },
     weeks: all.flatMap((r) => (r.week ? [r.week] : [])),
     lesson: l
