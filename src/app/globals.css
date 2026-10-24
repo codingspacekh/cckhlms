@@ -1655,6 +1655,385 @@ th a:hover {
   text-align: center;
 }
 
+/* the lesson note page and editor (M9, FR-TCH-22) */
+.note-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .note-page {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.note-main {
+  container-type: inline-size;
+  padding: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.note-side {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+.note-side h2,
+.note-topics legend {
+  font-size: 1.15rem;
+  color: var(--heading);
+}
+.note-topics legend {
+  float: left;
+  width: 100%;
+  margin-bottom: 4px;
+  padding: 0;
+  font-weight: 700;
+}
+.note-views {
+  align-self: flex-start;
+  display: inline-flex;
+  gap: 4px;
+  margin: 18px 24px 0;
+  padding: 4px;
+  border-radius: 16px;
+  background: var(--surface-2);
+}
+.note-views button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.note-views button[aria-pressed='true'] {
+  background: var(--surface);
+  color: var(--heading);
+  box-shadow: 0 1px 3px rgb(20 33 61 / 0.12);
+}
+.note-title {
+  display: block;
+  padding: 14px 24px 0;
+}
+.note-title input {
+  width: 100%;
+  min-height: 0;
+  padding: 6px 0 10px;
+  border: 0;
+  border-bottom: 2px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--heading);
+  font: inherit;
+  font-size: 1.875rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.note-title input:focus-visible {
+  outline: none;
+  border-bottom-color: var(--accent);
+}
+.note-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 20px;
+  border-bottom: 2px solid var(--surface-2);
+  background: var(--surface);
+}
+.note-style select {
+  min-height: 40px;
+  width: auto;
+  padding: 0 10px;
+  font-weight: 600;
+}
+.note-sep {
+  width: 2px;
+  height: 26px;
+  margin: 0 6px;
+  background: var(--surface-2);
+}
+.note-gap {
+  flex: 1;
+}
+.tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.tool.wide {
+  padding: 0 12px;
+}
+.tool:hover:not(:disabled) {
+  background: var(--accent-soft);
+  color: var(--heading);
+}
+.tool[aria-pressed='true'] {
+  background: var(--heading);
+  color: var(--surface);
+}
+.tool:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.tool .i {
+  width: 20px;
+  height: 20px;
+}
+/* A narrower editor keeps the toolbar on one line: Code and Tip box show just their icons, and on a phone the
+   toolbar scrolls sideways. */
+@container (max-width: 760px) {
+  .tool.wide span {
+    display: none;
+  }
+}
+@container (max-width: 560px) {
+  .note-toolbar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 8px 12px;
+  }
+  .note-toolbar > * {
+    flex: none;
+  }
+  .note-doc {
+    padding: 12px 16px;
+  }
+}
+.note-link {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 12px 24px;
+  border-bottom: 2px solid var(--surface-2);
+  background: var(--surface-2);
+}
+.note-link .f {
+  flex: 1 1 260px;
+}
+/* The editable note: the reading view's type, a little tighter around the edges. */
+.note-doc {
+  min-height: 420px;
+  padding: 12px 32px;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  outline: none;
+  font-variant-ligatures: none;
+}
+.note-editor:focus-within .note-doc {
+  box-shadow: inset 0 0 0 3px var(--accent-soft);
+}
+.note-doc p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: var(--muted);
+  pointer-events: none;
+}
+.note-doc .tip-box > p:first-child::before {
+  content: 'Tip: ';
+  font-weight: 700;
+  color: var(--green-text);
+}
+.note-doc .tip-box {
+  position: relative;
+  margin: 0 0 20px;
+  padding: 14px 20px 14px 54px;
+  border-radius: 18px;
+  background: var(--green-soft);
+}
+.note-doc .code-block pre {
+  padding: 14px 18px;
+  white-space: pre;
+}
+.note-doc img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+}
+.note-doc img.ProseMirror-selectednode {
+  outline: 3px solid var(--accent);
+}
+.note-doc .ProseMirror-gapcursor {
+  display: none;
+  position: relative;
+  pointer-events: none;
+}
+.note-doc.ProseMirror-focused .ProseMirror-gapcursor {
+  display: block;
+}
+.note-doc .ProseMirror-gapcursor::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  width: 20px;
+  border-top: 1px solid var(--ink);
+}
+.code-head .code-lang select {
+  min-height: 34px;
+  width: auto;
+  margin-left: 8px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--heading);
+  font-weight: 700;
+}
+.code-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--nc-muted);
+  cursor: pointer;
+}
+.code-remove:hover {
+  background: var(--nc-bg);
+  color: var(--nc-ink);
+}
+.note-add {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 24px 20px;
+}
+.note-add-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--line-2);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--heading);
+  cursor: pointer;
+}
+.note-add-button[aria-expanded='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.note-menu {
+  position: absolute;
+  left: 24px;
+  bottom: calc(100% - 8px);
+  z-index: 5;
+  width: 330px;
+  max-width: calc(100% - 48px);
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  border: 2px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 10px 30px rgb(20 33 61 / 0.16);
+}
+.note-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.note-menu-item:hover,
+.note-menu-item:focus-visible {
+  background: var(--surface-2);
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.note-menu-item .mark {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--heading);
+  font-weight: 700;
+}
+.note-menu-item.is-code .mark {
+  background: var(--nc-bg);
+  color: var(--nc-ink);
+}
+.note-menu-item.is-tip .mark {
+  background: var(--green-soft);
+  color: var(--green-text);
+}
+.note-menu-item.is-link .mark {
+  background: var(--pink-soft);
+  color: var(--pink-text);
+}
+.note-menu-item .text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+.note-menu-item .hint {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+.note-student {
+  padding: 12px 24px 32px;
+}
+.note-student-banner {
+  margin: 0 0 18px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--accent-soft);
+  color: var(--heading);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+.note-student-title {
+  margin: 0 0 10px;
+  font-size: 2.25rem;
+  line-height: 1.15;
+  color: var(--heading);
+}
+.note-student .row {
+  margin-bottom: 20px;
+}
+
 /* Q&A (M3) */
 .lesson-grid {
   display: grid;

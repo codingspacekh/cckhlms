@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
 import { E2E } from '../../playwright.config';
 import { teachingClass, type TeachingClass } from './fixtures';
 import { stateFile } from './global-setup';
-import { expectAccessible, watchProblems } from './helpers';
+import { expectAccessible, watchProblems, writeNote } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 let c: TeachingClass;
@@ -24,8 +24,8 @@ test.describe('teacher', () => {
     await expect(page.getByText('Save the lesson first, then add files to it.')).toBeVisible();
     const form = page.getByRole('form', { name: 'Lesson note' });
     await form.getByLabel('Title').fill('Functions');
-    await form.getByLabel('Lesson note').fill('Today: functions.');
-    await form.getByRole('button', { name: 'Save draft' }).click();
+    await writeNote(page, 'Today: functions.');
+    await page.getByRole('button', { name: 'Save draft' }).click();
     await expect(page.getByRole('status')).toContainText('Draft saved');
 
     const files = page.getByRole('region', { name: 'Files' });
@@ -47,12 +47,16 @@ test.describe('teacher', () => {
     await expect(files.getByRole('alert')).toContainText('setup.exe can’t be attached');
 
     const snippet = (await files.locator('code').first().textContent())!;
-    await form.getByLabel('Lesson note').fill(`Today: functions.\n\n${snippet}`);
-    await expect(page.getByRole('region', { name: 'Preview' }).locator('img')).toHaveAttribute(
+    await writeNote(page, `Today: functions.\n\n${snippet}`);
+    await expect(form.getByRole('textbox', { name: 'Lesson note' }).getByRole('img', { name: 'diagram.png' })).toHaveAttribute(
       'src',
       `/api/files/${fileIds['diagram.png']}`,
     );
-    await form.getByRole('button', { name: 'Publish now' }).click();
+    await form.getByRole('button', { name: 'Student view' }).click();
+    await expect(
+      form.getByRole('region', { name: 'Student view' }).getByRole('figure', { name: 'diagram.png' }).locator('img'),
+    ).toHaveAttribute('src', `/api/files/${fileIds['diagram.png']}`);
+    await page.getByRole('region', { name: 'Publish' }).getByRole('button', { name: 'Publish now' }).click();
     await expect(page.getByRole('status').first()).toContainText('Lesson published');
   });
 

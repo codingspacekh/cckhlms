@@ -4,7 +4,7 @@ import { expect, test, type Browser } from '@playwright/test';
 import { E2E } from '../../playwright.config';
 import { CLASSMATE, rehearsalClass, type TeachingClass } from './fixtures';
 import { stateFile, USERS } from './global-setup';
-import { expectAccessible } from './helpers';
+import { expectAccessible, writeNote } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 let c: TeachingClass;
@@ -21,9 +21,9 @@ test('the teacher publishes week 2’s lesson and takes attendance', async ({ br
   await page.getByRole('table', { name: 'Weeks' }).getByRole('link', { name: 'Week 2' }).click();
   const form = page.getByRole('form', { name: 'Lesson note' });
   await form.getByLabel('Title').fill('Links and images');
-  await form.getByLabel('Lesson note').fill('## Links\nUse `<a href="...">` to link pages.');
-  await form.getByRole('checkbox', { name: 'Links and images' }).check();
-  await form.getByRole('button', { name: 'Publish now' }).click();
+  await writeNote(page, '## Links\nUse `<a href="...">` to link pages.');
+  await page.getByRole('checkbox', { name: 'Links and images' }).check();
+  await page.getByRole('region', { name: 'Publish' }).getByRole('button', { name: 'Publish now' }).click();
   await expect(page.getByRole('status').first()).toContainText('Lesson published');
 
   await page.getByRole('link', { name: 'Attendance' }).click();

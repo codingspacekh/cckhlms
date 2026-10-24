@@ -26,3 +26,17 @@ export async function watchProblems(page: Page) {
   });
   return { cspViolations: () => page.evaluate(() => (window as unknown as { __csp: string[] }).__csp), consoleErrors };
 }
+
+// Writes a lesson note in the editor (M9) by pasting Markdown over what's there, as a teacher pasting a note they
+// kept elsewhere would. Typing and the toolbar are tested in lessons.spec.ts.
+export async function writeNote(page: Page, markdown: string) {
+  const doc = page.getByRole('textbox', { name: 'Lesson note' });
+  await doc.click();
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.press('Delete');
+  await doc.evaluate((el, md) => {
+    const data = new DataTransfer();
+    data.setData('text/plain', md);
+    el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+  }, markdown);
+}

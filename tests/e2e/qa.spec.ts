@@ -4,7 +4,7 @@ import { expect, test, type Browser } from '@playwright/test';
 import { E2E } from '../../playwright.config';
 import { CLASSMATE, teachingClass, type TeachingClass } from './fixtures';
 import { stateFile, USERS } from './global-setup';
-import { expectAccessible, watchProblems } from './helpers';
+import { expectAccessible, watchProblems, writeNote } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 let c: TeachingClass;
@@ -18,8 +18,8 @@ test.beforeAll(async ({ browser }) => {
   await page.goto(`/teacher/classes/${c.classId}/weeks/${WEEK}`);
   const form = page.getByRole('form', { name: 'Lesson note' });
   await form.getByLabel('Title').fill('Lists');
-  await form.getByLabel('Lesson note').fill('Lists keep many values: `[1, 2, 3]`.');
-  await form.getByRole('button', { name: 'Publish now' }).click();
+  await writeNote(page, 'Lists keep many values: `[1, 2, 3]`.');
+  await page.getByRole('region', { name: 'Publish' }).getByRole('button', { name: 'Publish now' }).click();
   await expect(page.getByRole('status').first()).toContainText('Lesson published');
   await page.context().close();
 });
