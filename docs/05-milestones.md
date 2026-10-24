@@ -25,7 +25,8 @@ flowchart LR
   M5 --> M6["M6<br/>Term operations<br/>certificates · promotion"]
   M6 --> M7["M7<br/>Hardening"]
   M7 --> M8["M8<br/>Club look<br/>brand · three homes"]
-  M8 --> R2(["R2 · Club-wide launch"])
+  M8 --> M9["M9<br/>Lesson note editor"]
+  M9 --> R2(["R2 · Club-wide launch"])
   R2 --> L["Later<br/>Pyodide · runner"]
 ```
 
@@ -45,6 +46,7 @@ flowchart LR
 | **M6** ✅ | Term operations | Certificates + `/verify`, promotion wizard, login slips, CSV import, notifications, audit log, playground | FR-ADM-11…14 · FR-AUTH-08, 09 · FR-STU-08, 09 · FR-SYS-01, 02 · FR-CODE-07 | 6 days |
 | **M7** | Hardening | ASVS L1 review, ZAP, k6 load test, disaster-recovery rehearsal, runbook, privacy check | NFR-01…12 | 5 days |
 | **M8** | Club look | Champion Coders brand (logo, dark blue, Titillium Web), kid-friendly styling, new home pages for all three roles, term puzzle | NFR-08 · FR-STU-01, 11 · FR-TCH-21 · FR-ADM-10 · BR-21 | 4 days |
+| **M9** | Lesson note editor | Word-processor-style lesson note with code blocks, pictures and tip boxes; notes that read like a book page for students | FR-TCH-22 · FR-STU-12 · BR-22 | 4 days |
 | — | **R2: Club-wide launch** | Every class of the next term runs on `lms.cckh.dev` | | |
 
 \* *Effort = focused working days for one developer, tests included. Total ≈ **45 focused days**. At 2–3 focused days a week alongside teaching, that is about **4–5 months**: R1 could pilot in **Term 1 · 2027** (from Sat 9 Jan 2027) and R2 launch in **Term 2 · 2027**. These are planning ranges (±30%), not promises. AI-assisted pace on codingspacekh was faster, but the server work here is new.*
@@ -550,6 +552,27 @@ The next milestone does not start until all four are true.
 > - **Admin dashboard, #43:** term banner with the weeks as puzzle pieces; the four numbers in one strip; Needs your attention first; this weekend; classes with "Below pass"; score bands.
 > - **Left out on purpose** (new features, not asked for): "Show on the big screen" (teacher) and "Remind" for missing weekly reports (admin). Student work cards show names and times, not program output (no runner in v1).
 > - **Exit criterion:** ✅ met 2026-10-24: the owner checked the three home pages on a local production build (`npm run seed:dev` + `npm run build` + `npm start`) and signed off M8.
+
+### M9 — Lesson note editor (4 days)
+**Why:** teachers write a note every week, and a Markdown box is hard to use for text, code and pictures together; the preview was also hard to read (owner, 2026-10-24). The editor prototype was approved the same day: "it's very good", for the **lesson note only**, keeping the tip box (https://claude.ai/artifact/SoozYG2faUcsPkZZ8nS2KB, board "Teacher · Lesson note editor"). Homework instructions and feedback keep their Markdown boxes for now.
+
+**Goal:** a teacher writes a week's note with text, code and pictures without knowing Markdown, and students read it easily on a laptop or a phone.
+
+**Build (stacked PRs, merged in order):**
+1. **Readable notes** (`m9-reader`, FR-STU-12): the student's week page and the teacher's Student view use a reading layout (about 720 px wide, 19 px text, line height 1.75); code blocks get colours, line numbers and a **Copy** button; `> [!TIP]` becomes a tip box; a picture becomes a figure with its caption, sized by `#small`, `#medium` or `#full`. Code colours come from the CodeMirror language parsers the app already has (`@lezer/highlight`), worked out on the server, so the reader needs no new package. Every note written so far looks better straight away.
+2. **The editor** (`m9-editor`, FR-TCH-22, BR-22): **Tiptap 3.31.4** (ProseMirror, MIT licence; 3.32.0 is under two weeks old) with its Markdown extension, so the note is still saved as Markdown and the server's renderer stays the only thing that turns it into HTML. Toolbar (text style, bold, italic, code, link, lists, Code, Picture, Tip box, undo/redo), the **+** and `/` menu, code blocks with a language and the same colours as the reader, Markdown shortcuts, the **Write / Student view** switch, and Publish, Schedule, Syllabus topics and Files in a column on the right. Drafts save by themselves; a published or scheduled note asks before leaving with unsaved changes. The editor is loaded only on the lesson note page.
+3. **Pictures in the note** (`m9-pictures`, BR-22): upload, drag in or paste a screenshot; the browser shrinks it (reusing `src/lib/project/shrink.ts`) and uploads it as a lesson file marked *in the note* (new column `lesson_attachment.in_note`); Small/Medium/Full and a caption; pictures taken out of the note are deleted on save; pasted pictures from other websites are not copied in.
+
+**Left out on purpose:** the editor in homework instructions and feedback (owner chose the lesson note only); tables; an "Open in Playground" button on code blocks (new feature, not asked for).
+
+**Tests first:**
+- Unit (reader): tip boxes, figures with captions and sizes, code colours and line numbers; the existing XSS corpus still passes, and code text, captions and languages are escaped (a `<script>` in a code block or caption stays text); unknown sizes or languages fall back safely.
+- Unit (editor): Markdown → editor → Markdown keeps every block type; **every lesson note in the seed and the test fixtures renders the same for students after being opened and saved** in the editor.
+- Integration: an in-note picture is stored, is hidden from the Files list and its limit, is deleted when taken out of the note, and can be opened by the class's students only once the note is published; a published note doesn't save by itself.
+- Component: Copy puts exactly the code on the clipboard; toolbar buttons show their state (`aria-pressed`) and work from the keyboard.
+- Playwright + axe: a teacher writes a note with a heading, a list, a Python code block, a pasted picture and a tip box, publishes it, and a student sees each part and copies the code; the editor and the reading view pass axe in light and dark and at 360 px.
+
+**Exit criteria:** the editor and the student's note match the approved prototype; old notes open and save without changing what students see; the owner writes a real week's note with code and a picture on a local production build, checks it as a student on a phone, and signs off M9.
 
 ### R2 — Club-wide launch
 - All classes of the next term (e.g. Term 2 · 2027) are set up and run on `lms.cckh.dev`. Teachers get a short walkthrough, and students get login slips.

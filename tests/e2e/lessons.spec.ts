@@ -1,4 +1,4 @@
-// FR-TCH-01/02 · FR-STU-02 · NFR-05: the teacher writes and publishes a weekly lesson; the student reads it.
+// FR-TCH-01/02 · FR-STU-02, 12 · NFR-05: the teacher writes and publishes a weekly lesson; the student reads it.
 import { expect, test } from '@playwright/test';
 import { teachingClass, type TeachingClass } from './fixtures';
 import { stateFile } from './global-setup';
@@ -27,12 +27,14 @@ test.describe('teacher', () => {
     await form
       .getByLabel('Lesson note')
       .fill(
-        '## What we did\nWe used **for loops**.\n\n```python\nfor i in range(5):\n    print("Lap", i + 1)\n```\n\n<img src=x onerror=alert(1)>',
+        '## What we did\nWe used **for loops**.\n\n```python\nfor i in range(5):\n    print("Lap", i + 1)\n```\n\n> [!TIP]\n> range(5) stops before 5.\n\n<img src=x onerror=alert(1)>',
       );
     await form.getByRole('checkbox', { name: 'for loops & range()' }).check();
     const preview = page.getByRole('region', { name: 'Preview' });
     await expect(preview.getByRole('heading', { name: 'What we did' })).toBeVisible();
-    await expect(preview.locator('strong')).toHaveText('for loops');
+    await expect(preview.locator('strong', { hasText: 'for loops' })).toBeVisible();
+    await expect(preview.getByRole('note')).toHaveText('Tip: range(5) stops before 5.');
+    await expect(preview.locator('.code-lang')).toHaveText('Python');
     await expect(preview).toContainText('<img src=x onerror=alert(1)>');
     await expectAccessible(page);
 
@@ -65,7 +67,7 @@ test.describe('teacher', () => {
 });
 
 test.describe('student', () => {
-  test.use({ storageState: stateFile('student') });
+  test.use({ storageState: stateFile('student'), permissions: ['clipboard-read', 'clipboard-write'] });
 
   test('sees only the published lesson, by week, and reads it', async ({ page }) => {
     const problems = await watchProblems(page);
@@ -84,6 +86,10 @@ test.describe('student', () => {
     await expect(note.locator('pre code')).toContainText('print("Lap", i + 1)');
     await expect(note).toContainText('<img src=x onerror=alert(1)>');
     await expect(note.locator('img')).toHaveCount(0);
+    await expect(note.getByRole('note')).toHaveText('Tip: range(5) stops before 5.');
+    await note.getByRole('button', { name: 'Copy' }).click();
+    await expect(note.getByRole('button', { name: 'Copied' })).toBeVisible();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('for i in range(5):\n    print("Lap", i + 1)');
     await expectAccessible(page);
     expect(await problems.cspViolations()).toEqual([]);
     expect(problems.consoleErrors).toEqual([]);

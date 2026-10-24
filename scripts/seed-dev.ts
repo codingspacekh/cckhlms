@@ -162,7 +162,7 @@ const lessons: [number, string, string, number[], 'publish' | 'draft'][] = [
   [
     3,
     'Repeating things with for loops',
-    '## What we did today\nWe used **for loops** to repeat code without copying it.\n\n- `range(5)` gives the numbers 0, 1, 2, 3, 4\n- the code inside the loop must be **indented**\n\n```python\nfor i in range(5):\n    print("Lap", i + 1)\n```\n\n## Try at home\nChange the program so it counts **down** from 10 to 1, then prints "Lift off!".',
+    '## What we did today\nWe used **for loops** to repeat code without copying it.\n\n- `range(5)` gives the numbers 0, 1, 2, 3, 4\n- the code inside the loop must be **indented**\n\n```python\nfor i in range(5):\n    print("Lap", i + 1)\n```\n\n> [!TIP]\n> `range(10, 0, -1)` counts down and stops before 0.\n\n## Try at home\nChange the program so it counts **down** from 10 to 1, then prints "Lift off!".',
     [3],
     'publish',
   ],

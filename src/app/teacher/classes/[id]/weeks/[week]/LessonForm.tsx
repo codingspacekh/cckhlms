@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState, useTransition, type FormEvent } from 'react';
+import { NoteHtml } from '@/components/teaching/NoteHtml';
 import { Pill } from '@/components/ui/Pill';
 import { formatDate } from '@/modules/academics/schedule';
 import type { FormResult } from '@/server/action-result';
@@ -155,11 +156,10 @@ export function LessonForm({ classId, sessionId, syllabus, lesson, schedule, tim
           </details>
         )}
       </form>
-      <section className="card md" aria-label="Preview">
+      <section className="card" aria-label="Preview">
         <p className="xs muted">Preview</p>
         <h2>{title || 'Untitled lesson'}</h2>
-        {/* Sanitised by renderMarkdown on the server (src/lib/markdown.ts). */}
-        <div dangerouslySetInnerHTML={{ __html: html }} />
+        <NoteHtml html={html} />
       </section>
     </div>
   );

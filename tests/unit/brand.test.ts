@@ -42,6 +42,8 @@ const CODE = [
   '--code-tag',
   '--code-attr',
 ];
+// Lesson note code blocks (M9, FR-STU-12): dark blue in both themes, with a lighter header strip.
+const NOTE_CODE = ['--nc-ink', '--nc-muted', '--nc-keyword', '--nc-string', '--nc-number', '--nc-def', '--nc-type', '--nc-attr'];
 // Text on a tinted or filled background: [text, background].
 const PAIRS = [
   ['--accent-ink', '--accent'],
@@ -63,6 +65,9 @@ const PAIRS = [
   ['--hero-muted', '--hero'],
   ['--hero-ink', '--hero-2'],
   ['--hero-muted', '--hero-2'],
+  ['--ink', '--green-soft'],
+  ['--nc-muted', '--nc-head'],
+  ['--heading', '--surface'],
 ];
 
 describe.each([
@@ -75,6 +80,10 @@ describe.each([
 
   it.each(CODE)('%s on --surface passes 4.5:1', (text) => {
     expect(contrast(t[text]!, t['--surface']!)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it.each(NOTE_CODE)('%s on --nc-bg passes 4.5:1', (text) => {
+    expect(contrast(t[text]!, t['--nc-bg']!)).toBeGreaterThanOrEqual(4.5);
   });
 
   it.each(PAIRS)('%s on %s passes 4.5:1', (text, bg) => {
