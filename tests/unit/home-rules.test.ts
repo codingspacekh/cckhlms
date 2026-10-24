@@ -1,6 +1,6 @@
 // M8 (FR-STU-01, FR-TCH-21): how a home page says when the next class is, in words a child reads at a glance.
 import { describe, expect, it } from 'vitest';
-import { classWhen, firstName } from '@/modules/reporting/home-rules';
+import { classWhen, firstName, greeting } from '@/modules/reporting/home-rules';
 
 describe('classWhen', () => {
   const today = '2027-01-28'; // a Thursday
@@ -22,5 +22,15 @@ describe('firstName', () => {
     expect(firstName('Sophea Chan')).toBe('Sophea');
     expect(firstName('  Bopha  ')).toBe('Bopha');
     expect(firstName('')).toBe('');
+  });
+});
+
+describe('greeting', () => {
+  it('follows the club clock', () => {
+    expect(greeting(6)).toBe('Good morning');
+    expect(greeting(11)).toBe('Good morning');
+    expect(greeting(12)).toBe('Good afternoon');
+    expect(greeting(17)).toBe('Good evening');
+    expect(greeting(2)).toBe('Good evening');
   });
 });

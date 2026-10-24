@@ -24,6 +24,11 @@
   --side-muted: #9fb0d8;
   --side-active: #ffffff;
   --side-active-ink: #152a5c;
+  /* the dark blue "next class" card on the teacher's Today */
+  --hero: #152a5c;
+  --hero-2: #1f3a78;
+  --hero-ink: #ffffff;
+  --hero-muted: #c9d3ea;
   /* the logo's green and pink, for identity (class tags, the term puzzle); never for status */
   --green: #79b843;
   --on-green: #14213d;
@@ -84,6 +89,10 @@
     --side-muted: #8c9bc0;
     --side-active: #e4ecfa;
     --side-active-ink: #152a5c;
+    --hero: #1a2850;
+    --hero-2: #24366a;
+    --hero-ink: #ffffff;
+    --hero-muted: #c9d3ea;
     --green-soft: #17301a;
     --green-text: #8fd16a;
     --pink-soft: #3a1426;
@@ -129,6 +138,10 @@
   --side-muted: #8c9bc0;
   --side-active: #e4ecfa;
   --side-active-ink: #152a5c;
+  --hero: #1a2850;
+  --hero-2: #24366a;
+  --hero-ink: #ffffff;
+  --hero-muted: #c9d3ea;
   --green-soft: #17301a;
   --green-text: #8fd16a;
   --pink-soft: #3a1426;
@@ -2317,4 +2330,225 @@ table.gradebook .sticky-col {
   font-size: 1.15rem;
   line-height: 1.45;
   color: var(--ink);
+}
+
+/* Teacher's Today (FR-TCH-21): the next class on dark blue, then what to know before it. */
+.home-grid > .full {
+  grid-column: 1 / -1;
+}
+.next-up {
+  background: var(--hero);
+  color: var(--hero-ink);
+  border-radius: 28px;
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+.next-up h2 {
+  color: var(--hero-ink);
+  font-size: 2rem;
+}
+.next-up :focus-visible {
+  outline-color: var(--green);
+}
+.next-up .kicker {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--hero-muted);
+}
+.next-up .when {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--green);
+  color: var(--on-green);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.next-up .when .i {
+  width: 16px;
+  height: 16px;
+}
+.next-facts {
+  font-size: 1.15rem;
+  color: var(--hero-muted);
+  margin-top: 2px;
+}
+.next-lesson {
+  background: var(--hero-2);
+  border-radius: 18px;
+  padding: 14px 18px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.next-lesson strong {
+  font-size: 1.2rem;
+}
+.next-lesson .draft {
+  color: var(--hero-muted);
+}
+.next-lesson a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--hero-ink);
+  font-weight: 700;
+}
+.next-up .row {
+  gap: 12px;
+}
+.btn.light {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #152a5c;
+}
+.btn.light:hover {
+  background: #e4ecfa;
+}
+.btn.outline {
+  background: transparent;
+  border-color: var(--hero-muted);
+  color: var(--hero-ink);
+}
+.btn.outline:hover {
+  background: var(--hero-2);
+}
+.before {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.before li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: var(--surface-2);
+}
+.before li.away {
+  background: var(--pink-soft);
+}
+.before li strong {
+  font-size: 1.05rem;
+}
+.before li > span:not(.handed) {
+  color: var(--ink-2);
+}
+.before li a {
+  align-self: flex-start;
+  font-weight: 700;
+  color: var(--accent);
+}
+.handed {
+  display: flex;
+  gap: 4px;
+  margin: 4px 0 2px;
+}
+.handed i {
+  flex: 1;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--line);
+}
+.handed i.in {
+  background: var(--green);
+}
+.marking {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+.marking li,
+.class-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--surface-2);
+  min-width: 0;
+}
+.marking .who,
+.class-item .who {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.class-item h3 {
+  font-size: 1.1rem;
+}
+.face {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  font-weight: 700;
+}
+.face.green,
+.date-tile.green {
+  background: var(--green);
+  color: var(--on-green);
+}
+.face.blue,
+.date-tile.blue {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.face.pink,
+.date-tile.pink {
+  background: var(--pink);
+  color: var(--on-pink);
+}
+.class-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 12px;
+}
+.date-tile {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  line-height: 1.1;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.date-tile b {
+  font-size: 1.4rem;
+}
+@media (max-width: 640px) {
+  .next-up {
+    padding: 22px 20px;
+  }
+  .marking,
+  .class-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .class-item .sub {
+    white-space: normal;
+  }
+}
+.next-up > .spread {
+  flex-wrap: wrap;
+}
+.next-up > .spread .kicker {
+  white-space: nowrap;
 }

@@ -27,7 +27,7 @@ export const NAV: Record<Role, NavSection[]> = {
       ],
     },
   ],
-  teacher: [{ title: 'Teaching', items: [{ href: '/teacher', label: 'Dashboard', icon: 'home' }] }],
+  teacher: [{ title: 'Teaching', items: [{ href: '/teacher', label: 'Today', icon: 'home' }] }],
   student: [
     {
       title: 'Learning',
