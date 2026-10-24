@@ -5,17 +5,19 @@ import { expectAccessible } from './helpers';
 
 test.use({ storageState: stateFile('admin') });
 
+// Years far from today: the shared fixture's term (tests/e2e/fixtures.ts) runs 100 days from three weeks ago, so a
+// term in the next year collided with it once today reached late October (2026-10-24).
 test('Admin adds a term and makes it the active term', async ({ page }) => {
   await page.goto('/admin/terms');
   await expectAccessible(page);
   const form = page.getByRole('form', { name: 'Add a term' });
-  await form.getByLabel('Year').fill('2027');
+  await form.getByLabel('Year').fill('2031');
   await form.getByLabel('Term').selectOption('1');
-  await form.getByLabel('First day').fill('2027-01-09');
-  await form.getByLabel('Last day').fill('2027-03-28');
+  await form.getByLabel('First day').fill('2031-01-11');
+  await form.getByLabel('Last day').fill('2031-03-30');
   await form.getByRole('button', { name: 'Add term' }).click();
 
-  const row = page.getByRole('row', { name: /Term 1 · 2027/ });
+  const row = page.getByRole('row', { name: /Term 1 · 2031/ });
   await expect(row.getByText('Planned')).toBeVisible();
   await row.getByRole('button', { name: 'Make active' }).click();
   await expect(row.getByText('Active')).toBeVisible();
@@ -24,12 +26,12 @@ test('Admin adds a term and makes it the active term', async ({ page }) => {
 test('a term that overlaps another is refused with a clear message', async ({ page }) => {
   await page.goto('/admin/terms');
   const form = page.getByRole('form', { name: 'Add a term' });
-  await form.getByLabel('Year').fill('2027');
+  await form.getByLabel('Year').fill('2031');
   await form.getByLabel('Term').selectOption('2');
-  await form.getByLabel('First day').fill('2027-03-20');
-  await form.getByLabel('Last day').fill('2027-06-27');
+  await form.getByLabel('First day').fill('2031-03-22');
+  await form.getByLabel('Last day').fill('2031-06-29');
   await form.getByRole('button', { name: 'Add term' }).click();
-  await expect(form.getByRole('alert')).toHaveText('These dates overlap Term 1 · 2027.');
+  await expect(form.getByRole('alert')).toHaveText('These dates overlap Term 1 · 2031.');
 });
 
 test('Admin adds a course and writes its syllabus', async ({ page }) => {
