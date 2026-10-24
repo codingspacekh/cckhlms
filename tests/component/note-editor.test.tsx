@@ -204,4 +204,107 @@ describe('NoteEditor', () => {
     expect(submit).not.toHaveBeenCalled();
     expect(tool('Undo (Ctrl+Z)').getAttribute('type')).toBe('button');
   });
+
+  describe('more about links', () => {
+    it('opens the link form with Ctrl+K, and closes it with Escape or Cancel', async () => {
+      const { doc } = await setup();
+      act(() => void fireEvent.keyDown(doc, { key: 'k', ctrlKey: true }));
+      const address = screen.getByRole('textbox', { name: 'Link address' });
+      fireEvent.keyDown(address, { key: 'Escape' });
+      expect(screen.queryByRole('group', { name: 'Link' })).toBeNull();
+      act(() => void fireEvent.keyDown(doc, { key: 'k', ctrlKey: true }));
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(screen.queryByRole('group', { name: 'Link' })).toBeNull();
+    });
+
+    it('adds the address itself as the link text when nothing is selected', async () => {
+      const { saved, tool } = await setup('');
+      fireEvent.click(tool('Link (Ctrl+K)'));
+      fireEvent.change(screen.getByRole('textbox', { name: 'Link address' }), { target: { value: '/student/classes/c1/weeks/2' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add link' }));
+      await waitFor(() => expect(saved()).toBe('[/student/classes/c1/weeks/2](/student/classes/c1/weeks/2)'));
+    });
+
+    it('changes or removes a link that is already there', async () => {
+      const { saved, tool, selectAll } = await setup('[Hello](https://a.example)');
+      await selectAll();
+      fireEvent.click(tool('Link (Ctrl+K)'));
+      const address = screen.getByRole('textbox', { name: 'Link address' }) as HTMLInputElement;
+      expect(address.value).toBe('https://a.example');
+      fireEvent.change(address, { target: { value: 'https://b.example' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Change link' }));
+      await waitFor(() => expect(saved()).toBe('[Hello](https://b.example)'));
+      await selectAll();
+      fireEvent.click(tool('Link (Ctrl+K)'));
+      fireEvent.click(screen.getByRole('button', { name: 'Remove link' }));
+      await waitFor(() => expect(saved()).toBe('Hello'));
+    });
+  });
+
+  describe('more about the menu', () => {
+    const open = () => fireEvent.click(screen.getByRole('button', { name: 'Add code, a picture or a tip' }));
+    const focused = () => names([document.activeElement as HTMLElement])[0];
+
+    it('moves with the arrow keys, Home and End, wrapping round', async () => {
+      await setup();
+      open();
+      await waitFor(() => expect(focused()).toBe('Code'));
+      fireEvent.keyDown(document.activeElement!, { key: 'ArrowUp' });
+      expect(focused()).toBe('Link');
+      fireEvent.keyDown(document.activeElement!, { key: 'Home' });
+      expect(focused()).toBe('Code');
+      fireEvent.keyDown(document.activeElement!, { key: 'End' });
+      expect(focused()).toBe('Link');
+      fireEvent.keyDown(document.activeElement!, { key: 'ArrowDown' });
+      expect(focused()).toBe('Code');
+      fireEvent.keyDown(document.activeElement!, { key: 'Enter' }); // not a key the menu handles: the button does
+      expect(screen.getByRole('menu')).toBeTruthy();
+    });
+
+    it('closes when you start typing, and types the letter in the note', async () => {
+      const { saved } = await setup('');
+      open();
+      fireEvent.keyDown(screen.getAllByRole('menuitem')[0]!, { key: 'x' });
+      expect(screen.queryByRole('menu')).toBeNull();
+      await waitFor(() => expect(saved()).toBe('x'));
+    });
+
+    it('closes with Tab or the + button', async () => {
+      await setup();
+      open();
+      fireEvent.keyDown(screen.getAllByRole('menuitem')[0]!, { key: 'Tab' });
+      expect(screen.queryByRole('menu')).toBeNull();
+      open();
+      open();
+      expect(screen.queryByRole('menu')).toBeNull();
+    });
+
+    it('adds a code block, a heading, a list or a link from the menu', async () => {
+      const { saved } = await setup('Hello');
+      const choose = (name: string) => {
+        open();
+        fireEvent.click(screen.getAllByRole('menuitem').find((b) => names([b])[0] === name)!);
+      };
+      choose('Heading');
+      await waitFor(() => expect(saved()).toBe('## Hello'));
+      choose('List');
+      await waitFor(() => expect(saved()).toBe('- Hello')); // a heading becomes a plain list item
+      choose('Code');
+      await waitFor(() => expect(saved()).toMatch(/```python/));
+      choose('Link');
+      expect(screen.getByRole('textbox', { name: 'Link address' })).toBeTruthy();
+    });
+  });
+
+  it('pastes Markdown into a code block as it is', async () => {
+    const { doc, saved, tool } = await setup('');
+    fireEvent.click(tool('Code block'));
+    act(
+      () =>
+        void fireEvent.paste(doc, {
+          clipboardData: { getData: (t: string) => (t === 'text/plain' ? '## not a heading' : ''), types: ['text/plain'] },
+        }),
+    );
+    await waitFor(() => expect(saved()).toBe('```python\n## not a heading\n```'));
+  });
 });
