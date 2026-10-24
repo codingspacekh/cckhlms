@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 const fail = (error: string, status = 400) => Response.json({ ok: false, error }, { status });
 
-// Uploads a lesson attachment (FR-TCH-01). A route handler rather than a Server Action so the size and the
+// Uploads a lesson attachment (FR-TCH-01), or a picture for the note itself when inNote=1 (BR-22). A route handler rather than a Server Action so the size and the
 // caller are checked before the body is read, without raising the body limit of every action.
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   if (request.headers.get('origin') !== LMS_ORIGIN) return fail('Request not allowed from this site.', 403);
@@ -20,10 +20,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (length > MAX_ATTACHMENT_BYTES + 64 * 1024) return fail('That file is bigger than 10 MB.', 413);
 
   const { id } = await params;
-  const file = (await request.formData()).get('file');
+  const form = await request.formData();
+  const file = form.get('file');
   if (!(file instanceof File)) return fail('Choose a file to upload.');
   try {
-    const attachment = await addAttachment(actor, id, { name: file.name, bytes: new Uint8Array(await file.arrayBuffer()) });
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const attachment = await addAttachment(actor, id, { name: file.name, bytes }, { inNote: form.get('inNote') === '1' });
     revalidatePath('/teacher/classes', 'layout');
     revalidatePath('/student/classes', 'layout');
     return Response.json({ ok: true, attachment });

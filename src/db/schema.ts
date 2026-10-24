@@ -349,7 +349,8 @@ export const lessonTopic = pgTable(
   (t) => [primaryKey({ columns: [t.lessonId, t.topicId] })],
 );
 
-// Files attached to a lesson (FR-TCH-01). The bytes live in FileStorage under the row's id.
+// Files attached to a lesson (FR-TCH-01). The bytes live in FileStorage under the row's id. A picture shown in the
+// note itself (BR-22, M9) is marked in_note: it isn't one of the files to download.
 export const lessonAttachment = pgTable(
   'lesson_attachment',
   {
@@ -360,6 +361,7 @@ export const lessonAttachment = pgTable(
     filename: text('filename').notNull(),
     contentType: text('content_type').notNull(),
     size: integer('size').notNull(),
+    inNote: boolean('in_note').notNull().default(false),
     uploadedBy: text('uploaded_by').references(() => user.id, { onDelete: 'set null' }),
     createdAt: ts('created_at').notNull().defaultNow(),
   },

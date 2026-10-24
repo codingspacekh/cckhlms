@@ -14,10 +14,31 @@ vi.mock('@/modules/teaching/lesson-actions', () => ({
 vi.mock('@/components/teaching/note-editor/NoteEditor', async () => {
   const { useState } = await import('react');
   return {
-    NoteEditor: ({ initialMarkdown, onChange }: { initialMarkdown: string; onChange?: (md: string) => void }) => {
+    NoteEditor: ({
+      initialMarkdown,
+      onChange,
+      onPicture,
+    }: {
+      initialMarkdown: string;
+      onChange?: (md: string) => void;
+      onPicture?: (f: File) => Promise<string>;
+    }) => {
       const [value, setValue] = useState(initialMarkdown);
+      const [picture, setPicture] = useState('');
       return (
         <>
+          <button
+            type="button"
+            onClick={() =>
+              onPicture?.(new File([new Uint8Array([1, 2, 3])], 'output.png', { type: 'image/png' })).then(
+                (id) => setPicture(`added ${id}`),
+                (e: Error) => setPicture(`refused: ${e.message}`),
+              )
+            }
+          >
+            Add a test picture
+          </button>
+          <span data-testid="picture">{picture}</span>
           <textarea
             aria-label="Lesson note"
             value={value}
@@ -32,6 +53,16 @@ vi.mock('@/components/teaching/note-editor/NoteEditor', async () => {
     },
   };
 });
+// jsdom's Blob has no arrayBuffer(), which every browser has; read it through FileReader instead.
+Blob.prototype.arrayBuffer ??= function (this: Blob) {
+  return new Promise<ArrayBuffer>((resolve) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result as ArrayBuffer);
+    r.readAsArrayBuffer(this);
+  });
+};
+const fitImage = vi.fn(async (_path: string, bytes: Uint8Array, _max?: number) => bytes.slice(0, 2));
+vi.mock('@/lib/project/shrink', () => ({ fitImage: (...a: [string, Uint8Array, number]) => fitImage(...a) }));
 const { LessonForm } = await import('@/app/teacher/classes/[id]/weeks/[week]/LessonForm');
 
 const base = {
@@ -192,6 +223,61 @@ describe('LessonForm', () => {
       expect(saveLessonAction).not.toHaveBeenCalled();
       expect(publish().getByText('Changes not saved. Press Update to show them to students.')).toBeTruthy();
       expect(leave()).toBe(true);
+    });
+  });
+
+  describe('pictures', () => {
+    const upload = vi.fn();
+    const okUpload = () =>
+      upload.mockResolvedValue(new Response(JSON.stringify({ ok: true, attachment: { id: 'pic-1' } }), { status: 200 }));
+    afterEach(() => vi.unstubAllGlobals());
+
+    it('in a new lesson, saves the draft first, then shrinks the picture and uploads it for the note', async () => {
+      vi.stubGlobal('fetch', upload);
+      okUpload();
+      saveLessonAction.mockResolvedValue({ ok: true, message: 'Draft saved.' });
+      render(<LessonForm {...base} lesson={null} />);
+      type('Title', 'Pictures');
+      fireEvent.click(screen.getByRole('button', { name: 'Add a test picture' }));
+      await waitFor(() => expect(screen.getByTestId('picture').textContent).toBe('added pic-1'));
+      expect((saveLessonAction.mock.calls[0]![1] as FormData).get('intent')).toBe('draft');
+      expect(fitImage).toHaveBeenCalledWith('output.png', expect.any(Uint8Array), 2 * 1024 * 1024);
+      const [url, init] = upload.mock.calls[0]!;
+      expect(url).toBe('/api/sessions/s3/attachments');
+      const body = (init as RequestInit).body as FormData;
+      expect(body.get('inNote')).toBe('1');
+      expect((body.get('file') as File).size).toBe(2); // the shrunk picture
+      fireEvent.click(screen.getByRole('button', { name: 'Add a test picture' }));
+      await waitFor(() => expect(upload).toHaveBeenCalledTimes(2));
+      expect(saveLessonAction).toHaveBeenCalledTimes(1); // saved once is enough
+    });
+
+    it('asks for a title before a new lesson can have pictures', async () => {
+      vi.stubGlobal('fetch', upload);
+      render(<LessonForm {...base} lesson={null} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Add a test picture' }));
+      await waitFor(() =>
+        expect(screen.getByTestId('picture').textContent).toBe('refused: Add a title first, so the lesson can be saved with its pictures.'),
+      );
+      expect(upload).not.toHaveBeenCalled();
+    });
+
+    it('passes on why the server refused a picture', async () => {
+      vi.stubGlobal('fetch', upload);
+      upload.mockResolvedValue(new Response(JSON.stringify({ ok: false, error: 'A note can have up to 20 pictures.' }), { status: 400 }));
+      render(<LessonForm {...base} lesson={saved('draft')} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Add a test picture' }));
+      await waitFor(() => expect(screen.getByTestId('picture').textContent).toBe('refused: A note can have up to 20 pictures.'));
+      expect(saveLessonAction).not.toHaveBeenCalled();
+    });
+
+    it('marks a draft that saves itself, so the server keeps pictures the teacher may be moving', async () => {
+      vi.useFakeTimers();
+      saveLessonAction.mockResolvedValue({ ok: true, message: 'Draft saved.' });
+      render(<LessonForm {...base} lesson={saved('draft')} />);
+      type('Lesson note', 'Moving a picture');
+      await act(() => vi.advanceTimersByTimeAsync(2100));
+      expect((saveLessonAction.mock.calls[0]![1] as FormData).get('auto')).toBe('1');
     });
   });
 });

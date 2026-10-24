@@ -11,7 +11,7 @@ import { renderNote } from '@/lib/markdown';
 import type { Actor } from '@/server/actor';
 import { audit } from '@/server/audit';
 import { assertCan, ValidationError } from '@/server/errors';
-import { attachmentsOf, type AttachmentRow } from './attachments';
+import { attachmentsOf, removeUnusedNotePictures, type AttachmentRow } from './attachments';
 import { reviewCounts } from './qa';
 import { reportedSessions } from './reports';
 import { lessonState, publishAtFor, type LessonState, type LessonStatus } from './rules';
@@ -157,6 +157,8 @@ export const lessonInputSchema = z.object({
   intent: z.enum(['draft', 'publish', 'schedule']),
   publishDate: z.string().optional(),
   publishTime: z.string().optional(),
+  // A draft saving itself (FR-TCH-22). It keeps pictures the note no longer shows: the teacher may be moving one.
+  auto: z.boolean().optional(),
 });
 export type LessonInput = z.input<typeof lessonInputSchema>;
 
@@ -197,7 +199,7 @@ export async function saveLesson(
   const status: LessonStatus = input.intent === 'draft' ? 'draft' : 'published';
 
   const state = lessonState({ status, publishAt }, now);
-  await db.transaction(async (tx) => {
+  const lessonId = await db.transaction(async (tx) => {
     const [row] = await tx
       .insert(lesson)
       .values({
@@ -236,7 +238,9 @@ export async function saveLesson(
       },
       tx,
     );
+    return row!.id;
   });
+  if (!input.auto) await removeUnusedNotePictures(actor.userId, lessonId, input.contentMd);
   return { state };
 }
 
