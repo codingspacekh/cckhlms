@@ -6,6 +6,23 @@ import { ClubLogo } from './ClubLogo';
 import { CLASS_SECTIONS, classSectionActive, NAV, type ClassLink, type Role } from './nav';
 import { SignOutButton } from './SignOutButton';
 
+// A class's name without its day and time ("Python Level 1 · Sat 09:00" → "Python Level 1"), which fits the
+// sidebar; screen readers still hear the whole name.
+function ClassName({ name }: { name: string }) {
+  const [short, ...rest] = name.split(' · ');
+  return (
+    <span>
+      {short}
+      {rest.length > 0 && (
+        <>
+          {' '}
+          <span className="sr-only">· {rest.join(' · ')}</span>
+        </>
+      )}
+    </span>
+  );
+}
+
 const initials = (name: string) =>
   name
     .split(/\s+/)
@@ -37,13 +54,21 @@ export function Sidebar({ role, user, classes = [] }: { role: Role; user: { name
           <div className="navsec">
             <div className="sec">My classes</div>
             {classes.map((k) => {
-              const base = `/teacher/classes/${k.id}`;
+              const base = `/${role === 'student' ? 'student' : 'teacher'}/classes/${k.id}`;
               const open = pathname === base || pathname.startsWith(`${base}/`);
+              // A student's class is one page (lessons and work); a teacher's opens into its sections.
+              if (role === 'student')
+                return (
+                  <Link key={k.id} href={base} aria-current={open ? 'page' : undefined} title={k.name}>
+                    <Icon name="book" />
+                    <ClassName name={k.name} />
+                  </Link>
+                );
               return (
                 <div key={k.id} className="navgroup">
                   <Link href={base} className={open ? 'open' : undefined} title={k.name}>
                     <Icon name="layers" />
-                    <span>{k.name}</span>
+                    <ClassName name={k.name} />
                   </Link>
                   {open && (
                     <div className="subnav" role="group" aria-label={`${k.name} sections`}>

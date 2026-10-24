@@ -18,7 +18,7 @@ test.describe('student', () => {
   test('starts a Web project and sees their page as they type, saved', async ({ page }) => {
     const problems = await watchProblems(page);
     await page.goto('/student');
-    await page.getByRole('link', { name: 'Playground' }).click();
+    await page.getByRole('navigation', { name: 'Sections' }).getByRole('link', { name: 'Playground' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Playground' })).toBeVisible();
     await expect(page.getByRole('table', { name: 'My projects' })).toContainText('No projects yet.');
     await expectAccessible(page);
