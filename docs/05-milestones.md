@@ -514,7 +514,7 @@ The next milestone does not start until all four are true.
 > - **Not done, on purpose:** the 4× repeated class-access queries per page (a 10–15 % CPU saving; it needs care after Server Actions); MFA for Admin (beyond ASVS L1).
 > - **Exit criterion:** all checks pass and are recorded here, in `docs/security-review.md` and in runbook §6. **The owner signs off the runbook and M7.**
 
-### M8 — Club look (4 days)
+### M8 — Club look (4 days) — ✅ DONE 2026-10-24 (owner signed off on a local production build; PRs #40–#43)
 **Why:** the owner felt the app looked like a generic AI-made template (2026-10-24) and asked for a look that is clearly the club's own and friendly for children. The redesign prototype was approved the same day: "it's very well designed. approved." (https://claude.ai/artifact/SoozYG2faUcsPkZZ8nS2KB, three screens: Student "My week", Teacher "Today", Admin dashboard).
 
 **Goal:** every screen wears the club's brand, and each role's home page leads with what that person needs today.
@@ -549,7 +549,7 @@ The next milestone does not start until all four are true.
 > - **Teacher "Today", #42:** next class with its lesson, Take attendance; who was away last time, homework handed in, unanswered questions; hand-ins to mark; my classes.
 > - **Admin dashboard, #43:** term banner with the weeks as puzzle pieces; the four numbers in one strip; Needs your attention first; this weekend; classes with "Below pass"; score bands.
 > - **Left out on purpose** (new features, not asked for): "Show on the big screen" (teacher) and "Remind" for missing weekly reports (admin). Student work cards show names and times, not program output (no runner in v1).
-> - **Exit criterion:** the owner checks the three home pages on a local production build (`npm run seed:dev` + `npm run build` + `npm start`) and signs off M8.
+> - **Exit criterion:** ✅ met 2026-10-24: the owner checked the three home pages on a local production build (`npm run seed:dev` + `npm run build` + `npm start`) and signed off M8.
 
 ### R2 — Club-wide launch
 - All classes of the next term (e.g. Term 2 · 2027) are set up and run on `lms.cckh.dev`. Teachers get a short walkthrough, and students get login slips.
