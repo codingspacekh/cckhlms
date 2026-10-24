@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
+import { ClubLogo } from '@/components/shell/ClubLogo';
 import { currentActor } from '@/server/guard';
 import { homeFor } from '@/server/policy';
 import { LoginForm } from './LoginForm';
@@ -13,13 +14,7 @@ export default async function LoginPage() {
     <main className="center">
       <div className="card stack narrow">
         <div className="brand">
-          <div className="logo" aria-hidden="true">
-            ck
-          </div>
-          <div>
-            <b>CCKH LMS</b>
-            <small>lms.cckh.dev</small>
-          </div>
+          <ClubLogo />
         </div>
         <div>
           <h1>Sign in</h1>

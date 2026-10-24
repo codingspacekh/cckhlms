@@ -92,6 +92,12 @@
 | FR-TCH-18 | **Graphical view** of class and student performance: score trend by week, attendance by week, homework completion, score distribution, topic-level weak areas. | M |
 | FR-TCH-20 | **Syllabus coverage** per class: which course syllabus topics have been covered (from weekly reports) and which are still to come. Also visible to Admin. | S |
 
+**Dashboard**
+
+| ID | Requirement | Pri |
+|---|---|---|
+| FR-TCH-21 | **Today** dashboard (added 2026-10-24, M8): the teacher's next class first (time, room, students, that week's lesson, Take attendance); before class: who was away last week, how many handed in the latest homework, questions waiting; new work to mark; this weekend's classes. | S |
+
 ### 1.4 Student (STU)
 
 | ID | Requirement | Pri |
@@ -106,6 +112,7 @@
 | FR-STU-08 | Download own certificates. | S |
 | FR-STU-09 | Receive in-app notifications: new lesson, new homework, due soon, graded, question answered. | S |
 | FR-STU-10 | **Report** a question or reply as inappropriate. Once reported, it is hidden from students until a teacher reviews it. | S |
+| FR-STU-11 | **Term puzzle** (added 2026-10-24, M8): on "My week", one puzzle piece per weekly session of each class, filled in as the student earns it (BR-21). | S |
 
 ### 1.5 Embedded Code Editor (CODE)
 
@@ -158,6 +165,7 @@ Languages: **Python 3**, **Java** (multi-file, packages), **Web (HTML/CSS/JS)**.
 | BR-18 | **Transfer:** moving a student to another class ends the old enrolment (withdrawn) and starts a new one. Scores don't carry over unless Admin moves them (logged). |
 | BR-19 | **Time:** all timestamps are stored in UTC; session dates/times and due dates are entered and shown in the club time zone. "Next session", "due" and "late" are always worked out in the club time zone. |
 | BR-20 | A reported Q&A post is hidden from students (shown to the author as "under review") until a teacher restores or removes it. |
+| BR-21 | **Term puzzle piece** (FR-STU-11): a past week's piece is **earned** when the student came to that week's session (present, late or excused) and every piece of work set that week that is already due has been handed in or excused. Otherwise it reads **Away** (absent) or **Not yet** (work missing, so handing it in late still earns the piece). The next session's piece is **This week**, later ones **Coming up**. Cancelled sessions have no piece; weeks before the student joined read **Joined later**. The puzzle never affects scores, pass/fail or certificates. |
 
 ---
 

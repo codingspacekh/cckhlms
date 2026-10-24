@@ -10,6 +10,7 @@ import {
   nextSession,
   numberWeeks,
   overlaps,
+  termWeek,
   scheduleLabel,
   todayIn,
   weekdayOf,
@@ -118,5 +119,20 @@ describe('toClubTime', () => {
   it('shows an instant as a club date and time, the reverse of zonedToUtc', () => {
     expect(toClubTime(new Date('2027-01-08T23:00:00Z'), 'Asia/Phnom_Penh')).toEqual({ date: '2027-01-09', time: '06:00' });
     expect(toClubTime(zonedToUtc('2027-07-10', '10:00', 'Europe/London'), 'Europe/London')).toEqual({ date: '2027-07-10', time: '10:00' });
+  });
+});
+
+// M8: the top bar and the admin banner say which week of the term it is.
+describe('termWeek', () => {
+  const t4 = { startDate: '2026-10-03', endDate: '2026-12-27' };
+  it('counts weeks from the term start, 7 days each', () => {
+    expect(termWeek('2026-10-03', t4)).toEqual({ week: 1, weeks: 13 });
+    expect(termWeek('2026-10-09', t4)).toEqual({ week: 1, weeks: 13 });
+    expect(termWeek('2026-10-24', t4)).toEqual({ week: 4, weeks: 13 });
+    expect(termWeek('2026-12-27', t4)).toEqual({ week: 13, weeks: 13 });
+  });
+  it('is null before the term starts and after it ends', () => {
+    expect(termWeek('2026-10-02', t4)).toBeNull();
+    expect(termWeek('2026-12-28', t4)).toBeNull();
   });
 });

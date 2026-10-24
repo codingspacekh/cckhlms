@@ -24,7 +24,8 @@ flowchart LR
   R1 --> M5["M5<br/>Reports & statistics"]
   M5 --> M6["M6<br/>Term operations<br/>certificates · promotion"]
   M6 --> M7["M7<br/>Hardening"]
-  M7 --> R2(["R2 · Club-wide launch"])
+  M7 --> M8["M8<br/>Club look<br/>brand · three homes"]
+  M8 --> R2(["R2 · Club-wide launch"])
   R2 --> L["Later<br/>Pyodide · runner"]
 ```
 
@@ -43,6 +44,7 @@ flowchart LR
 | **M5** ✅ | Reports & statistics | 60/30/10 overall score, end-term exam, term reports with pass/fail, charts for all three roles, admin dashboard | FR-TCH-15…18 · FR-ADM-09, 10 · FR-STU-07 | 6 days |
 | **M6** ✅ | Term operations | Certificates + `/verify`, promotion wizard, login slips, CSV import, notifications, audit log, playground | FR-ADM-11…14 · FR-AUTH-08, 09 · FR-STU-08, 09 · FR-SYS-01, 02 · FR-CODE-07 | 6 days |
 | **M7** | Hardening | ASVS L1 review, ZAP, k6 load test, disaster-recovery rehearsal, runbook, privacy check | NFR-01…12 | 5 days |
+| **M8** | Club look | Champion Coders brand (logo, dark blue, Titillium Web), kid-friendly styling, new home pages for all three roles, term puzzle | NFR-08 · FR-STU-01, 11 · FR-TCH-21 · FR-ADM-10 · BR-21 | 4 days |
 | — | **R2: Club-wide launch** | Every class of the next term runs on `lms.cckh.dev` | | |
 
 \* *Effort = focused working days for one developer, tests included. Total ≈ **45 focused days**. At 2–3 focused days a week alongside teaching, that is about **4–5 months**: R1 could pilot in **Term 1 · 2027** (from Sat 9 Jan 2027) and R2 launch in **Term 2 · 2027**. These are planning ranges (±30%), not promises. AI-assisted pace on codingspacekh was faster, but the server work here is new.*
@@ -511,6 +513,27 @@ The next milestone does not start until all four are true.
 >   - The runbook is complete: version-aware commands, the full restore, alerts for sign-in limits and slow pages, software updates, renewals, the deletion log, and the **G1 go-live checklist** (§8).
 > - **Not done, on purpose:** the 4× repeated class-access queries per page (a 10–15 % CPU saving; it needs care after Server Actions); MFA for Admin (beyond ASVS L1).
 > - **Exit criterion:** all checks pass and are recorded here, in `docs/security-review.md` and in runbook §6. **The owner signs off the runbook and M7.**
+
+### M8 — Club look (4 days)
+**Why:** the owner felt the app looked like a generic AI-made template (2026-10-24) and asked for a look that is clearly the club's own and friendly for children. The redesign prototype was approved the same day: "it's very well designed. approved." (https://claude.ai/artifact/SoozYG2faUcsPkZZ8nS2KB, three screens: Student "My week", Teacher "Today", Admin dashboard).
+
+**Goal:** every screen wears the club's brand, and each role's home page leads with what that person needs today.
+
+**Build (one PR each, each starting from `main`):**
+1. **Brand and shell** (`m8-brand`): the Champion Coders logo in a dark blue sidebar; **Titillium Web** for all text (Khmer names fall back to the system's Khmer font); new colour tokens for light and dark (dark blue `#152a5c`, action blue `#0a5aa0`, the logo's green and pink as accents); larger text (16 px) and rounder cards, buttons and fields with touch targets of at least 44 px; the top bar shows the date and the term week. Every existing screen picks the look up from the shared styles.
+2. **Student "My week"** (`m8-student-home`, FR-STU-01, FR-STU-11, BR-21): a greeting card with the next class (day, time, room, teacher) and a button to its lesson; the **term puzzle**; a to-do list (work due, then recently done with marks); the latest project; the latest teacher feedback.
+3. **Teacher "Today"** (`m8-teacher-home`, FR-TCH-21): the next class first (time, room, students, that week's lesson, Take attendance); before class: who was away last week, how many handed in the latest homework, questions waiting; new work to mark; this weekend's classes.
+4. **Admin dashboard** (`m8-admin-home`, FR-ADM-10): a term banner (which week, weeks to go, the term's weeks as puzzle pieces); the four headline numbers in one strip; **Needs your attention** first; this weekend; the classes table; the score-band chart in the new colours.
+
+**Left out of the prototype on purpose:** "Show on the big screen" for teachers and "Remind" for missing weekly reports. Both would be new features, so they wait until the owner asks for them. Student work cards show the work's name and time, not program output, because the server doesn't run code (no runner in v1).
+
+**Tests first:**
+- Unit: every text colour token passes 4.5:1 against the surfaces it sits on, in light and dark (contrast computed in the test, not eyeballed); the light and dark token sets stay in step; the root layout loads Titillium Web.
+- Unit: the term puzzle rule (BR-21): earned, Away, Not yet, This week, Coming up, Joined later; cancelled sessions have no piece; late hand-in earns the piece; excused work and excused absence count.
+- Integration: the student, teacher and admin home data against a seeded class (next class, puzzle pieces, to-do order, away last week, handed-in count, questions waiting, work to mark, attention list).
+- Playwright: the logo shows with the club's name as its text; each home page shows its new sections; the existing layout, theme, phone-width and accessibility sweep tests stay green in light and dark.
+
+**Exit criteria:** the three home pages match the approved prototype; every screen passes the accessibility sweep in both themes and at phone width; the owner signs off.
 
 ### R2 — Club-wide launch
 - All classes of the next term (e.g. Term 2 · 2027) are set up and run on `lms.cckh.dev`. Teachers get a short walkthrough, and students get login slips.

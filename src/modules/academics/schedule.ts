@@ -11,6 +11,15 @@ export const addDays = (date: string, days: number) =>
   new Date(toUtcMidnight(date).getTime() + days * 86_400_000).toISOString().slice(0, 10);
 export const weekdayOf = (date: string) => WEEKDAYS[toUtcMidnight(date).getUTCDay()]!;
 
+const daysBetween = (from: string, to: string) => Math.round((toUtcMidnight(to).getTime() - toUtcMidnight(from).getTime()) / 86_400_000);
+
+// Which week of a term a club date falls in (M8: top bar, admin banner): 7-day weeks from the start date; null
+// outside the term.
+export function termWeek(today: string, t: { startDate: string; endDate: string }): { week: number; weeks: number } | null {
+  if (today < t.startDate || today > t.endDate) return null;
+  return { week: Math.floor(daysBetween(t.startDate, today) / 7) + 1, weeks: Math.floor(daysBetween(t.startDate, t.endDate) / 7) + 1 };
+}
+
 export function addMinutes(time: string, minutes: number): string {
   const [h, m] = time.split(':').map(Number) as [number, number];
   const total = (h * 60 + m + minutes) % (24 * 60);
