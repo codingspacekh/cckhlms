@@ -9,6 +9,7 @@ import { studentWeekWork } from '@/modules/assessments/service';
 import { myStanding } from '@/modules/assessments/submissions';
 import { formatSize } from '@/modules/teaching/attachment-rules';
 import { getClubSettings } from '@/modules/club/service';
+import { NoteHtml } from '@/components/teaching/NoteHtml';
 import { QaBoard } from '@/components/teaching/QaBoard';
 import { classLessons, readLesson } from '@/modules/teaching/lessons';
 import { lessonQuestions } from '@/modules/teaching/qa';
@@ -82,12 +83,9 @@ export default async function StudentLessonPage({ params }: { params: Promise<{ 
       )}
       <div className="lesson-grid">
         <div className="stack">
-          {/* Sanitised by renderMarkdown on the server (src/lib/markdown.ts). */}
-          <article
-            className="card md"
-            aria-label="Lesson note"
-            dangerouslySetInnerHTML={{ __html: l.html || '<p>No notes for this week.</p>' }}
-          />
+          <article className="card" aria-label="Lesson note">
+            {l.html ? <NoteHtml html={l.html} /> : <p className="muted">No notes for this week.</p>}
+          </article>
           {work.length > 0 && (
             <section className="card stack" aria-labelledby="week-work-title">
               <h2 id="week-work-title">Classwork & homework</h2>

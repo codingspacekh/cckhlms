@@ -7,7 +7,7 @@ import { classSession, course, klass, lesson, lessonTopic, syllabusTopic } from 
 import { classAccess } from '@/modules/academics/access';
 import { todayIn } from '@/modules/academics/schedule';
 import { getClubSettings } from '@/modules/club/service';
-import { renderMarkdown } from '@/lib/markdown';
+import { renderNote } from '@/lib/markdown';
 import type { Actor } from '@/server/actor';
 import { audit } from '@/server/audit';
 import { assertCan, ValidationError } from '@/server/errors';
@@ -297,7 +297,7 @@ export async function readLesson(actor: Actor | null, classId: string, week: num
     week,
     date: l.date,
     title: l.lesson.title,
-    html: renderMarkdown(l.lesson.contentMd),
+    html: renderNote(l.lesson.contentMd),
     topics: l.topics,
     attachments: (await attachmentsOf([l.lesson.id])).map(({ lessonId: _, ...a }) => a),
     weeks: lessons.map((x) => x.week),

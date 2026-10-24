@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { renderMarkdown } from '@/lib/markdown';
+import { renderNote } from '@/lib/markdown';
 import { toClubTime } from '@/modules/academics/schedule';
 import { lessonForEdit } from '@/modules/teaching/lessons';
 import { sessionEnd } from '@/modules/teaching/rules';
@@ -24,7 +24,7 @@ export default async function LessonNotePage({ params }: { params: Promise<{ id:
         lesson={e.lesson && { title: e.lesson.title, contentMd: e.lesson.contentMd, state: e.lesson.state, topicIds: e.lesson.topicIds }}
         schedule={schedule}
         timeZone={e.timeZone}
-        initialHtml={renderMarkdown(e.lesson?.contentMd ?? '')}
+        initialHtml={renderNote(e.lesson?.contentMd ?? '')}
       />
       <FilesForm classId={id} sessionId={e.session.id} lessonSaved={e.lesson !== null} attachments={e.attachments} />
     </>

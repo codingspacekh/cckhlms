@@ -71,7 +71,8 @@ test.describe('student', () => {
   test('sees the image in the note and the files list, and opens a file', async ({ page }) => {
     const problems = await watchProblems(page);
     await page.goto(`/student/classes/${c.classId}/weeks/6`);
-    const img = page.getByRole('article', { name: 'Lesson note' }).getByRole('img', { name: 'diagram.png' });
+    // A picture on its own line is a figure named by its caption (FR-STU-12).
+    const img = page.getByRole('article', { name: 'Lesson note' }).getByRole('figure', { name: 'diagram.png' }).locator('img');
     await expect(img).toBeVisible();
     expect(await img.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBe(1);
     const list = page.getByRole('list', { name: 'Lesson files' });

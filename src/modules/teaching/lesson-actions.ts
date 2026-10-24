@@ -1,6 +1,6 @@
 'use server';
 import { revalidatePath } from 'next/cache';
-import { renderMarkdown } from '@/lib/markdown';
+import { renderNote } from '@/lib/markdown';
 import { formatDate } from '@/modules/academics/schedule';
 import { formText as t, toResult, type FormResult } from '@/server/action-result';
 import { currentActor } from '@/server/guard';
@@ -34,7 +34,7 @@ export async function saveLessonAction(_prev: FormResult | null, form: FormData)
 // The editor's live preview: the same server-side renderer students get (NFR-05).
 export async function previewMarkdownAction(source: string): Promise<string> {
   if (!(await currentActor())) return '';
-  return renderMarkdown(String(source).slice(0, MAX_LESSON_CHARS));
+  return renderNote(String(source).slice(0, MAX_LESSON_CHARS));
 }
 
 export async function removeAttachmentAction(classId: string, attachmentId: string): Promise<FormResult> {
