@@ -14,3 +14,7 @@ export function classWhen(s: { date: string; startTime: string }, today: string)
 }
 
 export const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? '';
+
+// "Good morning" before noon, "Good afternoon" until 5 pm, else "Good evening" (an hour on the club's clock).
+export const greeting = (hour: number) =>
+  hour >= 5 && hour < 12 ? 'Good morning' : hour >= 12 && hour < 17 ? 'Good afternoon' : 'Good evening';

@@ -59,6 +59,10 @@ const PAIRS = [
   ['--side-muted', '--side'],
   ['--side-ink', '--side-2'],
   ['--side-active-ink', '--side-active'],
+  ['--hero-ink', '--hero'],
+  ['--hero-muted', '--hero'],
+  ['--hero-ink', '--hero-2'],
+  ['--hero-muted', '--hero-2'],
 ];
 
 describe.each([
