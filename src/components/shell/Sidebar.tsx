@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
+import { ClubLogo } from './ClubLogo';
 import { CLASS_SECTIONS, classSectionActive, NAV, type ClassLink, type Role } from './nav';
 import { SignOutButton } from './SignOutButton';
 
@@ -18,13 +19,7 @@ export function Sidebar({ role, user, classes = [] }: { role: Role; user: { name
   return (
     <aside className="side">
       <div className="brand">
-        <div className="logo" aria-hidden="true">
-          ck
-        </div>
-        <div>
-          <b>CCKH LMS</b>
-          <small>Coding club</small>
-        </div>
+        <ClubLogo />
       </div>
       <nav className="nav" aria-label="Sections">
         {NAV[role].map((section) => (

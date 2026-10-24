@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { ClubLogo } from '@/components/shell/ClubLogo';
 import { Pill } from '@/components/ui/Pill';
 import { formatDay } from '@/modules/academics/schedule';
 import { verifyCertificate } from '@/modules/certificates/certificates';
@@ -15,13 +16,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
     <main className="center">
       <section className="card stack narrow" aria-labelledby="verify-title">
         <div className="brand">
-          <div className="logo" aria-hidden="true">
-            ck
-          </div>
-          <div>
-            <b>CCKH LMS</b>
-            <small>Certificate check</small>
-          </div>
+          <ClubLogo />
         </div>
         <h1 id="verify-title">Certificate check</h1>
         {!v ? (
