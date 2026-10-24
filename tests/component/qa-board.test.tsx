@@ -72,7 +72,8 @@ describe('QaBoard for a student', () => {
     fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'How?' } });
     fireEvent.change(screen.getByLabelText('Code (optional)'), { target: { value: 'x = 1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Post question' }));
-    expect((await screen.findByRole('status')).textContent).toBe('Question posted.');
+    // The status line is always there (empty until something happens), so wait for its text, not for it.
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('Question posted.'));
     expect(actions.askQuestionAction).toHaveBeenCalledWith('c1', 3, 'How?', 'x = 1');
     expect((screen.getByLabelText('Your question') as HTMLTextAreaElement).value).toBe('');
   });
@@ -94,7 +95,8 @@ describe('QaBoard for a student', () => {
     const dialog = screen.getByRole('dialog');
     fireEvent.change(within(dialog).getByLabelText('Reason (optional)'), { target: { value: 'Rude' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Report' }));
-    expect((await screen.findByRole('status')).textContent).toBe('Thanks.');
+    // The status line is always there (empty until something happens), so wait for its text, not for it.
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('Thanks.'));
     expect(actions.reportPostAction).toHaveBeenCalledWith('c1', { type: 'question', id: 'q1' }, 'Rude');
   });
 

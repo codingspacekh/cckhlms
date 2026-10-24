@@ -183,6 +183,36 @@ describe('NoteEditor', () => {
       expect(names(screen.getAllByRole('menuitem'))).toEqual(['Code', 'Picture', 'Tip box', 'Heading', 'List', 'Link']);
     });
 
+    it('puts a picture in place of an empty line, and shows a picture from before M9 with no size picked', async () => {
+      const onPicture = vi.fn().mockResolvedValue(ID);
+      const { saved } = await setup('', { onPicture });
+      fireEvent.change(screen.getByLabelText('Choose a picture'), { target: { files: [file()] } });
+      await waitFor(() => expect(saved()).toBe(`![](/api/files/${ID}#medium)`));
+      cleanup();
+      await setup('![Loop diagram](/files/abc)', { onPicture });
+      const sizes = await screen.findByRole('group', { name: 'Picture size' });
+      expect(
+        within(sizes)
+          .getAllByRole('button')
+          .map((b) => b.getAttribute('aria-pressed')),
+      ).toEqual(['false', 'false', 'false']);
+      expect((screen.getByRole('textbox', { name: /^Caption/ }) as HTMLInputElement).value).toBe('Loop diagram');
+    });
+
+    it('ignores files that aren’t pictures, and explains a failure that has no message', async () => {
+      const onPicture = vi.fn().mockRejectedValue('offline');
+      const { doc } = await setup('Hello', { onPicture });
+      act(
+        () =>
+          void fireEvent.paste(doc, {
+            clipboardData: { files: [new File(['x'], 'notes.pdf', { type: 'application/pdf' })], getData: () => '', types: ['Files'] },
+          }),
+      );
+      expect(onPicture).not.toHaveBeenCalled();
+      fireEvent.change(screen.getByLabelText('Choose a picture'), { target: { files: [file()] } });
+      await waitFor(() => expect(screen.getByRole('alert').textContent).toBe('The picture couldn’t be added. Try again.'));
+    });
+
     it('changes a picture’s size and caption, and removes it', async () => {
       const { saved } = await setup(`![](/api/files/${ID}#medium)`, { onPicture: vi.fn() });
       const tools = await screen.findByRole('group', { name: 'Picture size' });
