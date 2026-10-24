@@ -1,10 +1,10 @@
 // The admin dashboard (FR-ADM-10): the classes running now (active, in a term that isn't closed), with headline
 // tiles, standings across classes, this weekend's sessions, a classes table, and what needs attention: students
 // flagged as needing support, weekly reports not written for held sessions, and low attendance.
-import { and, asc, eq, inArray, ne } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, lte, ne } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { classTeacher, klass, studentReport, term, user } from '@/db/schema';
-import { addMinutes, todayIn } from '@/modules/academics/schedule';
+import { addMinutes, termWeek, todayIn } from '@/modules/academics/schedule';
 import { getClubSettings } from '@/modules/club/service';
 import { reportedSessions } from '@/modules/teaching/reports';
 import { weeksOf } from '@/modules/teaching/weeks';
@@ -54,7 +54,15 @@ export async function adminDashboard(actor: Actor | null, opts: Opts = {}) {
   const now = opts.now ?? new Date();
   const today = todayIn((await getClubSettings()).timeZone, now);
   const weekend = weekendOf(today);
-  const classes = await runningClasses();
+  const [classes, [running]] = await Promise.all([
+    runningClasses(),
+    db
+      .select({ name: term.name, number: term.number, startDate: term.startDate, endDate: term.endDate })
+      .from(term)
+      .where(and(lte(term.startDate, today), gte(term.endDate, today)))
+      .orderBy(desc(term.startDate))
+      .limit(1),
+  ]);
   const loaded = await Promise.all(
     classes.map(async (c) => {
       const [standings, sessions] = await Promise.all([loadStandings(c.id, { now }), weeksOf(c.id)]);
@@ -78,6 +86,8 @@ export async function adminDashboard(actor: Actor | null, opts: Opts = {}) {
   });
   return {
     today,
+    // The term running today and which week of it this is (M8 banner); null between terms.
+    term: running ? { ...running, ...termWeek(today, running)! } : null,
     tiles: {
       activeClasses: classes.length,
       students: new Set(students.map((s) => s.studentId)).size,

@@ -35,7 +35,12 @@ test.describe('signed out', () => {
     await page.getByLabel('Password').fill(USERS.admin.password);
     await page.getByRole('button', { name: 'Sign in' }).click();
     await expect(page).toHaveURL(/\/admin$/);
-    await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+    // M8: the dashboard's heading says where the term is; the sidebar marks Dashboard as the page.
+    await expect(page.getByRole('navigation', { name: 'Sections' }).getByRole('link', { name: 'Dashboard' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    await expect(page.getByRole('heading', { level: 1, name: /^Term \d is in Week \d+$|^No term is running today$/ })).toBeVisible();
     expect(await problems.cspViolations()).toEqual([]);
     expect(problems.consoleErrors).toEqual([]);
   });

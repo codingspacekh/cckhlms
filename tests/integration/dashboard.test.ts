@@ -134,6 +134,12 @@ afterAll(async () => {
 });
 
 describe('the admin dashboard', () => {
+  it('names the term running today and which week of it this is (M8 banner)', async () => {
+    const d = await adminDashboard(admin, { now: NOW }); // Wed 20 Jan 2027
+    expect(d.term).toEqual({ name: 'Term 1 · 2027', number: 1, startDate: '2027-01-09', endDate: '2027-04-04', week: 2, weeks: 13 });
+    expect((await adminDashboard(admin, { now: new Date('2027-04-20T05:00:00Z') })).term).toBeNull(); // between terms
+  });
+
   it('tiles: active classes, students, attendance this term, and students needing support', async () => {
     const d = await adminDashboard(admin, { now: NOW });
     // attendance: week 1 3/3, week 2 2/3 → 5 / 6 = 83 %
