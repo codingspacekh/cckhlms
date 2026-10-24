@@ -69,7 +69,7 @@ describe('pictures', () => {
     expect(imageDataUrl('logo.svg', bytes).startsWith('data:image/svg+xml;')).toBe(true);
     const big = new Uint8Array(200_000).map((_, i) => i % 251);
     expect(imageBytes(imageDataUrl('big.webp', big))).toEqual(big); // more than one chunk
-  });
+  }, 20_000); // encodes 200 KB: well under a second alone, but the full parallel run with coverage is slower
   it('can sit beside the code, and don’t count towards its limit', () => {
     const code = { path: 'index.html', content: 'x'.repeat(LIMITS.maxBytes) };
     expect(check([code, { path: 'images/cat.png', content: png(LIMITS.maxImageBytes) }])).toBe('ok');

@@ -69,5 +69,5 @@ describe('the QR code', () => {
       origin: 'https://lms.cckh.dev',
     });
     expect(readQrCode(pdf)).toBe('https://lms.cckh.dev/verify/ABCD2345EFGH6789JKMNPQRSTV');
-  });
+  }, 20_000); // draws a PDF and decodes it: under a second alone, but the full parallel run with coverage is slower
 });

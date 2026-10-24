@@ -4,7 +4,9 @@ import { NoteEditor } from '@/components/teaching/note-editor/NoteEditor';
 import { NoteHtml } from '@/components/teaching/NoteHtml';
 import { Icon } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
+import { fitImage } from '@/lib/project/shrink';
 import { formatDate } from '@/modules/academics/schedule';
+import { MAX_NOTE_PICTURE_BYTES } from '@/modules/teaching/attachment-rules';
 import { previewMarkdownAction, saveLessonAction } from '@/modules/teaching/lesson-actions';
 import type { LessonState } from '@/modules/teaching/rules';
 import type { FormResult } from '@/server/action-result';
@@ -51,6 +53,8 @@ export function LessonForm({ classId, sessionId, syllabus, lesson, schedule, tim
   const [result, setResult] = useState<FormResult | null>(null);
   const [autosave, setAutosave] = useState<Autosave>({ kind: 'idle' });
   const [pending, startTransition] = useTransition();
+  // Pictures belong to a saved lesson, so a new one is saved as a draft before its first picture.
+  const exists = useRef(lesson !== null);
   const state = lesson?.state;
   const autosaves = !state || state === 'draft';
   const dirty = !same(draft, saved);
@@ -62,7 +66,7 @@ export function LessonForm({ classId, sessionId, syllabus, lesson, schedule, tim
     const timer = setTimeout(() => {
       const sending = draft;
       setAutosave({ kind: 'saving' });
-      void send('draft').then((r) => {
+      void send('draft', null, true).then((r) => {
         if (r.ok) {
           setSaved(sending);
           setAutosave({ kind: 'saved', at: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) });
@@ -72,10 +76,33 @@ export function LessonForm({ classId, sessionId, syllabus, lesson, schedule, tim
     return () => clearTimeout(timer);
   }, [draft, dirty, autosaves]);
 
-  function send(intent: string, submitter?: HTMLElement | null) {
+  // auto: a draft saving itself, which keeps pictures the note doesn't show for now (the teacher may be moving one).
+  async function send(intent: string, submitter?: HTMLElement | null, auto = false) {
     const data = new FormData(form.current!, submitter);
     if (!submitter) data.set('intent', intent);
-    return saveLessonAction(null, data);
+    if (auto) data.set('auto', '1');
+    const r = await saveLessonAction(null, data);
+    if (r.ok) exists.current = true;
+    return r;
+  }
+
+  // A picture for the note (BR-22): shrunk in the browser, then stored as one of the lesson's note pictures.
+  async function addPicture(file: File): Promise<string> {
+    if (!exists.current) {
+      if (!draft.title.trim()) throw new Error('Add a title first, so the lesson can be saved with its pictures.');
+      const sending = draft;
+      const r = await send('draft', null, true);
+      if (!r.ok) throw new Error(r.error);
+      setSaved(sending);
+    }
+    const bytes = await fitImage(file.name, new Uint8Array(await file.arrayBuffer()), MAX_NOTE_PICTURE_BYTES);
+    const body = new FormData();
+    body.set('file', new File([bytes as BlobPart], file.name, { type: file.type }));
+    body.set('inNote', '1');
+    const res = await fetch(`/api/sessions/${sessionId}/attachments`, { method: 'POST', body });
+    const r = (await res.json().catch(() => ({ ok: false }))) as { ok: boolean; error?: string; attachment?: { id: string } };
+    if (!r.ok || !r.attachment) throw new Error(r.error ?? 'The picture couldn’t be added. Try again.');
+    return r.attachment.id;
   }
 
   // Submitted by hand (not <form action>) so the note isn't cleared if saving fails.
@@ -134,6 +161,7 @@ export function LessonForm({ classId, sessionId, syllabus, lesson, schedule, tim
             initialMarkdown={lesson?.contentMd ?? ''}
             defaultLanguage={defaultLanguage}
             onChange={(markdown) => setDraft((d) => ({ ...d, markdown }))}
+            onPicture={addPicture}
           />
         </div>
         {view === 'student' && (

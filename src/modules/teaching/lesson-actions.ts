@@ -17,6 +17,7 @@ export async function saveLessonAction(_prev: FormResult | null, form: FormData)
       intent: (t(form, 'intent') ?? 'draft') as LessonInput['intent'],
       publishDate: t(form, 'publishDate'),
       publishTime: t(form, 'publishTime'),
+      auto: t(form, 'auto') === '1',
     };
     const { state } = await saveLesson(await currentActor(), t(form, 'sessionId') ?? '', input);
     revalidatePath(`/teacher/classes/${classId}`, 'layout');

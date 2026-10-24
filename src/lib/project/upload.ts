@@ -3,7 +3,7 @@
 import { ALLOWED_EXTENSIONS, extensionOf, imageDataUrl, isImagePath, LIMITS, normalisePath, ProjectError, type ProjectFile } from './files';
 
 export type Picked = { path: string; bytes: Uint8Array };
-export type FitImage = (path: string, bytes: Uint8Array) => Promise<Uint8Array>;
+export type FitImage = (path: string, bytes: Uint8Array, maxBytes?: number) => Promise<Uint8Array>;
 
 // Pictures read before any are made smaller, so a folder of hundreds of photos is refused before decoding them.
 export const MAX_PICKED_IMAGE_BYTES = 25 * 1024 * 1024;

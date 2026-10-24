@@ -146,6 +146,86 @@ describe('NoteEditor', () => {
     await waitFor(() => expect(saved()).toBe('Cost: 5 \\* 3 = 15'));
   });
 
+  describe('pictures', () => {
+    const ID = '11111111-2222-3333-4444-555555555555';
+    const file = () => new File([new Uint8Array([137, 80, 78, 71])], 'output.png', { type: 'image/png' });
+
+    it('adds a picture from the toolbar: uploads it, then puts it after the current paragraph, medium size', async () => {
+      const onPicture = vi.fn().mockResolvedValue(ID);
+      const { saved, tool } = await setup('Hello', { onPicture });
+      expect(tool('Picture')).toBeTruthy();
+      fireEvent.change(screen.getByLabelText('Choose a picture'), { target: { files: [file()] } });
+      expect(onPicture).toHaveBeenCalledWith(expect.objectContaining({ name: 'output.png' }));
+      await waitFor(() => expect(saved()).toBe(`Hello\n\n![](/api/files/${ID}#medium)`));
+    });
+
+    it('says it’s adding the picture, and why it couldn’t', async () => {
+      let fail: (e: Error) => void = () => {};
+      const onPicture = vi.fn(() => new Promise<string>((_, reject) => (fail = reject)));
+      const { saved } = await setup('Hello', { onPicture });
+      fireEvent.change(screen.getByLabelText('Choose a picture'), { target: { files: [file()] } });
+      await waitFor(() => expect(screen.getByText('Adding output.png…')).toBeTruthy());
+      await act(async () => fail(new Error('output.png is bigger than 2 MB.')));
+      expect(screen.getByRole('alert').textContent).toBe('output.png is bigger than 2 MB.');
+      expect(saved()).toBe('Hello');
+    });
+
+    it('uploads a pasted screenshot (dropping one is tested in the browser: jsdom has no layout to drop on)', async () => {
+      const onPicture = vi.fn().mockResolvedValue(ID);
+      const { doc, saved } = await setup('Hello', { onPicture });
+      act(() => void fireEvent.paste(doc, { clipboardData: { files: [file()], getData: () => '', types: ['Files'] } }));
+      await waitFor(() => expect(saved()).toBe(`Hello\n\n![](/api/files/${ID}#medium)`));
+    });
+
+    it('lists Picture in the + menu when pictures can be added', async () => {
+      await setup('Hello', { onPicture: vi.fn() });
+      fireEvent.click(screen.getByRole('button', { name: 'Add code, a picture or a tip' }));
+      expect(names(screen.getAllByRole('menuitem'))).toEqual(['Code', 'Picture', 'Tip box', 'Heading', 'List', 'Link']);
+    });
+
+    it('puts a picture in place of an empty line, and shows a picture from before M9 with no size picked', async () => {
+      const onPicture = vi.fn().mockResolvedValue(ID);
+      const { saved } = await setup('', { onPicture });
+      fireEvent.change(screen.getByLabelText('Choose a picture'), { target: { files: [file()] } });
+      await waitFor(() => expect(saved()).toBe(`![](/api/files/${ID}#medium)`));
+      cleanup();
+      await setup('![Loop diagram](/files/abc)', { onPicture });
+      const sizes = await screen.findByRole('group', { name: 'Picture size' });
+      expect(
+        within(sizes)
+          .getAllByRole('button')
+          .map((b) => b.getAttribute('aria-pressed')),
+      ).toEqual(['false', 'false', 'false']);
+      expect((screen.getByRole('textbox', { name: /^Caption/ }) as HTMLInputElement).value).toBe('Loop diagram');
+    });
+
+    it('ignores files that aren’t pictures, and explains a failure that has no message', async () => {
+      const onPicture = vi.fn().mockRejectedValue('offline');
+      const { doc } = await setup('Hello', { onPicture });
+      act(
+        () =>
+          void fireEvent.paste(doc, {
+            clipboardData: { files: [new File(['x'], 'notes.pdf', { type: 'application/pdf' })], getData: () => '', types: ['Files'] },
+          }),
+      );
+      expect(onPicture).not.toHaveBeenCalled();
+      fireEvent.change(screen.getByLabelText('Choose a picture'), { target: { files: [file()] } });
+      await waitFor(() => expect(screen.getByRole('alert').textContent).toBe('The picture couldn’t be added. Try again.'));
+    });
+
+    it('changes a picture’s size and caption, and removes it', async () => {
+      const { saved } = await setup(`![](/api/files/${ID}#medium)`, { onPicture: vi.fn() });
+      const tools = await screen.findByRole('group', { name: 'Picture size' });
+      expect(within(tools).getByRole('button', { name: 'Medium' }).getAttribute('aria-pressed')).toBe('true');
+      fireEvent.click(within(tools).getByRole('button', { name: 'Small' }));
+      await waitFor(() => expect(saved()).toBe(`![](/api/files/${ID}#small)`));
+      fireEvent.change(screen.getByRole('textbox', { name: /^Caption/ }), { target: { value: 'What you should see' } });
+      await waitFor(() => expect(saved()).toBe(`![What you should see](/api/files/${ID}#small)`));
+      fireEvent.click(screen.getByRole('button', { name: 'Remove picture' }));
+      await waitFor(() => expect(saved()).toBe(''));
+    });
+  });
+
   it('doesn’t send the form from its buttons', async () => {
     const submit = vi.fn((e: Event) => e.preventDefault());
     const { tool } = await setup();

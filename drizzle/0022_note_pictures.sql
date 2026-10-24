@@ -1,0 +1,1 @@
+ALTER TABLE "lesson_attachment" ADD COLUMN "in_note" boolean DEFAULT false NOT NULL;

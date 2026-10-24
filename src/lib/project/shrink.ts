@@ -1,4 +1,5 @@
-// Makes a photo small enough for a project (LIMITS.maxImageBytes), in the browser: scaled to fit 1600 px, then
+// Makes a photo small enough for a project (LIMITS.maxImageBytes, or maxBytes: a lesson note allows 2 MB), in the
+// browser: scaled to fit 1600 px, then
 // smaller again until it fits, saved in its own format so its name (and the page's <img src>) stays the same.
 // GIFs (they may move) and SVGs (drawings) are left as they are; the project check then explains the limit.
 import { imageTypeOf, LIMITS } from './files';
@@ -7,7 +8,7 @@ import type { FitImage } from './upload';
 const MAX_SIDE = 1600;
 const SHRINKABLE = ['image/png', 'image/jpeg', 'image/webp'];
 
-export const fitImage: FitImage = async (path, bytes) => {
+export const fitImage: FitImage = async (path, bytes, maxBytes = LIMITS.maxImageBytes) => {
   const type = imageTypeOf(path);
   if (!type || !SHRINKABLE.includes(type)) return bytes;
   let bitmap: ImageBitmap;
@@ -25,7 +26,7 @@ export const fitImage: FitImage = async (path, bytes) => {
       canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
       const blob = await new Promise<Blob | null>((done) => canvas.toBlob(done, type, 0.85));
       if (!blob || blob.type !== type) return bytes; // this browser can't save that format
-      if (blob.size <= LIMITS.maxImageBytes) return new Uint8Array(await blob.arrayBuffer());
+      if (blob.size <= maxBytes) return new Uint8Array(await blob.arrayBuffer());
     }
     return bytes;
   } finally {

@@ -4,6 +4,14 @@
 
 export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 export const MAX_ATTACHMENTS_PER_LESSON = 10;
+// Pictures in the note itself (BR-22): the browser shrinks them first, and they don't count as files to download.
+export const MAX_NOTE_PICTURE_BYTES = 2 * 1024 * 1024;
+export const MAX_NOTE_PICTURES = 20;
+
+// The files a note shows, from the addresses its pictures use: ![caption](/api/files/<id>#size).
+export function notePictureIds(markdown: string): Set<string> {
+  return new Set([...markdown.matchAll(/\/api\/files\/([0-9a-f-]{36})/gi)].map((m) => m[1]!.toLowerCase()));
+}
 
 const TEXT = 'text/plain; charset=utf-8';
 const TYPES: Record<string, { contentType: string; inline: boolean }> = {

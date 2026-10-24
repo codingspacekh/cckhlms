@@ -172,11 +172,13 @@ const CodeColours = Extension.create({
 type Options = {
   // The React node view for code blocks (language picker); left out in headless use, such as the tests.
   codeBlockView?: () => NodeViewRenderer;
+  // The React node view for pictures (size and caption); also left out in headless use.
+  pictureView?: () => NodeViewRenderer;
   placeholder?: string;
   defaultLanguage?: string;
 };
 
-export function noteExtensions({ codeBlockView, placeholder, defaultLanguage = 'python' }: Options = {}): AnyExtension[] {
+export function noteExtensions({ codeBlockView, pictureView, placeholder, defaultLanguage = 'python' }: Options = {}): AnyExtension[] {
   const NoteCodeBlock = CodeBlock.extend({
     addOptions() {
       return { ...this.parent!(), defaultLanguage, enableTabIndentation: true, tabSize: 4 };
@@ -207,7 +209,7 @@ export function noteExtensions({ codeBlockView, placeholder, defaultLanguage = '
     TipBox,
     NoteCodeBlock,
     CodeColours,
-    NoteImage,
+    pictureView ? NoteImage.extend({ addNodeView: pictureView }) : NoteImage,
     TableKit,
     Markdown.configure({ marked: noteMarked() as never }),
     ...(placeholder ? [Placeholder.configure({ placeholder })] : []),

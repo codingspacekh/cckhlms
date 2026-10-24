@@ -4,13 +4,18 @@ import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { CodeBlockView } from './CodeBlockView';
 import { noteExtensions, tidyMarkdown } from './extensions';
+import { PictureView } from './PictureView';
 
 type Props = {
   initialMarkdown: string;
   // The class's language, for new code blocks.
   defaultLanguage?: string;
   onChange?: (markdown: string) => void;
+  // Uploads a picture for the note and gives back its file id, or throws with a message to show (BR-22).
+  // Without it, the editor offers no pictures.
+  onPicture?: (file: File) => Promise<string>;
 };
+const PICTURE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
 
 const PLACEHOLDER = 'Type, or press / for code, a picture or a tip';
 // Web and LMS addresses only, as renderNote allows (src/lib/markdown.ts).
@@ -22,20 +27,40 @@ type MenuItem = { id: string; label: string; hint: string; mark: string; run: (e
 
 // The lesson note editor (FR-TCH-22): a word-processor-style editor that still saves Markdown in a hidden
 // `contentMd` field, so the lesson form sends what it always sent.
-export function NoteEditor({ initialMarkdown, defaultLanguage, onChange }: Props) {
+export function NoteEditor({ initialMarkdown, defaultLanguage, onChange, onPicture }: Props) {
   const [markdown, setMarkdown] = useState(initialMarkdown);
   const [linking, setLinking] = useState(false);
+  const [adding, setAdding] = useState<string | null>(null);
+  const [pictureError, setPictureError] = useState('');
+  const picker = useRef<HTMLInputElement>(null);
   // Where the menu was opened from: the + button, or a "/" typed at this position.
   const [menu, setMenu] = useState<{ slashAt: number | null } | null>(null);
   const changed = useRef(onChange);
   const self = useRef<Editor | null>(null);
+  const addPictures = useRef<(files: File[]) => void>(() => {});
   useEffect(() => {
     changed.current = onChange;
+    addPictures.current = async (files) => {
+      for (const file of files) {
+        if (!onPicture || !PICTURE_TYPES.includes(file.type)) continue;
+        setPictureError('');
+        setAdding(file.name);
+        try {
+          insertPicture(self.current, await onPicture(file));
+        } catch (e) {
+          setPictureError(e instanceof Error ? e.message : 'The picture couldn’t be added. Try again.');
+        } finally {
+          setAdding(null);
+        }
+      }
+    };
   });
+  const pictures = (list: FileList | File[] | undefined | null) => [...(list ?? [])].filter((f) => PICTURE_TYPES.includes(f.type));
 
   const editor = useEditor({
     extensions: noteExtensions({
       codeBlockView: () => ReactNodeViewRenderer(CodeBlockView),
+      pictureView: () => ReactNodeViewRenderer(PictureView),
       placeholder: PLACEHOLDER,
       defaultLanguage,
     }),
@@ -51,10 +76,22 @@ export function NoteEditor({ initialMarkdown, defaultLanguage, onChange }: Props
         return false;
       },
       handlePaste: (view, e) => {
+        const files = pictures(e.clipboardData?.files);
+        if (files.length) {
+          void addPictures.current(files);
+          return true;
+        }
         const text = e.clipboardData?.getData('text/plain') ?? '';
         if (!self.current || !text || e.clipboardData?.getData('text/html') || !LOOKS_LIKE_MARKDOWN.test(text)) return false;
         if (view.state.selection.$from.parent.type.spec.code) return false; // into a code block: as it is
         self.current.commands.insertContent(text, { contentType: 'markdown' });
+        return true;
+      },
+      handleDrop: (_view, e, _slice, moved) => {
+        const files = moved ? [] : pictures(e.dataTransfer?.files);
+        if (!files.length) return false;
+        e.preventDefault();
+        void addPictures.current(files);
         return true;
       },
       handleKeyDown: (_view, e) => {
@@ -83,6 +120,17 @@ export function NoteEditor({ initialMarkdown, defaultLanguage, onChange }: Props
       mark: '</>',
       run: (e) => e.chain().focus().setCodeBlock().run(),
     },
+    ...(onPicture
+      ? [
+          {
+            id: 'picture',
+            label: 'Picture',
+            hint: 'From your computer, or paste a screenshot',
+            mark: '▣',
+            run: () => picker.current?.click(),
+          },
+        ]
+      : []),
     { id: 'tip', label: 'Tip box', hint: 'A hint or something to remember', mark: '!', run: (e) => e.chain().focus().toggleTipBox().run() },
     {
       id: 'heading',
@@ -110,9 +158,30 @@ export function NoteEditor({ initialMarkdown, defaultLanguage, onChange }: Props
 
   return (
     <div className="note-editor">
-      {editor && <Toolbar editor={editor} onLink={() => setLinking(true)} />}
+      {editor && <Toolbar editor={editor} onLink={() => setLinking(true)} onPicture={onPicture && (() => picker.current?.click())} />}
+      {onPicture && (
+        <input
+          ref={picker}
+          type="file"
+          accept={PICTURE_TYPES.join(',')}
+          aria-label="Choose a picture"
+          hidden
+          onChange={(e) => {
+            void addPictures.current(pictures(e.target.files));
+            e.target.value = '';
+          }}
+        />
+      )}
       {editor && linking && <LinkForm editor={editor} onDone={() => setLinking(false)} />}
       <EditorContent editor={editor} />
+      <p className="xs muted note-adding" aria-live="polite">
+        {adding ? `Adding ${adding}…` : ''}
+      </p>
+      {pictureError && (
+        <p className="note bad note-picture-error" role="alert">
+          {pictureError}
+        </p>
+      )}
       <div className="note-add">
         <button
           type="button"
@@ -142,7 +211,7 @@ export function NoteEditor({ initialMarkdown, defaultLanguage, onChange }: Props
   );
 }
 
-function Toolbar({ editor, onLink }: { editor: Editor; onLink: () => void }) {
+function Toolbar({ editor, onLink, onPicture }: { editor: Editor; onLink: () => void; onPicture?: () => void }) {
   const s = useEditorState({
     editor,
     selector: ({ editor: e }) => ({
@@ -185,6 +254,7 @@ function Toolbar({ editor, onLink }: { editor: Editor; onLink: () => void }) {
       <Tool icon="numbered" label="Numbered list" pressed={s.numbers} onClick={() => run((c) => c.toggleOrderedList())} />
       <span className="note-sep" aria-hidden="true" />
       <Tool icon="code-block" label="Code block" text="Code" pressed={s.codeBlock} onClick={() => run((c) => c.toggleCodeBlock())} />
+      {onPicture && <Tool icon="image" label="Picture" text="Picture" onClick={onPicture} />}
       <Tool icon="tip" label="Tip box" text="Tip box" pressed={s.tip} onClick={() => run((c) => c.toggleTipBox())} />
       <span className="note-gap" />
       <Tool icon="undo" label="Undo (Ctrl+Z)" disabled={!s.undo} onClick={() => run((c) => c.undo())} />
@@ -333,4 +403,15 @@ function MenuButton({ item, onChoose, children }: { item: MenuItem; onChoose: (i
       </span>
     </button>
   );
+}
+
+// A new picture goes in its own paragraph after the one the cursor is in (or in place of an empty one).
+function insertPicture(editor: Editor | null, id: string) {
+  if (!editor) return;
+  const { $from } = editor.state.selection;
+  const picture = { type: 'paragraph', content: [{ type: 'image', attrs: { src: `/api/files/${id}#medium`, alt: '' } }] };
+  if ($from.depth < 1) return void editor.chain().focus().insertContentAt(editor.state.doc.content.size, picture).run();
+  const block = $from.node(1);
+  const at = block.type.name === 'paragraph' && block.content.size === 0 ? { from: $from.before(1), to: $from.after(1) } : $from.after(1);
+  editor.chain().focus().insertContentAt(at, picture).run();
 }

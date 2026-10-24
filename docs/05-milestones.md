@@ -574,6 +574,16 @@ The next milestone does not start until all four are true.
 
 **Exit criteria:** the editor and the student's note match the approved prototype; old notes open and save without changing what students see; the owner writes a real week's note with code and a picture on a local production build, checks it as a student on a phone, and signs off M9.
 
+> **Result** (PRs #44–#46, stacked on M8: merge in order). Checked on a local production build, like M4–M8 before G1.
+> - **Readable notes, #44:** `renderNote` gives notes a reading layout, code blocks with a language label, colours, line numbers and Copy, tip boxes and captioned figures. Code colours come from the CodeMirror parsers the app already had, so the reader needed no new package. Q&A, instructions and feedback keep the plain renderer.
+>   - *Found by looking at the screens:* `.note` (status notices) and `.tip` (chart tooltips) were already class names, so the reading view uses `.reading` and `.tip-box`.
+> - **The editor, #45:** Tiptap 3.31.4, installed with `npm --before=2026-10-10` so all 53 new packages are at least 16 days old. The note is still saved as Markdown in the same form field. Toolbar, + and `/` menu, code blocks in the course's language, Markdown shortcuts, pasted Markdown becomes formatting, Write / Student view, and the side column. Drafts save themselves; published notes only on Update, with a warning before leaving.
+>   - *Found by the round-trip tests (58):* Tiptap turned raw HTML into formatting, made loose lists tight, joined pictures that sat in separate paragraphs, dropped tables, and broke code containing ```. Each is handled, so old notes render the same after saving.
+>   - *Changed from the plan:* the editor's own stylesheet is off (`injectCSS: false`) because the CSP allows only the app's stylesheet; its few base styles are in `globals.css`.
+>   - *Found:* "Back returns to where you were" was flaky because a scroll made before `ScrollReset` started was never recorded. It now records the position when it starts (15/15 runs).
+> - **Pictures in the note, #46:** choose a file, paste a screenshot or drop one in. The browser shrinks it to 1600 px and at most 2 MB, then it is stored as a lesson file marked `in_note` (migration `0022`). Small/Medium/Full and a caption; up to 20 a note; kept out of the files to download and their limit of 10. A picture taken out of the note is deleted when the note is saved, but not when a draft saves itself, so moving a picture never loses it. A new lesson is saved as a draft before its first picture.
+> - **Exit criterion:** waiting for the owner to write a real week's note with code and a picture on a local production build (`npm run seed:dev` + `npm run build` + `npm start`), check it as a student on a phone, and sign off M9.
+
 ### R2 — Club-wide launch
 - All classes of the next term (e.g. Term 2 · 2027) are set up and run on `lms.cckh.dev`. Teachers get a short walkthrough, and students get login slips.
 
