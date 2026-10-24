@@ -10,6 +10,7 @@ afterEach(cleanup);
 
 const dashboard: AdminDashboard = {
   today: '2027-01-20',
+  term: { name: 'Term 1 · 2027', number: 1, startDate: '2027-01-09', endDate: '2027-04-04', week: 2, weeks: 13 },
   tiles: { activeClasses: 1, students: 3, classPlaces: 3, attendance: 83, needSupport: 1 },
   bands: [
     { label: 'Below 50', count: 1 },
@@ -54,22 +55,32 @@ const dashboard: AdminDashboard = {
 describe('AdminDashboardView', () => {
   it('lists what needs attention: support flags, missing weekly reports (one line per class), low attendance', () => {
     render(<AdminDashboardView d={dashboard} />);
-    const list = screen.getByRole('region', { name: 'Needs attention' });
-    expect(list.textContent).toContain('Chenda OukNeeds supportPython Level 1 · Sat 09:00: Extra help with loops');
+    const list = screen.getByRole('region', { name: 'Needs your attention' });
+    const items = within(list).getAllByRole('listitem');
+    expect(items[0]!.textContent).toBe('Chenda Ouk needs supportPython Level 1 · Sat 09:00: Extra help with loopsOpen report');
     expect(within(list).getByRole('link', { name: 'Open report for Chenda Ouk' }).getAttribute('href')).toBe('/admin/students/s2');
-    expect(list.textContent).toContain('Sophea Chan · weeks 2, 32 reports missing');
-    expect(list.textContent).toContain('Kosal MeasPython Level 1 · Sat 09:00Attendance 50%');
+    expect(items[1]!.textContent).toBe('Python Level 1 · Sat 09:00Sophea Chan · weeks 2, 32 weekly reports missing');
+    expect(items[2]!.textContent).toBe('Kosal MeasPython Level 1 · Sat 09:00Attendance 50%');
   });
 
-  it('the tiles, this weekend and the classes table', () => {
+  it('the headline numbers, this weekend and the classes table', () => {
     render(<AdminDashboardView d={dashboard} />);
+    const glance = screen.getByRole('region', { name: 'Term at a glance' });
+    expect(glance.textContent).toContain('1Active classes');
+    expect(glance.textContent).toContain('3Students enrolled3 class places');
+    expect(glance.textContent).toContain('83%Attendance this term');
     expect(screen.getByRole('region', { name: 'This weekend' }).textContent).toContain('Sat 23 Jan 2027 · 09:00–10:30 · Room A');
     expect(screen.getByRole('row', { name: /Python Level 1/ }).textContent).toContain('Python Level 1 · Sat 09:00Sophea Chan383%61.7');
   });
 
+  it('marks a class whose average is below the pass mark, in words', () => {
+    render(<AdminDashboardView d={{ ...dashboard, classes: [{ ...dashboard.classes[0]!, average: 55 }] }} />);
+    expect(screen.getByRole('row', { name: /Python Level 1/ }).textContent).toContain('Below pass');
+  });
+
   it('says so when nothing needs attention', () => {
     render(<AdminDashboardView d={{ ...dashboard, attention: { support: [], missingReports: [], lowAttendance: [] } }} />);
-    expect(screen.getByText('Nothing needs attention right now.')).toBeTruthy();
+    expect(screen.getByText('Nothing needs your attention right now.')).toBeTruthy();
   });
 });
 

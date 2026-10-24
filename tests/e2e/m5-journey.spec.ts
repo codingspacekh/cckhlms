@@ -49,7 +49,7 @@ test('the teacher checks the statistics and finalises the term reports', async (
 test('the admin dashboard flags the student who needs support, and the student report shows it', async ({ browser }) => {
   const page = await as(browser, 'admin');
   await page.goto('/admin');
-  const attention = page.getByRole('region', { name: 'Needs attention' });
+  const attention = page.getByRole('region', { name: 'Needs your attention' });
   await expect(attention).toContainText('Practise loops at home before repeating Level 1');
   await expectAccessible(page);
   await attention.getByRole('link', { name: `Open report for ${CLASSMATE}` }).click();

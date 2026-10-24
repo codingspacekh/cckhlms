@@ -54,6 +54,9 @@ test.describe('teacher', () => {
     await page.goto(`/teacher/classes/${c.classId}/schedule`);
     await page.evaluate(() => scrollTo(0, 450));
     await expect.poll(() => page.evaluate(() => scrollY)).toBe(450);
+    // The page saves where you were from its scroll event, which the browser delivers on the next frame; a person
+    // can't click before then, but a busy test run could (seen twice in full local runs).
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
     await page
       .getByRole('group', { name: `${c.className} sections` })
       .getByRole('link', { name: 'Weeks' })
