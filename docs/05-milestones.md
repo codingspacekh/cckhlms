@@ -45,8 +45,8 @@ flowchart LR
 | **M5** ✅ | Reports & statistics | 60/30/10 overall score, end-term exam, term reports with pass/fail, charts for all three roles, admin dashboard | FR-TCH-15…18 · FR-ADM-09, 10 · FR-STU-07 | 6 days |
 | **M6** ✅ | Term operations | Certificates + `/verify`, promotion wizard, login slips, CSV import, notifications, audit log, playground | FR-ADM-11…14 · FR-AUTH-08, 09 · FR-STU-08, 09 · FR-SYS-01, 02 · FR-CODE-07 | 6 days |
 | **M7** | Hardening | ASVS L1 review, ZAP, k6 load test, disaster-recovery rehearsal, runbook, privacy check | NFR-01…12 | 5 days |
-| **M8** | Club look | Champion Coders brand (logo, dark blue, Titillium Web), kid-friendly styling, new home pages for all three roles, term puzzle | NFR-08 · FR-STU-01, 11 · FR-TCH-21 · FR-ADM-10 · BR-21 | 4 days |
-| **M9** | Lesson note editor | Word-processor-style lesson note with code blocks, pictures and tip boxes; notes that read like a book page for students | FR-TCH-22 · FR-STU-12 · BR-22 | 4 days |
+| **M8** ✅ | Club look | Champion Coders brand (logo, dark blue, Titillium Web), kid-friendly styling, new home pages for all three roles, term puzzle | NFR-08 · FR-STU-01, 11 · FR-TCH-21 · FR-ADM-10 · BR-21 | 4 days |
+| **M9** ✅ | Lesson note editor | Word-processor-style lesson note with code blocks, pictures and tip boxes; notes that read like a book page for students | FR-TCH-22 · FR-STU-12 · BR-22 | 4 days |
 | — | **R2: Club-wide launch** | Every class of the next term runs on `lms.cckh.dev` | | |
 
 \* *Effort = focused working days for one developer, tests included. Total ≈ **45 focused days**. At 2–3 focused days a week alongside teaching, that is about **4–5 months**: R1 could pilot in **Term 1 · 2027** (from Sat 9 Jan 2027) and R2 launch in **Term 2 · 2027**. These are planning ranges (±30%), not promises. AI-assisted pace on codingspacekh was faster, but the server work here is new.*
@@ -553,7 +553,7 @@ The next milestone does not start until all four are true.
 > - **Left out on purpose** (new features, not asked for): "Show on the big screen" (teacher) and "Remind" for missing weekly reports (admin). Student work cards show names and times, not program output (no runner in v1).
 > - **Exit criterion:** ✅ met 2026-10-24: the owner checked the three home pages on a local production build (`npm run seed:dev` + `npm run build` + `npm start`) and signed off M8.
 
-### M9 — Lesson note editor (4 days)
+### M9 — Lesson note editor (4 days) — ✅ DONE 2026-10-24 (owner signed off on a local production build; PRs #44–#46)
 **Why:** teachers write a note every week, and a Markdown box is hard to use for text, code and pictures together; the preview was also hard to read (owner, 2026-10-24). The editor prototype was approved the same day: "it's very good", for the **lesson note only**, keeping the tip box (https://claude.ai/artifact/SoozYG2faUcsPkZZ8nS2KB, board "Teacher · Lesson note editor"). Homework instructions and feedback keep their Markdown boxes for now.
 
 **Goal:** a teacher writes a week's note with text, code and pictures without knowing Markdown, and students read it easily on a laptop or a phone.
@@ -574,7 +574,7 @@ The next milestone does not start until all four are true.
 
 **Exit criteria:** the editor and the student's note match the approved prototype; old notes open and save without changing what students see; the owner writes a real week's note with code and a picture on a local production build, checks it as a student on a phone, and signs off M9.
 
-> **Result** (PRs #44–#46, stacked on M8: merge in order). Checked on a local production build, like M4–M8 before G1.
+> **Result** (PRs #44–#46, merged in order after M8 on 2026-10-24). Checked on a local production build, like M4–M8 before G1.
 > - **Readable notes, #44:** `renderNote` gives notes a reading layout, code blocks with a language label, colours, line numbers and Copy, tip boxes and captioned figures. Code colours come from the CodeMirror parsers the app already had, so the reader needed no new package. Q&A, instructions and feedback keep the plain renderer.
 >   - *Found by looking at the screens:* `.note` (status notices) and `.tip` (chart tooltips) were already class names, so the reading view uses `.reading` and `.tip-box`.
 > - **The editor, #45:** Tiptap 3.31.4, installed with `npm --before=2026-10-10` so all 53 new packages are at least 16 days old. The note is still saved as Markdown in the same form field. Toolbar, + and `/` menu, code blocks in the course's language, Markdown shortcuts, pasted Markdown becomes formatting, Write / Student view, and the side column. Drafts save themselves; published notes only on Update, with a warning before leaving.
@@ -582,7 +582,7 @@ The next milestone does not start until all four are true.
 >   - *Changed from the plan:* the editor's own stylesheet is off (`injectCSS: false`) because the CSP allows only the app's stylesheet; its few base styles are in `globals.css`.
 >   - *Found:* "Back returns to where you were" was flaky because a scroll made before `ScrollReset` started was never recorded. It now records the position when it starts (15/15 runs).
 > - **Pictures in the note, #46:** choose a file, paste a screenshot or drop one in. The browser shrinks it to 1600 px and at most 2 MB, then it is stored as a lesson file marked `in_note` (migration `0022`). Small/Medium/Full and a caption; up to 20 a note; kept out of the files to download and their limit of 10. A picture taken out of the note is deleted when the note is saved, but not when a draft saves itself, so moving a picture never loses it. A new lesson is saved as a draft before its first picture.
-> - **Exit criterion:** waiting for the owner to write a real week's note with code and a picture on a local production build (`npm run seed:dev` + `npm run build` + `npm start`), check it as a student on a phone, and sign off M9.
+> - **Exit criterion:** met. The owner checked the editor and the student's note on a local production build and signed off M9 on 2026-10-24.
 
 ### R2 — Club-wide launch
 - All classes of the next term (e.g. Term 2 · 2027) are set up and run on `lms.cckh.dev`. Teachers get a short walkthrough, and students get login slips.
