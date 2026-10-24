@@ -290,6 +290,7 @@ svg.i {
   padding-top: 0;
 }
 .nav a {
+  position: relative; /* holds the screen-reader-only rest of a class name, so it can't widen the page */
   display: flex;
   align-items: center;
   gap: 12px;
@@ -2006,4 +2007,314 @@ table.gradebook .sticky-col {
   font-size: 0.8rem;
   display: grid;
   gap: 2px;
+}
+
+/* Home pages (M8, the design approved on 2026-10-24) */
+.btn.lg {
+  min-height: 52px;
+  padding: 0 22px;
+  font-size: 1.1rem;
+  border-radius: 16px;
+}
+.pill.green {
+  background: var(--green-soft);
+  color: var(--green-text);
+  font-size: 0.95rem;
+  padding: 3px 12px;
+}
+.big {
+  font-size: 1.25rem;
+}
+.lead {
+  font-size: 1.2rem;
+  color: var(--ink);
+  max-width: 40ch;
+}
+.hello {
+  background: var(--accent-soft);
+  border-radius: 28px;
+  padding: 32px 36px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+.hello-text {
+  flex: 1 1 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.hello h1 {
+  font-size: 2.6rem;
+  line-height: 1.1;
+}
+.hello .row {
+  gap: 12px;
+  margin-top: 4px;
+}
+.facts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.facts li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--heading);
+  font-weight: 600;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+.facts .i {
+  width: 17px;
+  height: 17px;
+}
+/* The logo's puzzle children, on white like the logo itself (also in the dark theme). */
+.hello-art {
+  flex: 0 1 240px;
+  display: flex;
+  justify-content: center;
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 18px 20px;
+}
+.hello-art img {
+  width: 100%;
+  max-width: 200px;
+  height: auto;
+}
+.home-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  align-items: start;
+}
+.home-grid > .wide {
+  grid-column: span 2;
+}
+@media (max-width: 1100px) {
+  .home-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .home-grid > .wide {
+    grid-column: auto;
+  }
+}
+@media (max-width: 640px) {
+  .hello {
+    padding: 24px 20px;
+  }
+  .hello h1 {
+    font-size: 2.1rem;
+  }
+  .hello-art {
+    display: none;
+  }
+}
+
+/* The term puzzle (FR-STU-11): pieces shaped like the logo's; earned ones in its blue, green and pink in turn. */
+.puzzle {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
+  gap: 6px 4px;
+}
+.piece {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.piece svg {
+  width: 68px;
+  height: 68px;
+}
+.piece path {
+  fill: var(--surface-2);
+  stroke: var(--line-2);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+.piece text {
+  font: 700 26px var(--f);
+  fill: var(--muted);
+}
+.piece.earned.blue path {
+  fill: var(--s1);
+  stroke: var(--s1);
+}
+.piece.earned.green path {
+  fill: var(--green);
+  stroke: var(--green);
+}
+.piece.earned.pink path {
+  fill: var(--pink);
+  stroke: var(--pink);
+}
+.piece.earned.blue text,
+.piece.earned.pink text {
+  fill: #ffffff;
+}
+.piece.earned.green text {
+  fill: var(--on-green);
+}
+.piece.now path {
+  fill: var(--surface);
+  stroke: var(--accent);
+  stroke-width: 5;
+  stroke-dasharray: 9 6;
+}
+.piece.now text {
+  fill: var(--accent);
+}
+.piece.not_yet path {
+  fill: var(--surface);
+  stroke: var(--warn);
+  stroke-width: 4;
+}
+.piece.not_yet text {
+  fill: var(--warn-text);
+}
+.piece.joined path {
+  fill: none;
+  stroke-dasharray: 3 5;
+}
+.piece-label {
+  min-height: 1.4em;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.piece.earned .piece-label {
+  color: var(--green-text);
+}
+.piece.now .piece-label {
+  color: var(--accent);
+}
+.piece.not_yet .piece-label {
+  color: var(--warn-text);
+}
+
+/* To do: work left, then recent marks. Each row has an icon and words, never colour alone. */
+.todo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.todo li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--surface-2);
+}
+.todo li.missing {
+  background: var(--pink-soft);
+}
+.todo li.missing .sub {
+  color: var(--pink-text);
+  font-weight: 600;
+}
+.todo li.done .sub {
+  color: var(--green-text);
+  font-weight: 600;
+}
+.todo-icon {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.todo li.missing .todo-icon {
+  background: var(--pink);
+  color: var(--on-pink);
+}
+.todo li.returned .todo-icon {
+  background: var(--warn);
+  color: #3b2f0a;
+}
+.todo li.done .todo-icon {
+  background: var(--green);
+  color: var(--on-green);
+}
+.todo-icon .i {
+  width: 22px;
+  height: 22px;
+}
+.todo-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.todo-text a {
+  color: var(--ink);
+  font-size: 1.05rem;
+  text-decoration: none;
+}
+.todo-text a:hover {
+  text-decoration: underline;
+}
+
+/* My latest project: its name beside the first lines of its code. */
+.card.latest {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+.card.latest > .stack {
+  flex: 1 1 240px;
+}
+.code-peek {
+  flex: 2 1 320px;
+  min-width: 0;
+  margin: 0;
+  border: 2px solid var(--line);
+  border-radius: 18px;
+  overflow: hidden;
+}
+.code-peek figcaption {
+  padding: 8px 14px;
+  background: var(--surface-2);
+  border-bottom: 2px solid var(--line);
+  font-family: var(--f-mono);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.code-peek pre {
+  margin: 0;
+  padding: 14px 16px;
+  font-family: var(--f-mono);
+  font-size: 0.9rem;
+  line-height: 1.7;
+  overflow-x: auto;
+}
+
+/* A teacher's latest feedback, warm like a note on paper. */
+.card.word {
+  background: var(--warn-soft);
+  border-color: transparent;
+}
+.card.word blockquote {
+  margin: 0;
+  font-size: 1.15rem;
+  line-height: 1.45;
+  color: var(--ink);
 }

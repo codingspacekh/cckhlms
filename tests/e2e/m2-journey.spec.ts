@@ -95,11 +95,14 @@ test('the student signs in and sees the class, its next session and teacher', as
   const page = await ctx.newPage();
   await signIn(page, slips['Kosal Meas']!);
   await expect(page).toHaveURL(/\/student$/);
-  const next = page.getByRole('region', { name: 'Next class' });
-  await expect(next).toContainText('Python Level 2');
-  await expect(next).toContainText('Sat 15 Apr 2028 · 09:00–10:30');
-  await expect(next).toContainText('Room C');
-  await expect(page.getByRole('region', { name: 'My classes' })).toContainText('Sophea Chan');
+  // M8: the greeting card leads with the next class; the class is in the sidebar under My classes.
+  const hello = page.getByRole('region', { name: 'Hi Kosal!' });
+  await expect(hello).toContainText('Python Level 2');
+  await expect(hello.getByRole('list', { name: 'Next class' })).toContainText('Sat 15 Apr 2028');
+  await expect(hello.getByRole('list', { name: 'Next class' })).toContainText('09:00–10:30');
+  await expect(hello).toContainText('Room C');
+  await expect(hello).toContainText('Teacher Sophea');
+  await expect(page.getByRole('navigation', { name: 'Sections' }).getByRole('link', { name: /Python Level 2/ })).toBeVisible();
   await expectAccessible(page);
   await ctx.close();
 });
