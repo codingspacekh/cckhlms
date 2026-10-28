@@ -1,6 +1,6 @@
 // Questions and replies on a lesson (FR-STU-03/04/10, FR-TCH-03). Students see their own class only (BR-11).
 // A reported post is hidden from other students and shown to its author as "under review" until a teacher
-// restores or removes it (BR-20).
+// restores or removes it (BR-20). A teacher's post can't be reported, so one student can't hide an answer.
 import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/db/client';
@@ -232,6 +232,8 @@ export async function reportPost(actor: Actor | null, ref: PostRef, reason: stri
   const post = await findPost(ref);
   assertCan(actor, 'qa.post', post.ctx);
   if (post.authorId === actor.userId) throw new ValidationError('You can’t report your own post.');
+  if ((post.ctx.classTeacherIds ?? []).includes(post.authorId))
+    throw new ValidationError('Teachers’ posts can’t be reported. If something in one is wrong, tell your teacher or the club admin.');
   if (post.visibility === 'hidden') throw new ValidationError('That post has already been removed.');
   const why = z
     .string()

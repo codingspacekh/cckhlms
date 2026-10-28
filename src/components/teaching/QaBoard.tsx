@@ -104,7 +104,7 @@ export function QaBoard({ classId, week, role, open, questions, timeZone }: Prop
         </>
       );
     }
-    if (!p.mine && p.state === 'visible')
+    if (!p.mine && !p.byTeacher && p.state === 'visible')
       return (
         <button
           type="button"
