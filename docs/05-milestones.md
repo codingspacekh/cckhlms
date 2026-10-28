@@ -44,7 +44,7 @@ flowchart LR
 | — | **R1: Pilot** | One real class uses the LMS on production for at least 4 weeks | | |
 | **M5** ✅ | Reports & statistics | 60/30/10 overall score, end-term exam, term reports with pass/fail, charts for all three roles, admin dashboard | FR-TCH-15…18 · FR-ADM-09, 10 · FR-STU-07 | 6 days |
 | **M6** ✅ | Term operations | Certificates + `/verify`, promotion wizard, login slips, CSV import, notifications, audit log, playground | FR-ADM-11…14 · FR-AUTH-08, 09 · FR-STU-08, 09 · FR-SYS-01, 02 · FR-CODE-07 | 6 days |
-| **M7** | Hardening | ASVS L1 review, ZAP, k6 load test, disaster-recovery rehearsal, runbook, privacy check | NFR-01…12 | 5 days |
+| **M7** ✅ | Hardening | ASVS L1 review, ZAP, k6 load test, disaster-recovery rehearsal, runbook, privacy check | NFR-01…12 | 5 days |
 | **M8** ✅ | Club look | Champion Coders brand (logo, dark blue, Titillium Web), kid-friendly styling, new home pages for all three roles, term puzzle | NFR-08 · FR-STU-01, 11 · FR-TCH-21 · FR-ADM-10 · BR-21 | 4 days |
 | **M9** ✅ | Lesson note editor | Word-processor-style lesson note with code blocks, pictures and tip boxes; notes that read like a book page for students | FR-TCH-22 · FR-STU-12 · BR-22 | 4 days |
 | — | **R2: Club-wide launch** | Every class of the next term runs on `lms.cckh.dev` | | |
@@ -471,7 +471,7 @@ The next milestone does not start until all four are true.
 
 **Exit criteria:** the pilot class's end of term is run fully in the LMS (promotion + certificates) on production.
 
-### M7 — Hardening (5 days)
+### M7 — Hardening (5 days) — ✅ DONE 2026-10-28 (owner signed off the runbook and M7; PRs #32–#36, pre-launch review #49, #51, #52)
 **Goal:** safe and reliable for the whole club.
 
 **Build / checks:**
@@ -514,7 +514,8 @@ The next milestone does not start until all four are true.
 >     - **lesson files were backed up but never restored**, and came back owned by root (`backup-restore.sh` now checks both).
 >   - The runbook is complete: version-aware commands, the full restore, alerts for sign-in limits and slow pages, software updates, renewals, the deletion log, and the **G1 go-live checklist** (§8).
 > - **Not done, on purpose:** the 4× repeated class-access queries per page (a 10–15 % CPU saving; it needs care after Server Actions); MFA for Admin (beyond ASVS L1).
-> - **Exit criterion:** all checks pass and are recorded here, in `docs/security-review.md` and in runbook §6. **The owner signs off the runbook and M7.**
+> - **Pre-launch review, 2026-10-28** (`docs/prelaunch-review.md`, after M8 and M9): a second security pass before G1. It closed Better Auth's unused endpoints, kept stray laptop files out of the app image, moved the app to a database role that isn't a superuser, and stopped one report from hiding a teacher's Q&A post (PRs #49, #52, #51).
+> - **Exit criterion:** ✅ met 2026-10-28: all checks pass and are recorded here, in `docs/security-review.md`, `docs/prelaunch-review.md` and runbook §6. The owner signed off the runbook and M7.
 
 ### M8 — Club look (4 days) — ✅ DONE 2026-10-24 (owner signed off on a local production build; PRs #40–#43)
 **Why:** the owner felt the app looked like a generic AI-made template (2026-10-24) and asked for a look that is clearly the club's own and friendly for children. The redesign prototype was approved the same day: "it's very well designed. approved." (https://claude.ai/artifact/SoozYG2faUcsPkZZ8nS2KB, three screens: Student "My week", Teacher "Today", Admin dashboard).
