@@ -1,9 +1,9 @@
 #!/bin/sh
 # The production Compose file is valid, publishes no ports, keeps the database off the internet,
-# and refuses to start without its secrets.
+# and refuses to start without its secrets. The app and backups use the database as `lms`, which isn't a superuser.
 set -eu
 cd "$(dirname "$0")/.."
-APP_TAG=t POSTGRES_PASSWORD=p BETTER_AUTH_SECRET=s TUNNEL_TOKEN=t R2_ACCOUNT_ID=a R2_BUCKET=b \
+APP_TAG=t POSTGRES_PASSWORD=p LMS_DB_PASSWORD=l BETTER_AUTH_SECRET=s TUNNEL_TOKEN=t R2_ACCOUNT_ID=a R2_BUCKET=b \
   R2_ACCESS_KEY_ID=k R2_SECRET_ACCESS_KEY=s BACKUP_AGE_RECIPIENT=age1x \
   docker compose -f compose.prod.yaml config --format json | python3 -c '
 import json, sys
@@ -26,6 +26,21 @@ for n in ("app", "preview"):
     assert s[n].get("read_only") is True, n + " must run read-only"
 assert {t.split(":")[0] for t in s["app"].get("tmpfs", [])} == {"/tmp", "/app/.next/cache"}, "app tmpfs: /tmp and the Next cache"
 assert s["backup"]["environment"].get("UPLOADS_OWNER") == "100:101", "restored lesson files must go to the app user (Dockerfile)"
+# Pre-launch review: the superuser (postgres) is only for the database container itself. On first start
+# db-app-role.sh creates lms, the owner of the lms database but not a superuser; the app and the backups use it.
+db = s["db"]
+assert db["environment"]["POSTGRES_USER"] != "lms", "lms must not be the superuser the image creates"
+assert db["environment"].get("LMS_DB_PASSWORD") == "l", "the database needs the app role password on first start"
+assert any(v.get("target", "").startswith("/docker-entrypoint-initdb.d/") and v.get("source", "").endswith("db-app-role.sh")
+           for v in db.get("volumes", [])), "db-app-role.sh must run when the database is first created"
+assert s["app"]["environment"]["DATABASE_URL"] == "postgres://lms:l@db:5432/lms", "the app connects as lms with its own password"
+assert (s["backup"]["environment"]["PGUSER"], s["backup"]["environment"]["PGPASSWORD"]) == ("lms", "l"), "backups run as lms"
+# The first-run init server listens only on a socket: ready means ready on TCP, after db-app-role.sh has run.
+assert "-h 127.0.0.1" in " ".join(db["healthcheck"]["test"]), "the database health check must use TCP"
 '
 if APP_TAG=t docker compose -f compose.prod.yaml config >/dev/null 2>&1; then echo "FAIL: missing secrets were not detected"; exit 1; fi
-echo "PASS: compose config valid, no published ports, db internal-only, restarts + memory limits, terse db errors, read-only app + preview, no capabilities, no-new-privileges, missing secrets refused"
+if APP_TAG=t POSTGRES_PASSWORD=p BETTER_AUTH_SECRET=s TUNNEL_TOKEN=t R2_ACCOUNT_ID=a R2_BUCKET=b R2_ACCESS_KEY_ID=k \
+  R2_SECRET_ACCESS_KEY=s BACKUP_AGE_RECIPIENT=age1x docker compose -f compose.prod.yaml config >/dev/null 2>&1; then
+  echo "FAIL: a missing LMS_DB_PASSWORD was not detected"; exit 1
+fi
+echo "PASS: compose config valid, no published ports, db internal-only, restarts + memory limits, terse db errors, read-only app + preview, no capabilities, no-new-privileges, app and backups as lms (not a superuser), missing secrets refused"

@@ -72,7 +72,7 @@ jobs:
         if: steps.day.outputs.go == 'true'
         run: |
           docker save "cckhlms-app:$SHA" "cckhlms-preview:$SHA" "cckhlms-backup:$SHA" | gzip -1 | ssh "deploy@$HOST" 'gunzip | docker load'
-          scp infra/compose.prod.yaml infra/server/deploy.sh "deploy@$HOST:/opt/cckhlms/"
+          scp infra/compose.prod.yaml infra/db-app-role.sh infra/server/deploy.sh "deploy@$HOST:/opt/cckhlms/"
 
       - name: Start the new version (rolls back automatically if unhealthy)
         if: steps.day.outputs.go == 'true'
