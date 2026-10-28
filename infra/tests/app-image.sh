@@ -45,6 +45,11 @@ primary=$(docker exec it-app ps | grep -c 'node cluster.mjs' || true)
 [ "$servers" = 2 ] && [ "$primary" = 1 ] || { echo "FAIL: expected 1 primary and 2 server processes"; docker exec it-app ps; exit 1; }
 user=$(docker exec it-app id -un)
 [ "$user" != root ] || { echo "FAIL: app runs as root"; exit 1; }
+# Pre-launch review finding 2: the image holds the server and nothing else from the build folder (no .env, src,
+# out/, resource/ …); uploads/ is the volume.
+extra=$(docker exec it-app ls -A /app | grep -vxE '\.next|node_modules|package\.json|server\.js|drizzle|cluster\.mjs|uploads' || true)
+[ -z "$extra" ] || { echo "FAIL: the image holds files that don't belong in it: $extra"; exit 1; }
+[ -z "$(docker exec it-app ls -A /app/uploads)" ] || { echo "FAIL: the image ships files in uploads/"; exit 1; }
 hsts=$(docker exec it-app wget -qS -O /dev/null http://127.0.0.1:3000/login 2>&1 | grep -i 'strict-transport-security' || true)
 [ -n "$hsts" ] || { echo "FAIL: no HSTS header when served as https"; exit 1; }
 # Read-only: pages still render, uploads are writable, and nothing tried to write to the image.

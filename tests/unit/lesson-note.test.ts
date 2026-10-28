@@ -135,8 +135,8 @@ describe('renderNote: pictures', () => {
   });
 
   it('keeps pictures from before M9 at their own size, and drops an unknown size', () => {
-    expect(renderNote('![Loop diagram](/files/abc)')).toBe(
-      '<figure class="pic"><img src="/files/abc" alt=""><figcaption>Loop diagram</figcaption></figure>\n',
+    expect(renderNote('![Loop diagram](/api/files/abc)')).toBe(
+      '<figure class="pic"><img src="/api/files/abc" alt=""><figcaption>Loop diagram</figcaption></figure>\n',
     );
     expect(renderNote('![x](/api/files/abc#huge)')).toContain('<figure class="pic"><img src="/api/files/abc" alt="">');
   });

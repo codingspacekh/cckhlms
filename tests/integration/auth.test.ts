@@ -4,6 +4,7 @@ import { Pool } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { auth } from '@/server/auth';
 import { getActor } from '@/server/actor';
+import { signOutEverywhere } from '@/modules/identity/service';
 import { seedUser } from '@/server/seed';
 import { startup } from '@/server/startup';
 import { pool as appPool } from '@/db/client';
@@ -64,31 +65,12 @@ describe('accounts', () => {
     expect(rowCount).toBe(0);
   });
 
-  it('lets Admin create a student who then signs in with a username', async () => {
-    const res = await call('/admin/create-user', {
-      cookie: adminCookie,
-      body: {
-        email: 'bopha.l@students.cckh.invalid',
-        password: 'lotus-comet-42',
-        name: 'Bopha Lim',
-        role: 'student',
-        data: { username: 'bopha.l' },
-      },
-    });
-    expect(res.status).toBe(200);
+  it('lets a student created by Admin sign in with a username', async () => {
+    await seedUser({ username: 'bopha.l', name: 'Bopha Lim', password: 'lotus-comet-42', role: 'student' });
     const s = await signIn('bopha.l', 'lotus-comet-42');
     expect(s.status).toBe(200);
     const actor = await getActor(headersWith(s.cookie));
     expect(actor).toMatchObject({ username: 'bopha.l', role: 'student' });
-  });
-
-  it('refuses account creation by a non-admin', async () => {
-    const teacher = await signIn('sophea', 'teacher-pass-1234');
-    const res = await call('/admin/create-user', {
-      cookie: teacher.cookie,
-      body: { email: 'x@students.cckh.invalid', password: 'xxxx-xxxx-12', name: 'X', role: 'student', data: { username: 'x.x' } },
-    });
-    expect(res.status).toBe(403);
   });
 
   it('stores passwords only as hashes', async () => {
@@ -102,6 +84,42 @@ describe('accounts', () => {
       const res = await call('/sign-in/username', { origin, body: { username: 'bopha.l', password: 'lotus-comet-42' } });
       expect(res.status, `origin ${origin}`).toBe(403);
     }
+  });
+});
+
+// Pre-launch review finding 1: Better Auth serves ~40 endpoints; the LMS uses three. The rest are refused, so a
+// student can't rename themselves (certificates), sign in by email past FR-AUTH-11, or reach the admin plugin.
+describe('only the auth endpoints the LMS uses', () => {
+  it('refuses every other endpoint, whoever calls it', async () => {
+    const student = await signIn('bopha.l', 'lotus-comet-42');
+    const refused: [string, unknown][] = [
+      ['/update-user', { name: 'Someone Else', username: 'someone.else' }],
+      ['/change-password', { currentPassword: 'lotus-comet-42', newPassword: 'aaaaaaaaaa' }],
+      ['/is-username-available', { username: 'admin' }],
+      ['/sign-in/email', { email: 'bopha.l@users.cckh.invalid', password: 'lotus-comet-42' }],
+      ['/admin/create-user', { email: 'x@users.cckh.invalid', password: 'xxxx-xxxx-12', name: 'X', role: 'student' }],
+      ['/admin/set-role', { userId: 'x', role: 'admin' }],
+      ['/admin/impersonate-user', { userId: 'x' }],
+      ['/admin/remove-user', { userId: 'x' }],
+    ];
+    for (const cookie of [student.cookie, adminCookie, undefined])
+      for (const [path, body] of refused) {
+        const res = await call(path, { cookie, body });
+        expect(res.status, `${path} ${cookie ? 'signed in' : 'anonymous'}`).toBe(404);
+      }
+    expect((await call('/list-sessions', { cookie: student.cookie, method: 'GET' })).status).toBe(404);
+    const { rows } = await pool.query(`select name, username from "user" where username = 'bopha.l'`);
+    expect(rows).toEqual([{ name: 'Bopha Lim', username: 'bopha.l' }]);
+  });
+
+  it('still signs in by username, reads the session and signs out', async () => {
+    const s = await signIn('bopha.l', 'lotus-comet-42');
+    expect(s.status).toBe(200);
+    const got = await call('/get-session', { cookie: s.cookie, method: 'GET' });
+    expect(got.status).toBe(200);
+    expect(await got.json()).toMatchObject({ user: { username: 'bopha.l' } });
+    expect((await call('/sign-out', { cookie: s.cookie, body: {} })).status).toBe(200);
+    expect(await getActor(headersWith(s.cookie))).toBeNull();
   });
 });
 
@@ -150,12 +168,22 @@ describe('sessions by role (FR-AUTH-10)', () => {
     expect(Number(rows[0].idle)).toBeLessThan(5);
   });
 
+  // Pre-launch review: switching an account off deletes its sessions; this is the second guard if that ever fails.
+  it('refuses a switched-off account even if a session survived', async () => {
+    const s = await signIn('bopha.l', 'lotus-comet-42');
+    await pool.query(`update "user" set banned = true where username = 'bopha.l'`);
+    try {
+      expect(await getActor(headersWith(s.cookie))).toBeNull();
+    } finally {
+      await pool.query(`update "user" set banned = false where username = 'bopha.l'`);
+    }
+  });
+
   it('lets Admin sign a user out everywhere at once', async () => {
     const a = await signIn('bopha.l', 'lotus-comet-42');
     const b = await signIn('bopha.l', 'lotus-comet-42');
     const { rows } = await pool.query(`select id from "user" where username = 'bopha.l'`);
-    const res = await call('/admin/revoke-user-sessions', { cookie: adminCookie, body: { userId: rows[0].id } });
-    expect(res.status).toBe(200);
+    await signOutEverywhere(await getActor(headersWith(adminCookie)), rows[0].id);
     expect(await getActor(headersWith(a.cookie))).toBeNull();
     expect(await getActor(headersWith(b.cookie))).toBeNull();
   });
@@ -195,6 +223,22 @@ describe('brute force (FR-AUTH-11)', () => {
     expect((await signIn('admin', 'admin-pass-1234', ip)).status).toBe(200);
     expect((await signIn('nobody9', 'guess-1234', ip)).status).toBe(401);
     expect((await signIn('nobody10', 'guess-1234', ip)).status).toBe(429);
+  });
+
+  it('counts IPv6 addresses per /64, so moving inside one connection doesn’t reset the count', async () => {
+    for (let i = 1; i <= 10; i++) await signIn(`nobody${i}`, 'wrong-password', `2001:db8:77:1::${i}`);
+    expect((await signIn('sophea', 'teacher-pass-1234', '2001:db8:77:1::ff')).status).toBe(429);
+    expect((await signIn('sophea', 'teacher-pass-1234', '2001:db8:77:2::1')).status).toBe(200);
+  });
+
+  it('forgets failed sign-ins (usernames and addresses) after a day', async () => {
+    await pool.query(`insert into sign_in_failure (key, count, window_start) values ('ip:192.0.2.250', 3, now() - interval '25 hours')`);
+    await pool.query(`insert into rate_limit (id, key, count, last_request) values ('old', '192.0.2.250/sign-in/username', 1, $1)`, [
+      Date.now() - 25 * H,
+    ]);
+    await signIn('nobody', 'wrong-password');
+    expect((await pool.query(`select 1 from sign_in_failure where key = 'ip:192.0.2.250'`)).rowCount).toBe(0);
+    expect((await pool.query(`select 1 from rate_limit where id = 'old'`)).rowCount).toBe(0);
   });
 
   it('lets a class of 30 sign in together from one address, with a few typos', async () => {

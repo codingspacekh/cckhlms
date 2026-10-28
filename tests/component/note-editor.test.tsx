@@ -189,7 +189,7 @@ describe('NoteEditor', () => {
       fireEvent.change(screen.getByLabelText('Choose a picture'), { target: { files: [file()] } });
       await waitFor(() => expect(saved()).toBe(`![](/api/files/${ID}#medium)`));
       cleanup();
-      await setup('![Loop diagram](/files/abc)', { onPicture });
+      await setup('![Loop diagram](/api/files/abc)', { onPicture });
       const sizes = await screen.findByRole('group', { name: 'Picture size' });
       expect(
         within(sizes)

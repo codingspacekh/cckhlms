@@ -16,6 +16,9 @@ const inNote = (env: unknown) => (env as NoteEnv | undefined)?.note === true;
 
 const isWeb = (url: string) => /^https?:\/\//i.test(url);
 const isLocal = (url: string) => url.startsWith('/') && !url.startsWith('//');
+// A picture must be an uploaded file (and, in a note, its #size): an image makes the reader's browser request it with
+// their cookie, so it can't be any LMS address (pre-launch review).
+const isPicture = (url: string) => /^\/api\/files\/[\w-]+(#\w+)?$/.test(url);
 
 // Only web, email and same-site links. Everything else (javascript:, data:, //host …) stays plain text.
 md.validateLink = (url) => isWeb(url) || /^mailto:/i.test(url) || isLocal(url) || url.startsWith('#');
@@ -39,13 +42,16 @@ md.renderer.rules.link_open = (tokens, idx, options, _env, self) => {
   return self.renderToken(tokens, idx, options);
 };
 
-// Images only from the LMS itself (the CSP blocks others anyway); a web image becomes a link to it.
+// Images only from the LMS's own files (the CSP blocks other sites anyway); any other image becomes a link to it.
 const defaultImage = md.renderer.rules.image!;
 md.renderer.rules.image = (tokens, idx, options, env, self) => {
   const t = tokens[idx]!;
   const src = String(t.attrGet('src') ?? '');
   const alt = self.renderInlineAsText(t.children ?? [], options, env);
-  if (!isLocal(src)) return `<a href="${escapeHtml(src)}"${webLinkAttrs}>${escapeHtml(alt || src)}</a>`;
+  if (!isPicture(src)) {
+    const attrs = isLocal(src) ? '' : webLinkAttrs;
+    return `<a href="${escapeHtml(src)}"${attrs}>${escapeHtml(alt || src)}</a>`;
+  }
   if (!inNote(env)) return defaultImage(tokens, idx, options, env, self);
   // In a note, `#small`, `#medium` or `#full` after the address is the picture's size (BR-22).
   const [path = '', size = ''] = src.split('#');
@@ -97,7 +103,7 @@ md.core.ruler.push('note_blocks', (state) => {
     if (t.type === 'paragraph_open' && tokens[i + 2]?.type === 'paragraph_close') {
       const kids = tokens[i + 1]!.children ?? [];
       const img = kids.length === 1 ? kids[0]! : null;
-      if (img?.type === 'image' && isLocal(String(img.attrGet('src') ?? ''))) {
+      if (img?.type === 'image' && isPicture(String(img.attrGet('src') ?? ''))) {
         img.meta = { figure: true };
         t.hidden = true;
         tokens[i + 2]!.hidden = true;

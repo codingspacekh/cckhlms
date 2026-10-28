@@ -15,3 +15,5 @@ next-env.d.ts
 infra/secrets/
 backups/
 uploads/
+# local brand material (logo source files)
+resource/

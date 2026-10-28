@@ -13,15 +13,15 @@ export const FONT_FILES = ['latin', 'latin-ext', 'vietnamese'].flatMap((sub) =>
   [400, 700].map((w) => `node_modules/@fontsource/noto-sans/files/noto-sans-${sub}-${w}-normal.woff`),
 );
 FONT_FILES.push(...[400, 700].map((w) => `node_modules/@fontsource/noto-sans-khmer/files/noto-sans-khmer-khmer-${w}-normal.woff`));
+// turbopackIgnore: a path Next can't work out at build time would make it copy the whole project folder into the
+// standalone build (pre-launch review finding 2; scripts/check-standalone.mjs).
+const fontPath = (file: string) => path.join(/* turbopackIgnore: true */ process.cwd(), file);
 const SUBSETS = ['latin', 'latin-ext', 'vietnamese', 'khmer'];
 for (const sub of SUBSETS)
   Font.register({
     family: `Noto ${sub}`,
     fonts: [400, 700].map((fontWeight) => ({
-      src: path.join(
-        process.cwd(),
-        FONT_FILES.find((f) => f.includes(`-${sub}-${fontWeight}-`))!,
-      ),
+      src: fontPath(FONT_FILES.find((f) => f.includes(`-${sub}-${fontWeight}-`))!),
       fontWeight,
     })),
   });
