@@ -11,6 +11,15 @@ export function newCode(): string {
 // For people: ABCD-2345-EFGH-…
 export const formatCode = (code: string) => code.match(/.{1,4}/g)!.join('-');
 
+// The code as it arrives in /verify/<code>. A broken escape (%E0%A4) reads as no code, not a server error.
+export function codeFromPath(segment: string): string {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return '';
+  }
+}
+
 // Whatever was typed or scanned → the stored code, or null if it can't be one.
 export function normaliseCode(input: string): string | null {
   const code = input.toUpperCase().replace(/[\s-]/g, '').replace(/O/g, '0').replace(/[IL]/g, '1');

@@ -1,7 +1,7 @@
 // NFR-05 · FR-TCH-01: lesson notes and Q&A are Markdown rendered on the server. Whatever a teacher or
 // student types, the HTML that comes out must contain nothing that can run.
 import { describe, expect, it } from 'vitest';
-import { renderMarkdown } from '@/lib/markdown';
+import { renderMarkdown, renderNote } from '@/lib/markdown';
 import { problems, XSS_CORPUS } from './markdown-safety';
 
 describe('renderMarkdown: XSS corpus', () => {
@@ -50,10 +50,18 @@ describe('renderMarkdown: what teachers write', () => {
   });
 
   it('shows images stored in the LMS, and turns other images into links', () => {
-    expect(renderMarkdown('![Loop diagram](/files/abc)')).toBe('<p><img src="/files/abc" alt="Loop diagram"></p>\n');
+    expect(renderMarkdown('![Loop diagram](/api/files/abc)')).toBe('<p><img src="/api/files/abc" alt="Loop diagram"></p>\n');
     expect(renderMarkdown('![Logo](https://example.com/logo.png)')).toBe(
       '<p><a href="https://example.com/logo.png" target="_blank" rel="noopener noreferrer nofollow">Logo</a></p>\n',
     );
+  });
+
+  // Pre-launch review: an image makes the reader's browser request it with their cookie, so a picture may only be an
+  // uploaded file, not any LMS address (a data export, a sign-out …). Anything else becomes a plain link.
+  it('shows only uploaded files as images', () => {
+    for (const src of ['/api/students/s1/export', '/api/auth/sign-out', '/admin/people', '/api/files/abc/x', '/api/files/abc?x=1'])
+      expect(renderMarkdown(`![x](${src})`), src).not.toContain('<img');
+    expect(renderNote('![x](/api/students/s1/export)')).not.toContain('<img');
   });
 
   it('renders tables', () => {

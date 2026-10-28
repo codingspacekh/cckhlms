@@ -41,4 +41,7 @@ export class LocalDiskStorage implements FileStorage {
   }
 }
 
-export const storage: FileStorage = new LocalDiskStorage(process.env.UPLOADS_DIR ?? path.join(process.cwd(), 'uploads'));
+// turbopackIgnore: otherwise Next copies the local uploads/ folder into the build (scripts/check-standalone.mjs).
+export const storage: FileStorage = new LocalDiskStorage(
+  process.env.UPLOADS_DIR ?? path.join(/* turbopackIgnore: true */ process.cwd(), 'uploads'),
+);

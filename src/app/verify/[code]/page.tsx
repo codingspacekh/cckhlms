@@ -3,15 +3,15 @@ import { ClubLogo } from '@/components/shell/ClubLogo';
 import { Pill } from '@/components/ui/Pill';
 import { formatDay } from '@/modules/academics/schedule';
 import { verifyCertificate } from '@/modules/certificates/certificates';
-import { formatCode, normaliseCode } from '@/modules/certificates/rules';
+import { codeFromPath, formatCode, normaliseCode } from '@/modules/certificates/rules';
 
 // Public: no sign-in (FR-ADM-12). It shows a student's name, so search engines are asked not to keep it.
 export const metadata: Metadata = { title: 'Check a certificate', robots: { index: false, follow: false } };
 
 export default async function VerifyPage({ params }: { params: Promise<{ code: string }> }) {
-  const { code } = await params;
-  const v = await verifyCertificate(decodeURIComponent(code));
-  const shown = normaliseCode(decodeURIComponent(code));
+  const code = codeFromPath((await params).code);
+  const v = await verifyCertificate(code);
+  const shown = normaliseCode(code);
   return (
     <main className="center">
       <section className="card stack narrow" aria-labelledby="verify-title">

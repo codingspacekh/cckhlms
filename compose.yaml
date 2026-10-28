@@ -6,7 +6,8 @@ services:
       POSTGRES_USER: lms
       POSTGRES_PASSWORD: lms-dev-only
       POSTGRES_DB: lms
-    ports: ['54329:5432']
+    # This computer only: the password is in the repo, and the laptop is often on the club's Wi-Fi.
+    ports: ['127.0.0.1:54329:5432']
     volumes: [pgdata:/var/lib/postgresql]
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U lms -d lms']

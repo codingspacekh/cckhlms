@@ -16,7 +16,9 @@ cleanup
 
 docker build -q --build-arg GIT_SHA="$SHA" -t "cckhlms-app:$SHA" . >/dev/null
 docker network create "$NET" >/dev/null
-docker run -d --name it-db --network "$NET" -e POSTGRES_USER=lms -e POSTGRES_PASSWORD=pw -e POSTGRES_DB=lms postgres:18.6-alpine3.24 >/dev/null
+# Set up as in compose.prod.yaml: postgres is the superuser, db-app-role.sh makes lms (the app's role, not a superuser).
+docker run -d --name it-db --network "$NET" -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=admin-pw -e POSTGRES_DB=lms \
+  -e LMS_DB_PASSWORD=pw -v "$PWD/infra/db-app-role.sh:/docker-entrypoint-initdb.d/app-role.sh:ro" postgres:18.6-alpine3.24 >/dev/null
 until docker exec it-db pg_isready -h 127.0.0.1 -U lms -d lms >/dev/null 2>&1; do sleep 1; done
 # The same lock-down as compose.prod.yaml: read-only image, no capabilities, no-new-privileges.
 docker run -d --name it-app --network "$NET" --read-only --tmpfs /tmp --tmpfs /app/.next/cache \
@@ -38,6 +40,10 @@ case "$health" in *'"ok":true'*"\"version\":\"$SHA\""*) ;; *) echo "FAIL: app no
 
 admins=$(docker exec it-db psql -U lms -d lms -tAc "select count(*) from \"user\" where role = 'admin'")
 [ "$admins" = 1 ] || { echo "FAIL: expected 1 admin, got $admins"; exit 1; }
+# Pre-launch review: the app's role ran the migrations but is no superuser, so SQL can't run programs in the
+# database container or read its files.
+[ "$(docker exec it-db psql -U postgres -tAc "select rolsuper from pg_roles where rolname = 'lms'")" = f ] || { echo "FAIL: lms is a superuser"; exit 1; }
+if docker exec it-db psql -U lms -d lms -c "copy (select 1) to program 'true'" >/dev/null 2>&1; then echo "FAIL: lms can run programs"; exit 1; fi
 [ "$(docker exec it-app printenv KEEP_ALIVE_TIMEOUT)" = 95000 ] || { echo "FAIL: idle connections must outlast cloudflared's 90 s"; exit 1; }
 # A primary (node cluster.mjs) and two server processes (Next.js names them next-server).
 servers=$(docker exec it-app ps | grep -c 'next-server' || true)
@@ -45,6 +51,11 @@ primary=$(docker exec it-app ps | grep -c 'node cluster.mjs' || true)
 [ "$servers" = 2 ] && [ "$primary" = 1 ] || { echo "FAIL: expected 1 primary and 2 server processes"; docker exec it-app ps; exit 1; }
 user=$(docker exec it-app id -un)
 [ "$user" != root ] || { echo "FAIL: app runs as root"; exit 1; }
+# Pre-launch review finding 2: the image holds the server and nothing else from the build folder (no .env, src,
+# out/, resource/ …); uploads/ is the volume.
+extra=$(docker exec it-app ls -A /app | grep -vxE '\.next|node_modules|package\.json|server\.js|drizzle|cluster\.mjs|uploads' || true)
+[ -z "$extra" ] || { echo "FAIL: the image holds files that don't belong in it: $extra"; exit 1; }
+[ -z "$(docker exec it-app ls -A /app/uploads)" ] || { echo "FAIL: the image ships files in uploads/"; exit 1; }
 hsts=$(docker exec it-app wget -qS -O /dev/null http://127.0.0.1:3000/login 2>&1 | grep -i 'strict-transport-security' || true)
 [ -n "$hsts" ] || { echo "FAIL: no HSTS header when served as https"; exit 1; }
 # Read-only: pages still render, uploads are writable, and nothing tried to write to the image.
@@ -68,7 +79,7 @@ docker exec it-app sh -c 'kill $(ps | awk "/next-server/ {print \$1; exit}")'
 i=0
 while [ "$(docker inspect -f '{{.State.Running}}' it-app)" = true ] && [ $i -lt 20 ]; do i=$((i + 1)); sleep 1; done
 [ "$(docker inspect -f '{{.State.Running}}' it-app)" = false ] || { echo "FAIL: the container kept running with a server process gone"; exit 1; }
-echo "PASS: app image (version $SHA, migrations + first admin, non-root user '$user', HSTS on, secure session cookie, read-only, no capabilities, 2 server processes, stops if one dies)"
+echo "PASS: app image (version $SHA, migrations + first admin as a non-superuser role, non-root user '$user', HSTS on, secure session cookie, read-only, no capabilities, 2 server processes, stops if one dies)"
 
 # The preview image, locked down the same way, serves the frame with its CSP.
 docker build -q -t "cckhlms-preview:$SHA" -f infra/preview/Dockerfile . >/dev/null

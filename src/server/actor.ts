@@ -10,7 +10,8 @@ export type Actor = { userId: string; username: string; name: string; role: stri
 
 export async function getActor(headers: Headers): Promise<Actor | null> {
   const found = await auth.api.getSession({ headers, query: { disableCookieCache: true } });
-  if (!found) return null;
+  // A switched-off account has no sessions left (setActive deletes them); this is the second guard.
+  if (!found || found.user.banned) return null;
   const s = found.session as typeof found.session & { lastActiveAt?: Date | string | null };
   const now = new Date();
   const decision = sessionDecision({

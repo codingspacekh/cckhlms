@@ -13,3 +13,10 @@ infra
 .env
 .env.*
 *.md
+# Local data and files that never belong in the image (pre-launch review finding 2)
+out
+uploads
+backups
+resource
+.DS_Store
+**/*.key

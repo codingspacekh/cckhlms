@@ -23,9 +23,14 @@ Everything needed to set up, run, recover and hand over the LMS. The owner does 
 
 Do these in order. Each step says what it produces; keep everything marked 🔑 in your password manager.
 
+### 2.0 Accounts
+Use a password manager, and turn on **two-factor sign-in** (an authenticator app or a security key, not SMS) for GitHub, Cloudflare, Hetzner, healthchecks.io, the uptime monitor and the password manager itself. Whoever gets into one of these can take over the site or the backups.
+
 ### 2.1 Domain
 1. Cloudflare → **Domain Registration → Register** `cckh.dev` (at cost, ~$10–15/year). DNS is then already on Cloudflare.
-2. SSL/TLS → Overview → mode **Full (strict)**. Edge Certificates → **Always Use HTTPS: on**.
+2. SSL/TLS → Overview → mode **Full (strict)**. Edge Certificates → **Always Use HTTPS: on**, **Minimum TLS Version: 1.2**.
+3. DNS → Settings → **DNSSEC: enable**.
+4. DNS → Records: after §2.3 there should be only the two tunnel records (`lms`, `preview`, type CNAME, proxied). Never add an `A` or `AAAA` record with the server's IP: it would tell everyone where the server is.
 
 ### 2.2 Server (Hetzner)
 1. Hetzner Cloud → new project **cckhlms** → Security → **add your laptop's SSH public key** (`cat ~/.ssh/id_ed25519.pub`; create one with `ssh-keygen -t ed25519` if needed).
@@ -36,6 +41,11 @@ Do these in order. Each step says what it produces; keep everything marked 🔑 
    ssh root@SERVER_IP 'DISK_PING_URL=https://hc-ping.com/YOUR-DISK-CHECK sh -s' < infra/server/provision.sh
    ```
    This installs Docker, creates the `deploy` user (allowed to run Docker, update the system and reboot), turns off root and password login, opens only SSH, enables automatic security updates and fail2ban, and starts the disk alert. Afterwards `ssh deploy@SERVER_IP` works and `ssh root@…` doesn't.
+5. Check it worked:
+   ```bash
+   ssh deploy@SERVER_IP 'sudo sshd -T | grep -E "^(permitrootlogin|passwordauthentication|kbdinteractiveauthentication) "; sudo ufw status; sudo fail2ban-client status sshd | head -3; cat /etc/apt/apt.conf.d/20auto-upgrades; sudo ss -tlnp'
+   ```
+   Expect `permitrootlogin no`, `passwordauthentication no`, `kbdinteractiveauthentication no`; ufw active with only 22; fail2ban's `sshd` jail; both auto-upgrade lines `"1"`; and `ss` listening publicly on port 22 only. From your laptop, `nc -zv -w 3 SERVER_IP 80 443 5432 3000` should fail for every port.
 
 ### 2.3 Cloudflare Tunnel
 1. Cloudflare **Zero Trust → Networks → Tunnels → Create a tunnel → Cloudflared**, name `cckhlms`.
@@ -50,11 +60,13 @@ Cloudflare → `cckh.dev` → **Security → WAF → Rate limiting rules → Cre
 ### 2.5 Backups (R2 + age)
 1. Cloudflare **R2 → Create bucket** `cckhlms-backups` (location: Asia-Pacific). Note the **Account ID**.
 2. R2 → **Manage API tokens → Create**: permission **Object Read & Write**, **this bucket only**. Copy **Access Key ID** and **Secret Access Key** 🔑.
+   - Bucket → Settings → **Public access: off** (no `r2.dev` address, no custom domain).
+   - Bucket → Settings → **Bucket lock rules → Add**: whole bucket, retention **30 days**. Nobody, not even the server's token, can delete or overwrite a backup younger than that, so someone who takes over the server can't wipe the backups. The nightly prune skips copies that are still locked and removes them later (`infra/backup/backup.sh`), so R2 holds about 30 days of copies (well inside the free 10 GB).
 3. On your laptop: `brew install age && age-keygen -o cckhlms-backup.key`. The file holds the **private key** 🔑 (store it in the password manager, then delete the file). The line `# public key: age1…` is the **public key** for the server.
 4. healthchecks.io → new check **cckhlms-backup**, schedule *cron* `0 2 * * *`, time zone `Asia/Phnom_Penh`, grace 1 hour → copy its **ping URL**. A second check **cckhlms-disk**, period 30 min, grace 30 min → ping URL.
 
 ### 2.6 Server secrets
-1. Generate: `openssl rand -hex 32` (twice: database password, auth secret) and a long first-admin password.
+1. Generate: `openssl rand -hex 32` (three times: the database superuser's password, the app's database password, the auth secret) and a long first-admin password. The app and the backups connect as `lms`, which owns the database but is not a superuser; the database creates it from `LMS_DB_PASSWORD` the first time it starts (`infra/db-app-role.sh`).
 2. Copy `infra/server/env.example` to a local file, fill it in, and save a copy 🔑. Then:
    ```bash
    scp filled.env deploy@SERVER_IP:/opt/cckhlms/.env
@@ -69,12 +81,14 @@ Cloudflare → `cckh.dev` → **Security → WAF → Rate limiting rules → Cre
    - `DEPLOY_HOST` = server IP
    - `DEPLOY_SSH_KEY` = contents of `cckhlms-deploy` (private key)
    - `DEPLOY_KNOWN_HOSTS` = output of `ssh-keyscan -t ed25519 SERVER_IP`
+   In the same environment, **Deployment branches and tags → Selected branches → add `main`**. The deploy key can do anything on the server, so only `main` (protected, reviewed by CI) may use it.
 4. Repo **Settings → Secrets and variables → Actions → Variables**: `DEPLOY_ENABLED` = `true`.
+5. Repo **Settings → Actions → General → Actions permissions**: choose the option that allows only *select* actions, tick **Allow actions created by GitHub** (nothing else), and tick **Require actions to be pinned to a full-length commit SHA**. Our workflows use only GitHub's own actions, each pinned.
 
 ### 2.8 First deploy
 1. GitHub → **Actions → Deploy → Run workflow** (tick *force* if it's a weekend).
 2. Open `https://lms.cckh.dev` → sign in with the first-admin username and password.
-3. Remove the two `BOOTSTRAP_ADMIN_*` lines from `/opt/cckhlms/.env` (they are ignored once an admin exists, but shouldn't stay on disk).
+3. Remove the two `BOOTSTRAP_ADMIN_*` lines from `/opt/cckhlms/.env` (they are ignored once an admin exists, but shouldn't stay on disk), then `cd /opt/cckhlms && APP_TAG=$(cat .deployed-tag) docker compose -f compose.prod.yaml up -d` so they also leave the running app's environment.
 4. Uptime monitor → add an HTTP monitor for `https://lms.cckh.dev/api/health` (every 5 min, alert by email or Telegram).
 5. Do the **first restore drill** (§4) and record it in §6.
 
@@ -93,12 +107,27 @@ On the server, every `docker compose` command needs the version that is running 
 | Backup now | `ssh deploy@SERVER_IP 'cd /opt/cckhlms && export APP_TAG=$(cat .deployed-tag) && docker compose -f compose.prod.yaml exec backup backup.sh'` | Before risky changes |
 | OS updates | Security updates install automatically. Monthly on a weekday: `ssh deploy@SERVER_IP 'sudo apt-get update && sudo apt-get upgrade -y'`, then `sudo reboot` if it says a restart is required. Containers come back by themselves. | Monthly |
 | App won't start: "The server settings need fixing" | `docker compose -f compose.prod.yaml logs app` (after the `export APP_TAG` above) lists each problem (for example a secret shorter than 32 characters, or an `http://` address). Fix `/opt/cckhlms/.env` as in *Rotate a secret*. | When a deploy fails its health check |
-| Rotate a secret | Edit `/opt/cckhlms/.env`, then `APP_TAG=$(cat .deployed-tag) docker compose -f compose.prod.yaml up -d`. Changing `BETTER_AUTH_SECRET` signs everyone out. | If leaked |
+| Rotate a secret | See §3.1: each secret has its own steps. | If leaked, or someone who knew it leaves |
 | Software updates | Dependencies and images are pinned (versions at least 2 weeks old). Once a month on a weekday, update them in a PR; CI and the deploy do the rest. A high-severity `npm audit` finding fails CI: update that package at once (docs/05 M6 has the exception rule). Ubuntu 24.04 is supported to 2029; plan the move to the next LTS in 2028. | Monthly |
 | A guardian asks for a student's data, or for it to be deleted (NFR-07) | People → the student's **Report** → *Personal data*. **Download their data** gives a JSON file; send it to the guardian only. **Delete personal data…** asks for the username and can't be undone: their marks stay under "Deleted student", their certificates are revoked. Backups keep the old data until they expire (at most 8 weeks), so a restore can bring it back: write the student's id (from the address bar, not their name) and the date in §7, and after any restore delete each one listed there again. | On request |
 | Pay / renew | Hetzner monthly; `cckh.dev` yearly (auto-renew on, card on file). Budget: $100 covers ≈13–16 months; set a reminder 3 months before. Cloudflare's certificates, the Tunnel and R2 tokens don't expire on their own. | — |
 
 **Never deploy on Saturday or Sunday** (classes). The workflow refuses unless *force* is ticked.
+
+### 3.1 Rotating a secret
+
+On the server, `cd /opt/cckhlms && export APP_TAG=$(cat .deployed-tag)` first; "restart" below means `docker compose -f compose.prod.yaml up -d`. Update the copy in the password manager each time.
+
+| Secret | Steps | Effect |
+|---|---|---|
+| `BETTER_AUTH_SECRET` | `openssl rand -hex 32` → edit `.env` → restart. | Everyone is signed out. |
+| App database password (`LMS_DB_PASSWORD`) | PostgreSQL keeps the password inside its data volume, so editing `.env` alone breaks the app. First `docker compose -f compose.prod.yaml exec db psql -U postgres -d lms`, type `\password lms`, enter the new one twice, `\q`. Then put the same value in `.env` and restart. | A few seconds of downtime. |
+| Database superuser password (`POSTGRES_PASSWORD`) | The same, with `\password postgres`. Nothing connects with it, so there's no downtime. | — |
+| `TUNNEL_TOKEN` | Zero Trust → Networks → Tunnels → `cckhlms` → **Refresh token** (or delete the tunnel and create it again with the same public hostnames). New token in `.env` → restart. | The old token stops working at once. |
+| R2 keys | Create a new token (§2.5 step 2) → new keys in `.env` → restart → **Backup now** (§3) → delete the old token in Cloudflare. | — |
+| Deploy SSH key | Create a new key (§2.7 step 1), append its `.pub` to `~deploy/.ssh/authorized_keys`, update `DEPLOY_SSH_KEY` in GitHub, run Deploy, then delete the old key's line from `authorized_keys`. | — |
+| Backup key (age) | `age-keygen` a new pair → new public key in `BACKUP_AGE_RECIPIENT` → restart → **Backup now**. Keep the **old private key** too, until the last backup made with it is gone (about 2 months). | — |
+| A person's password | People → the person → **Reset password**, print a new slip. | That person is signed out. |
 
 ---
 
@@ -178,6 +207,9 @@ M7 ran these checks against the production build on a laptop sized like the serv
 3. **ZAP baseline** (`docs/security-review.md`): `sh infra/security/zap-baseline.sh https://lms.cckh.dev/login live`, then signed in as an admin, a teacher and a student. Expect 0 high.
 4. **Disaster recovery on Hetzner** (§4): take a backup, create a second server, restore onto it, time it, record it in §6, then delete the second server.
 5. Check the edge: `http://lms.cckh.dev` redirects to `https://`, the rate-limiting rule (§2.4) exists, and `docker compose ps` shows cloudflared running with `cap_drop: [ALL]`.
+   - Cookies stay on the LMS: `curl -si -X POST https://lms.cckh.dev/api/auth/sign-in/username -H 'content-type: application/json' -H 'origin: https://lms.cckh.dev' -d '{"username":"…","password":"…"}' | grep -i set-cookie` shows `__Secure-better-auth.session_token` with **no `Domain=`**; and in the browser's developer tools, requests to `preview.cckh.dev` carry no `Cookie` header.
+   - Unused sign-in endpoints are closed: `curl -s -o /dev/null -w '%{http_code}\n' -X POST https://lms.cckh.dev/api/auth/sign-in/email -H 'origin: https://lms.cckh.dev'` prints `404`.
+   - The server's checks from §2.2 step 5 still pass, and DNS has no record with the server's IP (§2.1 step 4).
 6. Uptime, backup and disk alerts arrive (pause the app for 10 minutes once to see the uptime alert).
 7. The owner reads this runbook through and signs it off.
 

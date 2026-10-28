@@ -29,7 +29,14 @@ const REFUSED = {
   ip: 'Too many tries from this network. Wait a minute and try again.',
 };
 
+// Pre-launch review: Better Auth serves ~40 endpoints, and the browser needs only these. Everything else
+// (/update-user, /change-password, /sign-in/email, /admin/* …) answers 404, so nobody can rename an account,
+// sign in around the FR-AUTH-11 limits or change roles without the audit log. Admin's work goes through our own
+// services. Server-side calls (auth.api.getSession) have no request and aren't affected.
+const BROWSER_PATHS = new Set([SIGN_IN, '/sign-out', '/get-session']);
+
 const beforeHook = createAuthMiddleware(async (ctx) => {
+  if (ctx.request && !BROWSER_PATHS.has(ctx.path)) throw new APIError('NOT_FOUND');
   requireLmsOrigin(ctx.request);
   const attempt = ctx.path === SIGN_IN ? signInAttempt(ctx) : null;
   if (!attempt) return;
