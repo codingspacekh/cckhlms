@@ -20,12 +20,16 @@ cleanup 2>/dev/null; mkdir -p "$WORK"
 
 docker build -q -t "$IMG" infra/backup >/dev/null
 docker network create "$NET" >/dev/null
+# Set up as in compose.prod.yaml: backups and restores run as lms, the database's owner but not a superuser.
 for db in bt-src bt-dst; do
-  docker run -d --name "$db" --network "$NET" -e POSTGRES_USER=lms -e POSTGRES_PASSWORD=pw -e POSTGRES_DB=lms postgres:18.6-alpine3.24 >/dev/null
+  docker run -d --name "$db" --network "$NET" -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=admin-pw -e POSTGRES_DB=lms \
+    -e LMS_DB_PASSWORD=pw -v "$PWD/infra/db-app-role.sh:/docker-entrypoint-initdb.d/app-role.sh:ro" postgres:18.6-alpine3.24 >/dev/null
 done
 for db in bt-src bt-dst; do until docker exec "$db" pg_isready -h 127.0.0.1 -U lms -d lms >/dev/null 2>&1; do sleep 1; done; done
 
+# Tables in a second schema too: drizzle keeps its list of applied migrations in one.
 docker exec bt-src psql -q -U lms -d lms -c "
+  create schema drizzle; create table drizzle.migrations (id serial primary key, hash text); insert into drizzle.migrations (hash) values ('a'), ('b');
   create table student (id serial primary key, name text not null, note text);
   insert into student (name, note) select 'Student ' || g, case when g % 7 = 0 then 'សួស្តី ✓' end from generate_series(1, 500) g;
   create table attendance (student_id int references student(id), week int, status char(1));
@@ -72,10 +76,11 @@ others=$(docker run --rm --entrypoint find -v bt-uploads:/u "$IMG" /u ! -user 10
 [ "$others" = 0 ] || { echo "FAIL: $others restored lesson files or folders aren't owned by the app's user"; exit 1; }
 
 q="select count(*) || ':' || md5(string_agg(id || name || coalesce(note, ''), ',' order by id)) from student;
-   select count(*) || ':' || md5(string_agg(student_id || '-' || week || status, ',' order by student_id, week, status)) from attendance;"
+   select count(*) || ':' || md5(string_agg(student_id || '-' || week || status, ',' order by student_id, week, status)) from attendance;
+   select count(*) from drizzle.migrations;"
 src=$(docker exec bt-src psql -U lms -d lms -tA -c "$q")
 dst=$(docker exec bt-dst psql -U lms -d lms -tA -c "$q")
 [ "$src" = "$dst" ] || { echo "FAIL: restored data differs"; echo "src: $src"; echo "dst: $dst"; exit 1; }
 
 if run -e PGHOST=bt-dst -e AGE_IDENTITY_FILE=/dev/null "$IMG" restore-latest >/dev/null 2>&1; then echo "FAIL: restore worked without the key"; exit 1; fi
-echo "PASS: backup round trip ($(echo "$src" | tr '\n' ' ')) and lesson files (owned by the app's user), encrypted, retention 14 daily + 8 weekly"
+echo "PASS: backup round trip as a non-superuser ($(echo "$src" | tr '\n' ' ')) and lesson files (owned by the app's user), encrypted, retention 14 daily + 8 weekly"

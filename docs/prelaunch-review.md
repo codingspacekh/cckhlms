@@ -11,7 +11,7 @@ Status column: **Fixed** (in the pre-launch fix PR), **Runbook** (a set-up step,
 | # | Problem | Who could do it | Fix | Status |
 |---|---|---|---|---|
 | 1 | **Better Auth's unused endpoints were open.** About 40 endpoints are served under `/api/auth/*`; the LMS uses three. `/update-user` let a student rename themselves (name and username) from the browser console, and certificates and the public `/verify` page showed the live name, so a child could hold a real certificate in any name. `/sign-in/email` (every account has the predictable email `username@users.cckh.invalid`) skipped the failed-sign-in limits of FR-AUTH-11. `/change-password` and `/is-username-available` were open too. The `/admin/*` endpoints are Admin-only but change roles, delete users and impersonate them with no audit row. | Any signed-in student; anyone for `/sign-in/email` | Allow only `/sign-in/username`, `/sign-out` and `/get-session` (`src/server/auth.ts`). With `/update-user` closed, only Admin can change a name, so certificates keep reading the live name (copying it onto the certificate was considered and left out). | Fixed |
-| 2 | **The app image picked up whatever was in the build folder.** The certificate font loader built its path at run time, so Next's file tracing copied the whole project folder into `.next/standalone`. On the laptop that included `out/dr/drill.key` (the M7 drill's backup key, drill-only), `out/dr/filled.env` and `resource/`. CI builds from a clean checkout, so nothing leaked, but any image built on the laptop would have carried them. | Anyone with an image built on the laptop | Fixed font paths; tracing excludes local folders; `.dockerignore` covers them; `infra/tests/app-image.sh` checks the image has no stray folders. Delete `out/dr/` and `.next/standalone` on the laptop. | Fixed |
+| 2 | **The app image picked up whatever was in the build folder.** The certificate font loader built its path at run time, so Next's file tracing copied the whole project folder into `.next/standalone`. On the laptop that included `out/dr/drill.key` (the M7 drill's backup key, drill-only), `out/dr/filled.env` and `resource/`. CI builds from a clean checkout, so nothing leaked, but any image built on the laptop would have carried them. | Anyone with an image built on the laptop | Fixed font paths; tracing excludes local folders; `.dockerignore` covers them; `infra/tests/app-image.sh` checks the image has no stray folders. Deleted `out/dr/` and `.next/standalone` on the laptop (2026-10-28). | Fixed |
 
 ## Small fixes (low)
 
@@ -24,7 +24,7 @@ Status column: **Fixed** (in the pre-launch fix PR), **Runbook** (a set-up step,
 | Pictures in notes, Q&A and feedback could point at any LMS path, which makes the viewer's browser request it with their cookie. | Same-site pictures must be uploaded files (`/api/files/<id>`). | Fixed |
 | The per-address sign-in limit could be dodged by rotating IPv6 addresses inside one /64. | IPv6 addresses count per /64. | Fixed |
 | Failed-sign-in rows and IP addresses were kept forever. | Rows older than a day are removed, also from Better Auth's flood-guard table. | Fixed |
-| The app connects to Postgres as the superuser, so an SQL injection would reach the whole database server. No injection was found (Drizzle binds every value). | A limited role means separating "run migrations" from "serve pages" at start-up; a follow-up PR, best done before real data arrives. | Open |
+| The app connects to Postgres as the superuser, so an SQL injection would reach the whole database server (run programs in the database container, read its files, change roles). No injection was found (Drizzle binds every value). | The app and the backups use `lms`, the database's owner but not a superuser (`infra/db-app-role.sh`, follow-up PR). It can still change its own tables, which migrations need; a role without that would only add protection against `DROP TABLE`, and `DELETE` does the same damage. | Fixed |
 | The dev database listened on every network interface with a known password (club Wi-Fi). | Bound to 127.0.0.1. | Fixed |
 | `resource/` was neither tracked nor ignored, so easy to commit by accident. | Added to `.gitignore` and `.dockerignore`. | Fixed |
 | Pruning old backups needed delete rights, so a server take-over could delete every backup. | R2 bucket lock (runbook §2.5); the prune now skips copies still locked. | Fixed + Runbook |
@@ -41,8 +41,8 @@ Status column: **Fixed** (in the pre-launch fix PR), **Runbook** (a set-up step,
 
 ## Questions for the owner
 
-1. **Reporting in Q&A.** One report from any student hides that post (even a teacher's answer) until a teacher looks at it, so one child could blank a lesson's Q&A. Should teacher posts stay visible when reported? *(Open)*
-2. **Demo names.** The seed, prototype and doc names (Khmer names, phones `012 000 00x`) should all be made up. Is any of them a real enrolled child? *(Open)*
+1. **Reporting in Q&A.** One report from any student hides that post (even a teacher's answer) until a teacher looks at it, so one child could blank a lesson's Q&A. Should teacher posts stay visible when reported? *(Answered 2026-10-28: yes. A teacher's post can't be reported (PR #51).)*
+2. **Demo names.** The seed, prototype and doc names (Khmer names, phones `012 000 00x`) should all be made up. Is any of them a real enrolled child? *(Answered 2026-10-28: all made up.)*
 
 ## Checked and found safe (summary)
 

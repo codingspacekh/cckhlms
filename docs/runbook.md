@@ -66,7 +66,7 @@ Cloudflare → `cckh.dev` → **Security → WAF → Rate limiting rules → Cre
 4. healthchecks.io → new check **cckhlms-backup**, schedule *cron* `0 2 * * *`, time zone `Asia/Phnom_Penh`, grace 1 hour → copy its **ping URL**. A second check **cckhlms-disk**, period 30 min, grace 30 min → ping URL.
 
 ### 2.6 Server secrets
-1. Generate: `openssl rand -hex 32` (twice: database password, auth secret) and a long first-admin password.
+1. Generate: `openssl rand -hex 32` (three times: the database superuser's password, the app's database password, the auth secret) and a long first-admin password. The app and the backups connect as `lms`, which owns the database but is not a superuser; the database creates it from `LMS_DB_PASSWORD` the first time it starts (`infra/db-app-role.sh`).
 2. Copy `infra/server/env.example` to a local file, fill it in, and save a copy 🔑. Then:
    ```bash
    scp filled.env deploy@SERVER_IP:/opt/cckhlms/.env
@@ -121,7 +121,8 @@ On the server, `cd /opt/cckhlms && export APP_TAG=$(cat .deployed-tag)` first; "
 | Secret | Steps | Effect |
 |---|---|---|
 | `BETTER_AUTH_SECRET` | `openssl rand -hex 32` → edit `.env` → restart. | Everyone is signed out. |
-| Database password (`POSTGRES_PASSWORD`) | PostgreSQL keeps the password inside its data volume, so editing `.env` alone breaks the app. First `docker compose -f compose.prod.yaml exec db psql -U lms -d lms`, type `\password lms`, enter the new one twice, `\q`. Then put the same value in `.env` and restart. | A few seconds of downtime. |
+| App database password (`LMS_DB_PASSWORD`) | PostgreSQL keeps the password inside its data volume, so editing `.env` alone breaks the app. First `docker compose -f compose.prod.yaml exec db psql -U postgres -d lms`, type `\password lms`, enter the new one twice, `\q`. Then put the same value in `.env` and restart. | A few seconds of downtime. |
+| Database superuser password (`POSTGRES_PASSWORD`) | The same, with `\password postgres`. Nothing connects with it, so there's no downtime. | — |
 | `TUNNEL_TOKEN` | Zero Trust → Networks → Tunnels → `cckhlms` → **Refresh token** (or delete the tunnel and create it again with the same public hostnames). New token in `.env` → restart. | The old token stops working at once. |
 | R2 keys | Create a new token (§2.5 step 2) → new keys in `.env` → restart → **Backup now** (§3) → delete the old token in Cloudflare. | — |
 | Deploy SSH key | Create a new key (§2.7 step 1), append its `.pub` to `~deploy/.ssh/authorized_keys`, update `DEPLOY_SSH_KEY` in GitHub, run Deploy, then delete the old key's line from `authorized_keys`. | — |
