@@ -100,6 +100,12 @@ describe('QaBoard for a student', () => {
     expect(actions.reportPostAction).toHaveBeenCalledWith('c1', { type: 'question', id: 'q1' }, 'Rude');
   });
 
+  it('has no Report button on a teacher’s post', () => {
+    render(<QaBoard {...base} role="student" questions={[q({ replies: [post({ id: 'r2', author: 'Sophea Chan', byTeacher: true })] })]} />);
+    expect(screen.getByRole('button', { name: 'Report question from Rithy Som' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Report reply from Sophea Chan' })).toBeNull();
+  });
+
   it('shows their own post under review, without a reply box', () => {
     render(<QaBoard {...base} role="student" questions={[q({ mine: true, state: 'under_review', replies: [] })]} />);
     expect(within(article()).getByText('Under review')).toBeTruthy();

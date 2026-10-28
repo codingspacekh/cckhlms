@@ -141,6 +141,13 @@ describe('reporting (BR-20)', () => {
     expect(rows[0].n).toBe(1);
   });
 
+  it('a teacher’s post can’t be reported, so it stays visible to everyone', async () => {
+    await expect(reportPost(chenda, { type: 'reply', id: r2 }, 'Wrong')).rejects.toThrow(/teacher/);
+    const { rows } = await pool.query(`select count(*)::int as n from post_report where post_id = $1`, [r2]);
+    expect(rows[0].n).toBe(0);
+    expect((await visibleTo(rithy))[0]!.replies.find((r) => r.id === r2)?.state).toBe('visible');
+  });
+
   it('the teacher restores it: visible again, report resolved, logged', async () => {
     await expect(moderatePost(dara, { type: 'question', id: q2 }, 'restore')).rejects.toBeInstanceOf(ForbiddenError);
     await expect(moderatePost(bopha, { type: 'question', id: q2 }, 'restore')).rejects.toBeInstanceOf(ForbiddenError);
@@ -185,7 +192,7 @@ describe('reporting (BR-20)', () => {
   });
 
   it('counts posts waiting for review, for the teacher’s weeks table', async () => {
-    await reportPost(chenda, { type: 'reply', id: r2 }, '');
+    await reportPost(chenda, { type: 'question', id: q1 }, '');
     expect((await lessonQuestions(sophea, classId, 3)).toReview).toBe(1);
     expect((await classWeeks(sophea, classId)).find((w) => w.week === 3)?.toReview).toBe(1);
   });
