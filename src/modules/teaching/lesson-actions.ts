@@ -4,6 +4,7 @@ import { renderNote } from '@/lib/markdown';
 import { formatDate } from '@/modules/academics/schedule';
 import { formText as t, toResult, type FormResult } from '@/server/action-result';
 import { currentActor } from '@/server/guard';
+import { can } from '@/server/policy';
 import { removeAttachment } from './attachments';
 import { MAX_LESSON_CHARS, saveLesson, type LessonInput } from './lessons';
 
@@ -32,9 +33,10 @@ export async function saveLessonAction(_prev: FormResult | null, form: FormData)
   });
 }
 
-// The editor's live preview: the same server-side renderer students get (NFR-05).
+// The editor's live preview: the same server-side renderer students get (NFR-05). Teachers only: a long note costs
+// a few hundred ms to render, so nobody else gets to call it in a loop (pre-launch review).
 export async function previewMarkdownAction(source: string): Promise<string> {
-  if (!(await currentActor())) return '';
+  if (!can(await currentActor(), 'teacher.area')) return '';
   return renderNote(String(source).slice(0, MAX_LESSON_CHARS));
 }
 

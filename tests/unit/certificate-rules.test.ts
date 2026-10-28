@@ -2,7 +2,7 @@
 // its QR code opens the verify page. Codes are easy to read aloud and type back: no 0/O or 1/I/L mix-ups.
 import QRCode from 'qrcode';
 import { describe, expect, it } from 'vitest';
-import { CODE_ALPHABET, formatCode, newCode, normaliseCode, verifyUrl } from '@/modules/certificates/rules';
+import { CODE_ALPHABET, codeFromPath, formatCode, newCode, normaliseCode, verifyUrl } from '@/modules/certificates/rules';
 import { renderCertificate } from '@/modules/certificates/template';
 import { readQrCode } from '../qr';
 
@@ -46,6 +46,13 @@ describe('verification codes', () => {
     expect(normaliseCode('ABC')).toBeNull();
     expect(normaliseCode('A'.repeat(26) + '!')).toBeNull();
     expect(normaliseCode('<script>')).toBeNull();
+  });
+
+  // Pre-launch review: /verify/%E0%A4 made decodeURIComponent throw, so the public page failed with a server error.
+  it('read from the address, even a broken one', () => {
+    expect(codeFromPath('ABCD-2345%20EFGH')).toBe('ABCD-2345 EFGH');
+    expect(codeFromPath('%E0%A4%A')).toBe('');
+    expect(normaliseCode(codeFromPath('%'))).toBeNull();
   });
 });
 

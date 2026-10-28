@@ -117,6 +117,14 @@ What remains, and why it stays:
 4. **The app container could write to its own image and had default capabilities.** Now read-only with no capabilities, and every container sets `no-new-privileges`. *(PR 2.)*
 5. **PostgreSQL logged values in constraint errors** (a username, for example). Now terse. *(PR 1.)*
 
+## Pre-launch review (2026-10-28)
+
+A second pass before G1 covered the code added since this review (pictures, the lesson note editor, the theme switch), a fresh access-control sweep of every entry point, and the server and deploy set-up. Details, and what was checked and found safe: `docs/prelaunch-review.md`. What changed:
+
+6. **Better Auth's unused endpoints were open** (`/update-user`, `/change-password`, `/sign-in/email`, `/admin/*` …): a student could rename themselves, and sign-in by email skipped the failed-sign-in limits. Only `/sign-in/username`, `/sign-out` and `/get-session` are served now (`src/server/auth.ts`, `tests/integration/auth.test.ts`).
+7. **The standalone build copied the whole project folder** because of a font path Next couldn't work out, so an image built on a laptop would carry `.env`, drill keys and uploads. Fixed, and checked after every CI build (`scripts/check-standalone.mjs`) and in the image (`infra/tests/app-image.sh`).
+8. Smaller: images in Markdown only from uploaded files; the note preview for teachers only; `getActor()` refuses switched-off accounts; IPv6 sign-in limits per /64; sign-in records kept a day; `/verify` with a broken code; the dev database on this computer only; backups under an R2 retention lock; deploys from `main` only; per-secret rotation steps (runbook §2, §3.1, §8).
+
 ## At G1 (operational)
 
 - Run `sh infra/security/zap-baseline.sh https://lms.cckh.dev/login live` and the three signed-in scans against production; expect 0 high.

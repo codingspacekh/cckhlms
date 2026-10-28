@@ -11,12 +11,14 @@ KEEP_WEEKLY=${KEEP_WEEKLY:-8}
 ping() { if [ -n "${BACKUP_PING_URL:-}" ]; then curl -fsS -m 10 --retry 3 -o /dev/null "${BACKUP_PING_URL}$1" || true; fi; }
 fail() { echo "backup FAILED: $1" >&2; ping /fail; exit 1; }
 
-prune() { # keep the newest $2 files in folder $1 (names sort by time)
+# Keep the newest $2 files in folder $1 (names sort by time). The R2 bucket has a retention lock (runbook §2.5), so a
+# copy younger than the lock can't be deleted, even by this server: it is kept and pruned on a later night.
+prune() {
   list=$(rclone lsf "$BACKUP_REMOTE/$1" --files-only --include '*.age' | sort)
   total=$(printf '%s\n' "$list" | grep -c . || true)
   extra=$((total - $2))
   [ "$extra" -gt 0 ] || return 0
-  printf '%s\n' "$list" | head -n "$extra" | while read -r f; do rclone deletefile "$BACKUP_REMOTE/$1/$f"; done
+  printf '%s\n' "$list" | head -n "$extra" | while read -r f; do rclone deletefile "$BACKUP_REMOTE/$1/$f" 2>/dev/null || echo "kept $1/$f (locked)"; done
 }
 
 ping /start
