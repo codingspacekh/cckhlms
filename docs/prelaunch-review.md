@@ -11,7 +11,7 @@ Status column: **Fixed** (in the pre-launch fix PR), **Runbook** (a set-up step,
 | # | Problem | Who could do it | Fix | Status |
 |---|---|---|---|---|
 | 1 | **Better Auth's unused endpoints were open.** About 40 endpoints are served under `/api/auth/*`; the LMS uses three. `/update-user` let a student rename themselves (name and username) from the browser console, and certificates and the public `/verify` page showed the live name, so a child could hold a real certificate in any name. `/sign-in/email` (every account has the predictable email `username@users.cckh.invalid`) skipped the failed-sign-in limits of FR-AUTH-11. `/change-password` and `/is-username-available` were open too. The `/admin/*` endpoints are Admin-only but change roles, delete users and impersonate them with no audit row. | Any signed-in student; anyone for `/sign-in/email` | Allow only `/sign-in/username`, `/sign-out` and `/get-session` (`src/server/auth.ts`). With `/update-user` closed, only Admin can change a name, so certificates keep reading the live name (copying it onto the certificate was considered and left out). | Fixed |
-| 2 | **The app image picked up whatever was in the build folder.** The certificate font loader built its path at run time, so Next's file tracing copied the whole project folder into `.next/standalone`. On the laptop that included `out/dr/drill.key` (the M7 drill's backup key, drill-only), `out/dr/filled.env` and `resource/`. CI builds from a clean checkout, so nothing leaked, but any image built on the laptop would have carried them. | Anyone with an image built on the laptop | Fixed font paths; tracing excludes local folders; `.dockerignore` covers them; `infra/tests/app-image.sh` checks the image has no stray folders. Delete `out/dr/` and `.next/standalone` on the laptop. | Fixed |
+| 2 | **The app image picked up whatever was in the build folder.** The certificate font loader built its path at run time, so Next's file tracing copied the whole project folder into `.next/standalone`. On the laptop that included `out/dr/drill.key` (the M7 drill's backup key, drill-only), `out/dr/filled.env` and `resource/`. CI builds from a clean checkout, so nothing leaked, but any image built on the laptop would have carried them. | Anyone with an image built on the laptop | Fixed font paths; tracing excludes local folders; `.dockerignore` covers them; `infra/tests/app-image.sh` checks the image has no stray folders. Deleted `out/dr/` and `.next/standalone` on the laptop (2026-10-28). | Fixed |
 
 ## Small fixes (low)
 
@@ -41,8 +41,8 @@ Status column: **Fixed** (in the pre-launch fix PR), **Runbook** (a set-up step,
 
 ## Questions for the owner
 
-1. **Reporting in Q&A.** One report from any student hides that post (even a teacher's answer) until a teacher looks at it, so one child could blank a lesson's Q&A. Should teacher posts stay visible when reported? *(Open)*
-2. **Demo names.** The seed, prototype and doc names (Khmer names, phones `012 000 00x`) should all be made up. Is any of them a real enrolled child? *(Open)*
+1. **Reporting in Q&A.** One report from any student hides that post (even a teacher's answer) until a teacher looks at it, so one child could blank a lesson's Q&A. Should teacher posts stay visible when reported? *(Answered 2026-10-28: yes. A teacher's post can't be reported (PR #51).)*
+2. **Demo names.** The seed, prototype and doc names (Khmer names, phones `012 000 00x`) should all be made up. Is any of them a real enrolled child? *(Answered 2026-10-28: all made up.)*
 
 ## Checked and found safe (summary)
 
