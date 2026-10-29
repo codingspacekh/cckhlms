@@ -178,6 +178,49 @@ for (const [who, area] of [
   });
 }
 
+// The crawl sees pages, not dialogs: the M10 edit dialogs are opened here and checked the same way.
+test('the edit dialogs (M10): axe in light and dark, and they fit a phone', async ({ browser }) => {
+  const { ctx, page } = await signedIn(browser, 'admin');
+  const dialogs: [url: string, open: (p: Page) => Promise<void>][] = [
+    [
+      '/admin/terms',
+      (p) =>
+        p
+          .getByRole('button', { name: /^Edit Term/ })
+          .first()
+          .click(),
+    ],
+    [
+      '/admin/people',
+      (p) =>
+        p
+          .getByRole('button', { name: /^Edit / })
+          .first()
+          .click(),
+    ],
+    [`/admin/classes/${(await teachingClass()).classId}`, (p) => p.getByRole('button', { name: 'Edit class' }).click()],
+  ];
+  const problems: string[] = [];
+  for (const [url, open] of dialogs)
+    for (const [mode, width] of [
+      ['light', 1280],
+      ['dark', 1280],
+      ['light', 360],
+    ] as const) {
+      await page.emulateMedia({ colorScheme: mode });
+      await page.setViewportSize({ width, height: 740 });
+      await page.goto(url);
+      await open(page);
+      const dialog = page.getByRole('dialog');
+      await expect(dialog).toBeVisible();
+      for (const v of await axe(page)) problems.push(`${url} ${mode} ${width}: ${v}`);
+      const wide = await dialog.evaluate((d) => d.scrollWidth - d.clientWidth);
+      if (wide > 1) problems.push(`${url} at ${width}px: the dialog scrolls sideways by ${wide}px`);
+    }
+  await ctx.close();
+  expect(problems).toEqual([]);
+});
+
 test('the public pages, and every page in the app was swept', async ({ browser }) => {
   test.setTimeout(5 * 60_000);
   const ctx = await browser.newContext({ baseURL: E2E.lms, storageState: { cookies: [], origins: [] } });

@@ -155,14 +155,6 @@ export function PeopleManager({
                           Reset password
                         </button>
                       )}
-                      <button
-                        type="button"
-                        className="btn sm ghost"
-                        disabled={pending}
-                        onClick={() => act(() => signOutEverywhereAction(p.id))}
-                      >
-                        Sign out everywhere
-                      </button>
                       {p.id !== selfId && !p.erased && (
                         <button
                           type="button"
@@ -298,6 +290,12 @@ function EditPersonForm({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleting, startDelete] = useTransition();
+  const run = (fn: () => Promise<ActionResult>) =>
+    startDelete(async () => {
+      const r = await fn();
+      if (r.ok) onDone(r);
+      else setDeleteError(r.error);
+    });
   const problem = deleteError ?? (saved && !saved.ok ? saved.error : null);
 
   return (
@@ -352,6 +350,12 @@ function EditPersonForm({
           <textarea name="notes" rows={2} defaultValue={p.notes ?? ''} maxLength={1000} />
         </label>
       )}
+      <p className="small muted">
+        Signed in on a shared or lost device?{' '}
+        <button type="button" className="btn sm ghost" disabled={deleting} onClick={() => run(() => signOutEverywhereAction(p.id))}>
+          Sign out everywhere
+        </button>
+      </p>
       {problem && (
         <p className="note bad" role="alert">
           {problem}
@@ -360,18 +364,7 @@ function EditPersonForm({
       <div className="spread">
         <div className="row">
           {confirmDelete ? (
-            <button
-              type="button"
-              className="btn sm"
-              disabled={deleting}
-              onClick={() =>
-                startDelete(async () => {
-                  const r = await deleteAccountAction(p.id);
-                  if (r.ok) onDone(r);
-                  else setDeleteError(r.error);
-                })
-              }
-            >
+            <button type="button" className="btn sm" disabled={deleting} onClick={() => run(() => deleteAccountAction(p.id))}>
               Yes, delete {p.name}
             </button>
           ) : (

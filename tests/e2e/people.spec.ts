@@ -106,23 +106,23 @@ test('Admin changes the club name and it appears in the top bar', async ({ page 
 
 // M10 · BR-23: a typo in an account is fixed in place, and an account added by mistake is deleted.
 test('Admin corrects a student’s details, and deletes an account nobody has used', async ({ page, browser }) => {
-  const { username, password } = await addPerson(page, 'Student', 'Rithy Somm');
-  const row = page.getByRole('row', { name: /Rithy Somm/ });
-  await row.getByRole('button', { name: 'Edit Rithy Somm' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Edit Rithy Somm' });
+  const { username, password } = await addPerson(page, 'Student', 'Kunthea Prum');
+  const row = page.getByRole('row', { name: /Kunthea Prum/ });
+  await row.getByRole('button', { name: 'Edit Kunthea Prum' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Edit Kunthea Prum' });
   await expect(dialog.getByLabel('Username')).toHaveValue(username);
   await expectAccessible(page);
-  await dialog.getByLabel('Full name').fill('Rithy Som');
-  await dialog.getByLabel('Username').fill('rithy.som');
+  await dialog.getByLabel('Full name').fill('Kunthea Prom');
+  await dialog.getByLabel('Username').fill('kunthea.prom');
   await dialog.getByLabel('Guardian phone').fill('012 555 777');
   await dialog.getByRole('button', { name: 'Save details' }).click();
   await expect(dialog).toBeHidden();
-  const fixed = page.getByRole('row', { name: /Rithy Som\b/ });
-  await expect(fixed).toContainText('rithy.som');
+  const fixed = page.getByRole('row', { name: /Kunthea Prom/ });
+  await expect(fixed).toContainText('kunthea.prom');
   await expect(fixed).toContainText('012 555 777');
 
   // The new username signs in with the same password.
-  const { page: kid, ctx } = await signInFresh(browser, 'rithy.som', password, '198.18.0.31');
+  const { page: kid, ctx } = await signInFresh(browser, 'kunthea.prom', password, '198.18.0.31');
   await expect(kid).toHaveURL(/\/student$/);
   await ctx.close();
 

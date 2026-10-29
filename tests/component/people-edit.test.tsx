@@ -5,12 +5,13 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Person } from '@/modules/identity/service';
 
 const updateAccountAction = vi.fn();
+const signOutEverywhereAction = vi.fn();
 const deleteAccountAction = vi.fn();
 vi.mock('@/modules/identity/actions', () => ({
   createAccountAction: vi.fn(),
   resetPasswordAction: vi.fn(),
   setActiveAction: vi.fn(),
-  signOutEverywhereAction: vi.fn(),
+  signOutEverywhereAction: (...a: unknown[]) => signOutEverywhereAction(...a),
   updateAccountAction: (...a: unknown[]) => updateAccountAction(...a),
   deleteAccountAction: (...a: unknown[]) => deleteAccountAction(...a),
 }));
@@ -84,6 +85,16 @@ describe('editing a person', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Edit Bopha Lim' }));
     fireEvent.click(within(form()).getByRole('button', { name: 'Save details' }));
     expect((await within(form()).findByRole('alert')).textContent).toBe('That username is already taken.');
+  });
+
+  it('signs the person out everywhere from the dialog (the row keeps only the everyday buttons)', async () => {
+    signOutEverywhereAction.mockResolvedValue({ ok: true, message: 'Signed out on every device.' });
+    show([bopha]);
+    expect(screen.queryByRole('button', { name: 'Sign out everywhere' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Bopha Lim' }));
+    fireEvent.click(within(form()).getByRole('button', { name: 'Sign out everywhere' }));
+    await waitFor(() => expect(signOutEverywhereAction).toHaveBeenCalledWith('s1'));
+    expect((await screen.findByRole('status')).textContent).toBe('Signed out on every device.');
   });
 
   it('has no Edit for a student whose personal data was deleted', () => {
