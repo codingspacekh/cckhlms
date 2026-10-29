@@ -15,7 +15,7 @@
 | FR-AUTH-01 | Users log in with the **username and password assigned by Admin**. No email or Google login. | M |
 | FR-AUTH-02 | There is no public sign-up. Only Admin creates accounts. | M |
 | FR-AUTH-03 | Admin sets the password when creating an account (or the system generates a readable one). Admin can choose to require a password change at first login (off by default for students). | M |
-| FR-AUTH-04 | Admin can reset a user's password and deactivate/reactivate accounts (no hard delete, to keep history). There is no self-service "forgot password"; students ask the Admin or teacher. | M |
+| FR-AUTH-04 | Admin can reset a user's password and deactivate/reactivate accounts (no hard delete of an account with history, BR-23). There is no self-service "forgot password"; students ask the Admin or teacher. | M |
 | FR-AUTH-05 | Role-based access: Admin, Teacher, Student. One user may hold several roles. | M |
 | FR-AUTH-06 | Users can change their own password and edit their display name/avatar. | S |
 | FR-AUTH-07 | Passwords are stored hashed, so the system cannot show them again. A new or reset password is shown to Admin **once**. | M |
@@ -30,7 +30,7 @@
 |---|---|---|
 | FR-ADM-01 | Create/edit **Student** accounts (name, DOB, contact, guardian contact, notes). | M |
 | FR-ADM-02 | Create/edit **Teacher** accounts (name, contact, bio). | M |
-| FR-ADM-03 | Create/edit **Terms** (name e.g. "Term 2 2027", start date, end date, status: planned / active / closed). Normally **4 terms per year**. | M |
+| FR-ADM-03 | Create/edit **Terms** (name e.g. "Term 2 2027", start date, end date, status: planned / active / closed). Normally **4 terms per year**. A status change can be undone (BR-24). | M |
 | FR-ADM-04 | Create/edit **Courses** (name, level, description, ordered syllabus topics, next-level course, default language: Python / Java / Web, pass mark — default **60**). | M |
 | FR-ADM-05 | Create **Classes**: course, term, **weekend day** (Saturday or Sunday), start time, **session length** (90 min default, or 120), **first session date**, **number of weeks** (10–12), room, capacity. | M |
 | FR-ADM-06 | Assign one or more teachers to a class (lead / assistant). | M |
@@ -169,6 +169,8 @@ Languages: **Python 3**, **Java** (multi-file, packages), **Web (HTML/CSS/JS)**.
 | BR-20 | A reported Q&A post is hidden from students (shown to the author as "under review") until a teacher restores or removes it. A teacher's post can't be reported, so it stays visible. |
 | BR-21 | **Term puzzle piece** (FR-STU-11): a past week's piece is **earned** when the student came to that week's session (present, late or excused) and every piece of work set that week that is already due has been handed in or excused. Otherwise it reads **Away** (absent) or **Not yet** (work missing, so handing it in late still earns the piece). The next session's piece is **This week**, later ones **Coming up**. Cancelled sessions have no piece; weeks before the student joined read **Joined later**. The puzzle never affects scores, pass/fail or certificates. |
 | BR-22 | **Lesson note content** (FR-TCH-22): a note is stored as Markdown, so notes written before M9 open unchanged. A tip box is `> [!TIP]`; a picture is `![caption](/api/files/<id>#small\|medium\|full)`, its caption also being its text for screen readers. Pictures are PNG, JPEG, GIF or WebP, shrunk in the browser to at most 1600 px wide and 2 MB, up to 20 per note; they are lesson files marked *in the note*, so they don't appear in or count towards the 10 files to download. A picture taken out of the note is deleted when the note is saved. Students can open a picture only when they can read the note. Only **drafts** save by themselves: a published or scheduled note changes only when the teacher presses Update, so students never see half-written changes. |
+| BR-23 | **Delete only what nothing depends on** (M10, owner 2026-10-29): a term with no classes, a course no class uses, a class with no students, lessons or work, and an account never put in a class, never teaching one and with nothing written can be deleted (fixing a mistake). Anything else is switched off or archived and kept (§ data retention). Nobody can delete their own account or the last active admin. |
+| BR-24 | **Undoing a term's status** (M10): an active term can go back to planned; a closed term can be reopened (active again) when no other term is active, which un-archives the classes that closing archived (promoted classes stay archived). A term's dates can change as long as every session of its classes stays inside them. |
 
 ---
 

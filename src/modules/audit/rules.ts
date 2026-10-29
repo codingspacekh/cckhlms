@@ -43,11 +43,14 @@ export const AUDIT_ACTIONS: Record<string, { label: string; group: AuditGroup }>
   'certificate.revoke': { label: 'Revoked a certificate', group: 'certificates' },
   'term.create': { label: 'Added a term', group: 'classes' },
   'term.status': { label: 'Changed a term’s status', group: 'classes' },
+  'term.update': { label: 'Changed a term', group: 'classes' },
+  'term.delete': { label: 'Deleted a term', group: 'classes' },
   'course.create': { label: 'Added a course', group: 'classes' },
   'course.update': { label: 'Changed a course', group: 'classes' },
   'course.syllabus': { label: 'Changed a syllabus', group: 'classes' },
   'class.create': { label: 'Added a class', group: 'classes' },
   'class.archive': { label: 'Archived a class', group: 'classes' },
+  'class.unarchive': { label: 'Reopened a class', group: 'classes' },
   'session.add': { label: 'Added a session', group: 'classes' },
   'session.cancel': { label: 'Cancelled a session', group: 'classes' },
   'session.move': { label: 'Moved a session', group: 'classes' },
@@ -111,6 +114,8 @@ const TEXT: [key: string, label: string][] = [
   ['reason', 'Reason'],
   ['overrideReason', 'Issued without a Pass because'],
   ['name', 'Name'],
+  ['dates', 'Dates'],
+  ['before', 'Before'],
   ['code', 'Code'],
   ['title', 'Title'],
   ['username', 'Username'],
@@ -184,7 +189,8 @@ export function detailLines(action: string, detail: unknown, names: Map<string, 
 
   if (typeof d.role === 'string') add('Role', cap(d.role));
   for (const [key, label] of TEXT) if (typeof d[key] === 'string' && !lines.some((l) => l.label === label)) add(label, d[key] as string);
-  if (typeof d.status === 'string') add('Status', cap(d.status));
+  if (typeof d.status === 'string')
+    add('Status', typeof d.previousStatus === 'string' ? `${cap(d.previousStatus)} → ${cap(d.status)}` : cap(d.status));
   if (typeof d.kind === 'string') add('Type', cap(d.kind));
   if (typeof d.state === 'string') add('State', cap(d.state));
   if (typeof d.toClassId === 'string') add('To class', names.get(d.toClassId) ?? 'a class no longer in the LMS');

@@ -47,6 +47,7 @@ flowchart LR
 | **M7** ✅ | Hardening | ASVS L1 review, ZAP, k6 load test, disaster-recovery rehearsal, runbook, privacy check | NFR-01…12 | 5 days |
 | **M8** ✅ | Club look | Champion Coders brand (logo, dark blue, Titillium Web), kid-friendly styling, new home pages for all three roles, term puzzle | NFR-08 · FR-STU-01, 11 · FR-TCH-21 · FR-ADM-10 · BR-21 | 4 days |
 | **M9** ✅ | Lesson note editor | Word-processor-style lesson note with code blocks, pictures and tip boxes; notes that read like a book page for students | FR-TCH-22 · FR-STU-12 · BR-22 | 4 days |
+| **M10** 🔨 | Fix mistakes | Edit, undo and delete-if-unused for terms, courses, classes and people (reopen a closed term, change a class after it is created) | FR-ADM-01…05 · BR-23, 24 | 3 days |
 | — | **R2: Club-wide launch** | Every class of the next term runs on `lms.cckh.dev` | | |
 
 \* *Effort = focused working days for one developer, tests included. Total ≈ **45 focused days**. At 2–3 focused days a week alongside teaching, that is about **4–5 months**: R1 could pilot in **Term 1 · 2027** (from Sat 9 Jan 2027) and R2 launch in **Term 2 · 2027**. These are planning ranges (±30%), not promises. AI-assisted pace on codingspacekh was faster, but the server work here is new.*
@@ -584,6 +585,25 @@ The next milestone does not start until all four are true.
 >   - *Found:* "Back returns to where you were" was flaky because a scroll made before `ScrollReset` started was never recorded. It now records the position when it starts (15/15 runs).
 > - **Pictures in the note, #46:** choose a file, paste a screenshot or drop one in. The browser shrinks it to 1600 px and at most 2 MB, then it is stored as a lesson file marked `in_note` (migration `0022`). Small/Medium/Full and a caption; up to 20 a note; kept out of the files to download and their limit of 10. A picture taken out of the note is deleted when the note is saved, but not when a draft saves itself, so moving a picture never loses it. A new lesson is saved as a draft before its first picture.
 > - **Exit criterion:** met. The owner checked the editor and the student's note on a local production build and signed off M9 on 2026-10-24.
+
+### M10 — Fix mistakes: edit, undo, delete-if-unused (3 days) — 🔨 started 2026-10-29
+**Why:** setting up the real club on `lms.cckh.dev` (G1), the owner found the admin pages "really uncomfortable": terms, classes and people could only be added, a typo or a wrong date couldn't be fixed, a class's teachers, room or time couldn't change after it was created, and a term closed by accident couldn't be reopened (owner, 2026-10-29: "better if we can do CRUD on all"). The owner chose **delete only what nothing depends on yet**; anything with history is switched off or archived as before, so marks and attendance are never lost.
+
+**Goal:** an admin can put right any mistake in a term, course, class or account from the table it appears in, and can undo closing a term.
+
+**Build (stacked PRs, merged in order):**
+1. **Terms** (`m10-terms`, FR-ADM-03, BR-23, BR-24): **Edit** on each row opens a dialog (year, term number, first and last day); the new dates must still hold every session of the term's classes. Status can go back: an active term can return to **planned**, and a closed term can be **reopened** (active again, if no other term is active), which un-archives the classes that closing archived; promoted classes stay archived. **Delete** a term with no classes.
+2. **Courses and classes** (`m10-classes`, FR-ADM-04…06, BR-23): **Delete** a course no class uses. **Edit class** on the class page: name, room, capacity and teachers at any time (with the usual clash warning); start time and length at any time, applied to the sessions still to come; course, term, day, first date and number of weeks while the class hasn't started (no session has passed and nothing is in it yet), regenerating its sessions. **Delete** a class with no students, lessons or work. An archived class stays read-only (reopen the term to change it).
+3. **People** (`m10-people`, FR-ADM-01, 02, BR-23): **Edit** on each row: name, username, guardian name and phone or phone, notes. **Delete** an account that was never put in a class, never taught one and wrote nothing; otherwise Switch off as before. Nobody can delete themselves or the last active admin.
+
+**Left out on purpose:** changing someone's role (delete the unused account and add it again); deleting anything with history (BR-23); undoing a promotion (separate, if ever needed).
+
+**Tests first:**
+- Integration: each edit saves, is audited and keeps the same rules as creating (term overlap and duplicates, course code, class clashes, username format and uniqueness); term dates that would leave a session outside are refused; reopen un-archives only the classes closing archived, refuses while another term is active, and archived classes accept changes again; each delete works when unused and is refused with the reason when not (a term with a class, a course with a class, a class with a student or a lesson, a person in a class or who wrote anything); a class that has started refuses a course/term/day/date change but accepts time, room and teachers; only Admin can do any of it.
+- Component: the edit dialogs show the saved values, show errors next to the form, and confirm before deleting.
+- Playwright + axe: an admin fixes a term's dates, closes and reopens it, edits a class's teacher and room, edits a student's guardian phone, and deletes an unused course; the dialogs pass axe in light and dark and at 360 px.
+
+**Exit criteria:** every term, course, class and account can be edited from its table or page; an accidental close can be undone; nothing with history can be deleted; the owner fixes real set-up data on `lms.cckh.dev` and signs off M10.
 
 ### R2 — Club-wide launch
 - All classes of the next term (e.g. Term 2 · 2027) are set up and run on `lms.cckh.dev`. Teachers get a short walkthrough, and students get login slips.

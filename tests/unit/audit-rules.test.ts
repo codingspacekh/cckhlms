@@ -111,6 +111,19 @@ describe('the details', () => {
     ]);
   });
 
+  it('shows a term change and a status undone (M10)', () => {
+    expect(
+      detailLines('term.update', { name: 'Term 1 · 2027', dates: 'Sat 2 Jan 2027 – Sat 13 Mar 2027', before: 'Term 1 · 2027 · x' }, names),
+    ).toEqual([
+      { label: 'Name', value: 'Term 1 · 2027' },
+      { label: 'Dates', value: 'Sat 2 Jan 2027 – Sat 13 Mar 2027' },
+      { label: 'Before', value: 'Term 1 · 2027 · x' },
+    ]);
+    expect(detailLines('term.status', { status: 'active', previousStatus: 'closed' }, names)).toEqual([
+      { label: 'Status', value: 'Closed → Active' },
+    ]);
+  });
+
   it('shows what a published report was and became', () => {
     expect(
       detailLines(
