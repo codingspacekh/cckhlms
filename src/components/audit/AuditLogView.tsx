@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { TableScroll } from '@/components/ui/TableScroll';
 import type { AuditView } from '@/modules/audit/audit-log';
 import { AUDIT_GROUPS, EVERYDAY_GROUPS, SENSITIVE_GROUPS, type AuditFilters } from '@/modules/audit/rules';
+import { DateField } from '@/components/ui/DateTimeFields';
 
 export type AuditRowView = Omit<AuditView, 'at'> & { when: string }; // in the club's time zone
 
@@ -48,14 +49,8 @@ export function AuditLogView({ rows, next, filters }: { rows: AuditRowView[]; ne
           Person
           <input type="search" name="person" defaultValue={filters.person} placeholder="Name or username" maxLength={60} />
         </label>
-        <label className="f">
-          From
-          <input type="date" name="from" defaultValue={filters.from} />
-        </label>
-        <label className="f">
-          To
-          <input type="date" name="to" defaultValue={filters.to} />
-        </label>
+        <DateField label="From" name="from" defaultValue={filters.from} />
+        <DateField label="To" name="to" defaultValue={filters.to} />
         <div className="row">
           <button type="submit" className="btn primary">
             Show

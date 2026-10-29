@@ -768,7 +768,8 @@ main#main {
   border-width: 1.5px;
   border-radius: 10px;
 }
-label.f {
+label.f,
+div.f {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -931,6 +932,161 @@ textarea:focus {
 textarea {
   resize: vertical;
 }
+/* Date and time fields (DateTimeFields.tsx): a text field with a calendar or clock button, and its pop-up,
+   styled like the note editor's menu. Saturday and Sunday, the club's days, are marked in the calendar. */
+.pick {
+  position: relative;
+}
+.pick input[type='text'] {
+  padding-right: 42px;
+  text-overflow: ellipsis;
+}
+.pick input[aria-invalid='true'] {
+  border-color: var(--bad);
+}
+.pick-btn,
+.cal-nav {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.pick-btn {
+  position: absolute;
+  right: 3px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.pick-btn:hover,
+.pick.open .pick-btn,
+.cal-nav:hover {
+  background: var(--surface-2);
+  color: var(--accent);
+}
+.pick-btn .i,
+.cal-nav .i {
+  width: 20px;
+  height: 20px;
+}
+.pop {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  z-index: 50;
+  padding: 12px;
+  border: 2px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 10px 30px rgb(20 33 61 / 0.16);
+}
+.pop.date {
+  width: min(316px, calc(100vw - 16px));
+}
+.pop.time {
+  width: max(150px, var(--field-w, 0px));
+  padding: 6px;
+}
+.cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.cal-title {
+  font-weight: 700;
+  color: var(--heading);
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+.cal-wd {
+  padding: 4px 0 6px;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.cal-wd:nth-child(6),
+.cal-wd:nth-child(7) {
+  color: var(--accent);
+}
+.cal-day,
+.time-opt {
+  min-height: 38px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.cal-day {
+  border-radius: 999px;
+}
+.cal-day:nth-child(7n + 6),
+.cal-day:nth-child(7n + 7) {
+  font-weight: 600;
+}
+.cal-day.out {
+  color: var(--muted);
+  font-weight: 400;
+}
+.cal-day:hover,
+.time-opt:hover {
+  background: var(--surface-2);
+}
+.cal-day.today {
+  box-shadow: inset 0 0 0 2px var(--accent);
+  color: var(--accent);
+}
+.cal-day[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+  box-shadow: none;
+}
+.cal-day:focus-visible,
+.time-opt:focus-visible {
+  outline-offset: 0;
+  border-radius: 999px;
+}
+.time-opt:focus-visible {
+  border-radius: 10px;
+}
+.cal-foot {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+.times {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 264px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.time-opt {
+  padding: 0 12px;
+  border-radius: 10px;
+  text-align: left;
+}
+.time-opt[aria-pressed='true'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+}
 .note.warn {
   background: var(--warn-soft);
   color: var(--ink);
@@ -1049,6 +1205,16 @@ td.pick {
 }
 .g3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+/* Rows with a date field get it more room for 'Sat 22 Jan 2028' (new class: time · date · weeks; make-up session:
+   date · time · length). Phones keep one column. */
+@media (min-width: 641px) {
+  .g3.date-mid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 0.8fr);
+  }
+  .g3.date-first {
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
+  }
 }
 @media (max-width: 640px) {
   .g3 {

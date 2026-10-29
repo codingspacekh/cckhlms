@@ -2,6 +2,7 @@
 import { useActionState, useMemo, useState } from 'react';
 import { createClassAction } from '@/modules/academics/class-actions';
 import { addMinutes, DAY_NAME, formatDate, generateSessions, weekdayOf, type Day } from '@/modules/academics/schedule';
+import { DateField, TimeField } from '@/components/ui/DateTimeFields';
 
 type Option = { id: string; label: string };
 type TermOption = { id: string; name: string; startDate: string; endDate: string };
@@ -91,15 +92,9 @@ export function NewClassForm({
             </div>
           </fieldset>
         </div>
-        <div className="grid g3">
-          <label className="f">
-            Start time
-            <input name="startTime" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} required />
-          </label>
-          <label className="f">
-            First session
-            <input name="firstDate" type="date" value={firstDate} onChange={(e) => setFirstDate(e.target.value)} required />
-          </label>
+        <div className="grid g3 date-mid">
+          <TimeField label="Start time" name="startTime" value={startTime} onChange={setStartTime} required />
+          <DateField label="First session" name="firstDate" value={firstDate} onChange={setFirstDate} required />
           <label className="f">
             Weeks
             <select name="weeks" value={weeks} onChange={(e) => setWeeks(Number(e.target.value))}>

@@ -5,6 +5,7 @@ import { TableScroll } from '@/components/ui/TableScroll';
 import { createTermAction, setTermStatusAction } from '@/modules/academics/actions';
 import { formatDay } from '@/modules/academics/schedule';
 import type { TermStatus } from '@/modules/academics/terms';
+import { DateField } from '@/components/ui/DateTimeFields';
 
 type Row = { id: string; name: string; startDate: string; endDate: string; status: string };
 
@@ -107,14 +108,8 @@ export function TermsManager({ terms }: { terms: Row[] }) {
           </label>
         </div>
         <div className="grid g2">
-          <label className="f">
-            First day
-            <input name="startDate" type="date" required />
-          </label>
-          <label className="f">
-            Last day
-            <input name="endDate" type="date" required />
-          </label>
+          <DateField label="First day" name="startDate" required />
+          <DateField label="Last day" name="endDate" required />
         </div>
         {added && !added.ok && (
           <p className="note bad" role="alert">

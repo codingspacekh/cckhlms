@@ -86,7 +86,8 @@ const publish = () => within(screen.getByRole('region', { name: 'Publish' }));
 const buttons = () =>
   publish()
     .getAllByRole('button')
-    .map((b) => b.textContent);
+    .map((b) => b.textContent)
+    .filter(Boolean); // not the date and time fields' icon buttons
 const note = () => screen.getByRole('textbox', { name: 'Lesson note', hidden: true }); // hidden in Student view
 const type = (label: 'Title' | 'Lesson note', value: string) =>
   fireEvent.change(label === 'Title' ? screen.getByLabelText('Title') : note(), { target: { value } });
@@ -101,7 +102,7 @@ describe('LessonForm', () => {
   it('a new lesson can be published, saved as a draft or scheduled for the end of the session', () => {
     render(<LessonForm {...base} lesson={null} />);
     expect(buttons()).toEqual(['Publish now', 'Save draft', 'Schedule']);
-    expect((screen.getByLabelText('Publish on') as HTMLInputElement).value).toBe('2027-01-30');
+    expect((screen.getByLabelText('Publish on') as HTMLInputElement).value).toBe('Sat 30 Jan 2027');
     expect((screen.getByLabelText('At') as HTMLInputElement).value).toBe('10:30');
     expect(publish().getByText('Not saved yet')).toBeTruthy();
   });

@@ -66,8 +66,8 @@ describe('AuditLogView', () => {
     expect([...what.querySelectorAll('optgroup')].map((g) => g.label)).toEqual(['Sensitive', 'Everyday']);
     expect(what.options[0]!.textContent).toBe('All changes (not sign-ins)');
     expect((within(form).getByLabelText('Person') as HTMLInputElement).value).toBe('bopha');
-    expect((within(form).getByLabelText('From') as HTMLInputElement).value).toBe('2027-04-01');
-    expect((within(form).getByLabelText('To') as HTMLInputElement).value).toBe('2027-04-30');
+    expect((within(form).getByLabelText('From') as HTMLInputElement).value).toBe('Thu 1 Apr 2027');
+    expect((within(form).getByLabelText('To') as HTMLInputElement).value).toBe('Fri 30 Apr 2027');
     expect(within(form).getByRole('link', { name: 'Clear' }).getAttribute('href')).toBe('/admin/audit');
   });
 
