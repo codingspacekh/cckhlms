@@ -78,3 +78,38 @@ test('Admin cancels a session on the class page and a week is added at the end',
   await expect(weeks.getByRole('row', { name: /^Week 10\b/ })).toContainText('Sat 25 Mar 2028');
   await expect(weeks.getByText('Teacher training day')).toBeVisible();
 });
+
+// M10: a class can be changed after it is created, and what nothing uses can be deleted (BR-23).
+test('Admin changes the class room and time; the name and sessions follow', async ({ page }) => {
+  await page.goto('/admin/classes');
+  await page.getByRole('link', { name: 'Java Level 1 · Sat 14:00' }).click();
+  await page.getByRole('button', { name: 'Edit class' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Edit class' });
+  await expect(dialog.getByLabel('Room')).toHaveValue('Room B');
+  await expectAccessible(page);
+  await dialog.getByLabel('Room').fill('Lab C');
+  await dialog.getByLabel('Start time').fill('15:00');
+  await dialog.getByRole('button', { name: 'Save class' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole('heading', { level: 1, name: 'Java Level 1 · Sat 15:00' })).toBeVisible();
+  await expect(page.getByLabel('Class summary')).toContainText('Lab C');
+  await expect(page.getByText('Saturday 15:00–17:00 · 10 weeks')).toBeVisible();
+  await expect(page.getByRole('table', { name: 'Sessions' }).getByRole('row', { name: /^Week 1\b/ })).toContainText('15:00');
+});
+
+test('Admin deletes the class nobody is in, then its unused course', async ({ page }) => {
+  await page.goto('/admin/classes');
+  await page.getByRole('link', { name: 'Java Level 1 · Sat 15:00' }).click();
+  await page.getByRole('button', { name: 'Edit class' }).click();
+  await page.getByRole('button', { name: 'Delete class' }).click();
+  await page.getByRole('button', { name: 'Yes, delete this class' }).click();
+  await expect(page).toHaveURL(/\/admin\/classes$/);
+  await expect(page.getByRole('link', { name: 'Java Level 1 · Sat 15:00' })).toHaveCount(0);
+
+  await page.goto('/admin/courses');
+  await page.getByRole('link', { name: 'Edit JV1' }).click();
+  await page.getByRole('button', { name: 'Delete course' }).click();
+  await page.getByRole('button', { name: 'Yes, delete JV1' }).click();
+  await expect(page).toHaveURL(/\/admin\/courses$/);
+  await expect(page.getByRole('row', { name: /JV1/ })).toHaveCount(0);
+});
