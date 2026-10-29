@@ -40,7 +40,7 @@ flowchart LR
 | **M2** ✅ | Academics | Club settings, accounts and passwords, terms, courses + syllabus, weekend classes with weekly sessions, enrolments, transfers | FR-AUTH-01…07, 10, 11 · FR-ADM-01…08, 16 · FR-TCH-05 | 6 days |
 | **M3** ✅ | Teaching | Weekly lessons, Q&A with reporting, attendance, weekly class report, syllabus coverage | FR-TCH-01…06, 14, 20 · FR-STU-02…04, 10 | 5 days |
 | **M4** ✅ | Assessments | Classwork/homework/exams, multi-file editor, Web preview, submissions, grading, gradebook | FR-TCH-07…12, 19 · FR-STU-05, 06 · FR-CODE-01…06 | 8 days |
-| **G1** ⏳ | Go live | Owner's server and Cloudflare set-up (runbook §2); first deploy, restore drill, uptime alert | NFR-04 | 1–2 hours |
+| **G1** ✅ | Go live | Owner's server and Cloudflare set-up (runbook §2); first deploy, restore drill, uptime alert | NFR-04 | 1–2 hours |
 | — | **R1: Pilot** | One real class uses the LMS on production for at least 4 weeks | | |
 | **M5** ✅ | Reports & statistics | 60/30/10 overall score, end-term exam, term reports with pass/fail, charts for all three roles, admin dashboard | FR-TCH-15…18 · FR-ADM-09, 10 · FR-STU-07 | 6 days |
 | **M6** ✅ | Term operations | Certificates + `/verify`, promotion wizard, login slips, CSV import, notifications, audit log, playground | FR-ADM-11…14 · FR-AUTH-08, 09 · FR-STU-08, 09 · FR-SYS-01, 02 · FR-CODE-07 | 6 days |
@@ -327,7 +327,7 @@ The next milestone does not start until all four are true.
 
 **Exit criteria:** on production, one homework cycle runs end to end for Python, Java and Web, and the gradebook takes a class's paper-quiz scores in under 2 minutes.
 
-### G1 — Go live (owner set-up, ≈ 1–2 hours) — ⏳ deferred, required before R1
+### G1 — Go live (owner set-up, ≈ 1–2 hours) — ✅ DONE 2026-10-30 (owner signed off; live on `lms.cckh.dev` since 2026-10-29)
 - Do `docs/runbook.md` §2: domain, Hetzner server + `provision.sh`, Cloudflare Tunnel, rate-limit rule, R2 + age keys, healthchecks.io, GitHub `production` secrets, `DEPLOY_ENABLED`.
 - **Exit criteria** (the ones carried over from M1):
   1. a merged PR deploys to `lms.cckh.dev` on its own;
@@ -335,6 +335,16 @@ The next milestone does not start until all four are true.
   3. the uptime alert reaches the owner.
 - **Repeat M7's server checks on the real server, before any real data** (owner's decision, 2026-10-21): the load test, the ZAP baseline and a disaster-recovery rehearsal onto a second server. The steps are in `docs/runbook.md` §8.
 - Until G1, the milestone gate (§3.5, point 2) is checked on a **local production build** and in CI, instead of on production.
+
+> **Result** (2026-10-29/30, PRs #54, #55, #63; runbook §8 has each check's numbers).
+> - **Set-up:** `cckh.dev` on Cloudflare; a Hetzner server in Singapore (2 vCPU / 4 GB, Ubuntu 24.04, $30.99 a month, more than the €5–6 planned: the owner chose to keep Singapore); the Cloudflare Tunnel, DNSSEC, the sign-in rate-limit rule, R2 with a 30-day lock, the age keys, healthchecks.io and UptimeRobot; GitHub's `production` environment.
+>   - *Found:* a second tunnel connector installed on the laptop from the dashboard took live traffic and gave 502s while the server was healthy. Removed; the runbook says never to run one on a laptop.
+> - **Exit criterion 1 met:** every merged PR since #54 deployed on its own (#54–#63).
+> - **Exit criterion 2 met:** the first restore drill from R2, with the real key, passed on 2026-10-30 (runbook §6). It found the key saved in the password manager without its `AGE-SECRET-KEY-` start, now fixed.
+> - **Exit criterion 3:** UptimeRobot watches `/api/health`, but the alert wasn't seen by pausing the app. **The owner signed off without that test (2026-10-30).**
+> - **M7's checks on the real server:** the load test (page p95 302 ms, autosave p95 190 ms, nothing out of memory), the ZAP baseline (0 high in all four scans) and the edge and cookie checks all passed.
+>   - The **rebuild onto a second server** was not repeated on Hetzner: the owner chose the free laptop restore drill instead, since M7 rehearsed the rebuild (12½ min). It is a once-a-term task in runbook §4.
+> - **Left open, by the owner's decision:** HSTS at the edge (`docs/security-review.md`: turn it on in Cloudflare, or the app sends it), and the uptime alert test above.
 
 ### R1 — Pilot (one real class, ≥ 4 weeks)
 - One class (e.g. Python Level 1, Term 1 · 2027) uses the LMS on production for at least 4 weekly sessions, with real accounts.
