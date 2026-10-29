@@ -17,6 +17,9 @@
   --accent-2: #084a85;
   --accent-soft: #e4ecfa;
   --accent-ink: #ffffff;
+  /* Form control marks (select arrow, checkbox tick), drawn in --ink-2 and --accent-ink. */
+  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%233d4a66' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='%23ffffff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   /* the sidebar */
   --side: #152a5c;
   --side-2: #1f3a78;
@@ -94,6 +97,8 @@
     --accent-2: #86b6f0;
     --accent-soft: #172846;
     --accent-ink: #06121f;
+    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23b4bdd2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    --tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='%2306121f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     --side: #0e1730;
     --side-2: #1a2850;
     --side-ink: #c9d3ea;
@@ -154,6 +159,8 @@
   --accent-2: #86b6f0;
   --accent-soft: #172846;
   --accent-ink: #06121f;
+  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23b4bdd2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='%2306121f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   --side: #0e1730;
   --side-2: #1a2850;
   --side-ink: #c9d3ea;
@@ -923,6 +930,71 @@ input[type='number'] {
   font-weight: 400;
   width: 100%;
 }
+/* The browser's own arrow, spinners, checkbox and file button look out of place next to the club's fields
+   (owner, 2026-10-29): each is drawn here instead, in the theme's colours. */
+select {
+  appearance: none;
+  background-image: var(--chevron);
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 40px;
+  cursor: pointer;
+  text-overflow: ellipsis;
+}
+input[type='number'] {
+  appearance: textfield;
+  font-variant-numeric: tabular-nums;
+}
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+input[type='checkbox'] {
+  appearance: none;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  border: 2px solid var(--line-2);
+  border-radius: 6px;
+  background: var(--surface) center / 16px no-repeat;
+  cursor: pointer;
+  vertical-align: -4px;
+  transition:
+    background-color 0.12s,
+    border-color 0.12s;
+}
+input[type='checkbox']:hover {
+  border-color: var(--accent);
+}
+input[type='checkbox']:checked {
+  background-color: var(--accent);
+  background-image: var(--tick);
+  border-color: var(--accent);
+}
+input[type='checkbox']:disabled,
+select:disabled,
+input:disabled,
+textarea:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+input[type='file']::file-selector-button {
+  margin-right: 12px;
+  border: 2px solid var(--line-2);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+input[type='file']::file-selector-button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
 select:focus,
 textarea:focus {
   outline: none;
@@ -1492,9 +1564,6 @@ article h3 {
   background: var(--accent-soft);
   color: var(--ink);
 }
-.chip input {
-  accent-color: var(--accent);
-}
 .sched summary {
   cursor: pointer;
   font-size: 0.88rem;
@@ -1921,7 +1990,8 @@ th a:hover {
 .note-style select {
   min-height: 40px;
   width: auto;
-  padding: 0 6px;
+  padding: 0 30px 0 10px;
+  background-position: right 10px center;
   font-weight: 600;
 }
 .note-sep {
@@ -2162,10 +2232,10 @@ th a:hover {
   min-height: 34px;
   width: auto;
   margin-left: 8px;
-  padding: 0 8px;
+  padding: 0 28px 0 10px;
   border: 0;
   border-radius: 10px;
-  background: var(--surface);
+  background: var(--surface) var(--chevron) no-repeat right 9px center;
   color: var(--heading);
   font-weight: 700;
 }
