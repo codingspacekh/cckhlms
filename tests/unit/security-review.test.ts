@@ -31,4 +31,10 @@ describe('the ASVS Level 1 review', () => {
     expect(scans).toHaveLength(4);
     for (const s of scans) expect(s.split('|')[3]!.trim()).toBe('**0**');
   });
+
+  it('records the same scans against production at G1, also with no high-risk alert', () => {
+    const scans = doc.split('\n').filter((l) => /^\| (Anonymous|Admin|Teacher|Student), production \|/.test(l));
+    expect(scans).toHaveLength(4);
+    for (const s of scans) expect(s.split('|')[3]!.trim()).toBe('**0**');
+  });
 });

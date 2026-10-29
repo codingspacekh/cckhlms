@@ -137,25 +137,21 @@ On the server, `cd /opt/cckhlms && export APP_TAG=$(cat .deployed-tag)` first; "
 ## 4. Restore drill (once per term) and disaster recovery
 
 ### Restore drill on your laptop
+`infra/backup/restore-drill.sh` does it all: it reads the R2 settings from the server's `.env` (into memory only), downloads the newest backup, decrypts it with the private key, restores it into a scratch database on the laptop and compares the counts with the live site. Colima must be running, and your SSH key loaded (`ssh-add --apple-use-keychain ~/.ssh/id_ed25519`).
 ```bash
-# 1. a scratch database
-docker run -d --name drill-db -e POSTGRES_USER=lms -e POSTGRES_PASSWORD=drill -e POSTGRES_DB=lms -p 54330:5432 postgres:18.6-alpine3.24
-# 2. the private age key from the password manager → ./drill.key
-# 3. restore the newest backup from R2
-docker build -t cckhlms-backup:drill infra/backup
-docker run --rm --network host -v "$PWD/drill.key:/keys/key.txt:ro" \
-  -e PGHOST=localhost -e PGPORT=54330 -e PGUSER=lms -e PGPASSWORD=drill -e PGDATABASE=lms \
-  -e AGE_IDENTITY_FILE=/keys/key.txt -e BACKUP_REMOTE=r2:cckhlms-backups \
-  -e RCLONE_CONFIG_R2_TYPE=s3 -e RCLONE_CONFIG_R2_PROVIDER=Cloudflare \
-  -e RCLONE_CONFIG_R2_ACCESS_KEY_ID=… -e RCLONE_CONFIG_R2_SECRET_ACCESS_KEY=… \
-  -e RCLONE_CONFIG_R2_ENDPOINT=https://ACCOUNT_ID.r2.cloudflarestorage.com \
-  cckhlms-backup:drill restore-latest
-# 4. check: point a local build at it and sign in, or count rows
-docker exec drill-db psql -U lms -d lms -c 'select count(*) from "user";'
-# 5. clean up: delete drill.key and the container
-rm drill.key; docker rm -f drill-db
+# 1. the private age key from the password manager → ~/drill.key: one line, AGE-SECRET-KEY-1 and 58 more capitals
+chmod 600 ~/drill.key
+# 2. it must be the pair of the server's public key: the two age1… values must be the same
+age-keygen -y ~/drill.key
+ssh deploy@SERVER_IP 'grep ^BACKUP_AGE_RECIPIENT= /opt/cckhlms/.env'
+# 3. the drill (about 30 s, a few minutes the first time while it downloads images)
+SERVER=SERVER_IP KEY=~/drill.key sh infra/backup/restore-drill.sh
+# 4. clean up
+rm ~/drill.key
 ```
-On Docker Desktop/Colima for Mac, use `-e PGHOST=host.docker.internal` instead of `--network host`.
+It ends with `PASS` and two lines of counts (accounts | terms | classes | audit entries), restored and live, which should be the same; live can be a little higher if the site was used after the backup. If it fails, the step says why: an `age` error is the wrong key, an `rclone`/403 error an R2 token that can't read, a `pg_restore` error a bad dump. Record the result in §6.
+
+A key that `age-keygen -y` can't read may have lost its `AGE-SECRET-KEY-` start when it was copied (it happened at G1): put it back, and fix the password manager entry too.
 
 ### Server lost → new server (target < 2 hours)
 Rehearsed on 2026-10-22 in a fresh Ubuntu 24.04 VM (2 vCPU, 4 GB): **12½ minutes** from "server lost" to a checked restore (see §6). The rehearsal found and fixed three problems: `provision.sh` stopped on 24.04, `deploy.sh`'s health check never passed, and lesson files weren't restored.
@@ -193,7 +189,8 @@ Rehearsed on 2026-10-22 in a fresh Ubuntu 24.04 VM (2 vCPU, 4 GB): **12½ minute
 | Date | Backup restored | Rows (users) | Time taken | By | Notes |
 |---|---|---|---|---|---|
 | 2026-10-22 | `db-2026-10-21T183422Z` + `uploads-…` (e2e data, local "R2" folder) | 33 | 12½ min from server lost | Claude (M7 rehearsal, local VM) | Found and fixed: provision.sh on 24.04, deploy.sh health check, lesson files not restored / owned by root. Repeat on Hetzner at G1. |
-| | | | | | first drill on the real server (G1) |
+| 2026-10-30 | `db-2026-10-29T223529Z` (no lesson files yet), from R2 with the real key | 14 accounts, 1 term, 3 classes, 106 audit entries: the same as live | 25 s (laptop drill) | Owner, with Claude | The first drill with the real backups and key: they can be read and restored. The password manager had the key without its `AGE-SECRET-KEY-` start; fixed. The server rebuild on Hetzner wasn't repeated (owner, 2026-10-30): M7 rehearsed it; do it once a term. |
+| | | | | | next: the server rebuild on a second Hetzner server (§4), once a term |
 
 ## 7. Deletion requests log
 
@@ -222,11 +219,14 @@ M7 ran these checks against the production build on a laptop sized like the serv
    ```
    **G1 result (2026-10-29, Singapore, 2 vCPU / 4 GB):** page p95 302 ms, autosave p95 190 ms, sign-in p95 448 ms; app 415 MiB and 130 % CPU at peak, database 111 MiB; nothing out of memory. 268 of 450 signed in (the one-address limit above; the club has about 50 students, so the owner kept the limit). 9 of 53,590 requests got a 502 from Cloudflare (`stream canceled by remote` in cloudflared).
 3. **ZAP baseline** (`docs/security-review.md`): `sh infra/security/zap-baseline.sh https://lms.cckh.dev/login live`, then signed in as an admin, a teacher and a student. Expect 0 high.
+   **G1 result (2026-10-29):** 0 high in all four scans (anonymous 25 URLs, admin 52, teacher 27, student 32), with test accounts that were deleted afterwards. New compared with M7, only because Cloudflare is in front: no HSTS header, and "Retrieved from Cache" on `/_next/static/*` (public files that never change; no page is cached).
 4. **Disaster recovery on Hetzner** (§4): take a backup, create a second server, restore onto it, time it, record it in §6, then delete the second server.
+   **G1 result (2026-10-30):** the **restore drill on the laptop** (§4) passed with the real backups and key in 25 s, the counts matching live. The owner left the server rebuild on Hetzner for later: M7 rehearsed it (12½ min), and §4 says to do it once a term.
 5. Check the edge: `http://lms.cckh.dev` redirects to `https://`, the rate-limiting rule (§2.4) exists, and `docker compose ps` shows cloudflared running with `cap_drop: [ALL]`.
    - Cookies stay on the LMS: `curl -si -X POST https://lms.cckh.dev/api/auth/sign-in/username -H 'content-type: application/json' -H 'origin: https://lms.cckh.dev' -d '{"username":"…","password":"…"}' | grep -i set-cookie` shows `__Secure-better-auth.session_token` with **no `Domain=`**; and in the browser's developer tools, requests to `preview.cckh.dev` carry no `Cookie` header.
    - Unused sign-in endpoints are closed: `curl -s -o /dev/null -w '%{http_code}\n' -X POST https://lms.cckh.dev/api/auth/sign-in/email -H 'origin: https://lms.cckh.dev'` prints `404`.
    - The server's checks from §2.2 step 5 still pass, and DNS has no record with the server's IP (§2.1 step 4).
+   **G1 result (2026-10-29):** all pass. The session cookie is `__Secure-better-auth.session_token`, HttpOnly, Secure, SameSite=Lax, with no `Domain=`, and the preview sets no cookie; `sign-in/email` and `update-user` give 404; cloudflared, the app and the preview drop every capability, the app and the preview are read-only, nothing publishes a port; only port 22 is open; no DNS record has the server's IP.
 6. Uptime, backup and disk alerts arrive (pause the app for 10 minutes once to see the uptime alert).
 7. The owner reads this runbook through and signs it off.
 
