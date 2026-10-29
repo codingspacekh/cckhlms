@@ -229,4 +229,5 @@ M7 ran these checks against the production build on a laptop sized like the serv
    **G1 result (2026-10-29):** all pass. The session cookie is `__Secure-better-auth.session_token`, HttpOnly, Secure, SameSite=Lax, with no `Domain=`, and the preview sets no cookie; `sign-in/email` and `update-user` give 404; cloudflared, the app and the preview drop every capability, the app and the preview are read-only, nothing publishes a port; only port 22 is open; no DNS record has the server's IP.
 6. Uptime, backup and disk alerts arrive (pause the app for 10 minutes once to see the uptime alert).
 7. The owner reads this runbook through and signs it off.
+   **Signed off by the owner on 2026-10-30.** Still to do when convenient: the uptime alert test (step 6) and HSTS at the edge (`docs/security-review.md`).
 
