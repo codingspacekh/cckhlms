@@ -51,7 +51,7 @@ export function documentNonce(fallback: string): string {
   return document.querySelector<HTMLScriptElement>('script[nonce]')?.nonce || fallback;
 }
 
-export type CodeAreaHandle = { replaceDoc: (text: string) => void };
+export type CodeAreaHandle = { replaceDoc: (text: string) => void; goToLine: (line: number) => void };
 type Props = {
   path: string;
   doc: string;
@@ -84,7 +84,8 @@ export const CodeArea = forwardRef<CodeAreaHandle, Props>(function CodeArea(
         EditorView.cspNonce.of(documentNonce(nonce)), // CodeMirror injects <style>; the nonce keeps the strict CSP happy
         EditorState.readOnly.of(readOnly),
         EditorView.editable.of(!readOnly),
-        EditorView.contentAttributes.of({ 'aria-label': `Code for ${p}` }),
+        // tabindex: the code can be reached (and a long line scrolled) from the keyboard, read-only too.
+        EditorView.contentAttributes.of({ 'aria-label': `Code for ${p}`, tabindex: '0' }),
         EditorView.updateListener.of((u) => {
           if (u.docChanged) onChangeRef.current(p, u.state.doc.toString());
         }),
@@ -128,6 +129,14 @@ export const CodeArea = forwardRef<CodeAreaHandle, Props>(function CodeArea(
 
   useImperativeHandle(ref, () => ({
     replaceDoc: (text) => view.current?.dispatch({ changes: { from: 0, to: view.current.state.doc.length, insert: text } }),
+    // The Run panel's "Go to line" (M11): select the line, bring it into view and put the cursor there.
+    goToLine: (n) => {
+      const v = view.current;
+      if (!v) return;
+      const line = v.state.doc.line(Math.min(Math.max(1, n), v.state.doc.lines));
+      v.dispatch({ selection: { anchor: line.from, head: line.to }, effects: EditorView.scrollIntoView(line.from, { y: 'center' }) });
+      v.focus();
+    },
   }));
 
   return <div className="code-area" ref={host} />;

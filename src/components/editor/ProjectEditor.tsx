@@ -1,8 +1,8 @@
 'use client';
 // The multi-file editor (FR-CODE-01/02/03): file tree, code, upload files, a folder or a .zip, download a .zip,
-// and the Java package check with a one-click fix. Pictures open in a viewer instead of the code area. It reports
+// and the Java package check with a one-click fix. Python and Java get the Run panel beside the code (M11). Pictures open in a viewer instead of the code area. It reports
 // every change; the page decides when to save.
-import { useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { ALLOWED_EXTENSIONS, checkProject, imageInfo, isImagePath, ProjectError, type ProjectFile } from '@/lib/project/files';
 import { checkJavaPackages, fixPackage } from '@/lib/project/java-package';
 import { fitImage } from '@/lib/project/shrink';
@@ -10,6 +10,7 @@ import { checkPicked, mergeFiles, placePicked, toProjectFiles, type FitImage } f
 import { exportProject, importZip } from '@/lib/project/zip';
 import { CodeArea, type CodeAreaHandle } from './CodeArea';
 import { FileTree } from './FileTree';
+import { RunPanel } from './RunPanel';
 import { WebPreview } from './WebPreview';
 
 type Props = {
@@ -19,6 +20,7 @@ type Props = {
   java?: boolean;
   readOnly?: boolean;
   previewOrigin?: string; // Web work: show the page from the preview origin (FR-CODE-04)
+  run?: 'python' | 'java'; // Python and Java: the Run panel (M11)
   // `now`: a whole-file change (upload, new file, rename, delete, package fix) to save at once; typing can wait.
   onChange?: (files: ProjectFile[], now: boolean) => void;
 };
@@ -53,13 +55,18 @@ function ImageView({ file, web }: { file: ProjectFile; web: boolean }) {
   );
 }
 
-export function ProjectEditor({ initial, nonce, zipName, java = false, readOnly = false, previewOrigin, onChange }: Props) {
+export function ProjectEditor({ initial, nonce, zipName, java = false, readOnly = false, previewOrigin, run, onChange }: Props) {
   const [files, setFiles] = useState(initial);
   const [current, setCurrent] = useState(() => firstFile(initial));
   const [resetKey, setResetKey] = useState(0);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const code = useRef<CodeAreaHandle>(null);
   const filesRef = useRef(files);
+  // "Go to line" from the Run panel: open the file first; the code area has switched to it by the time this runs.
+  const [goTo, setGoTo] = useState<{ path: string; line: number; at: number } | null>(null);
+  useEffect(() => {
+    if (goTo && goTo.path === current) code.current?.goToLine(goTo.line);
+  }, [goTo, current]);
 
   function update(next: ProjectFile[], opts: { reset?: boolean; open?: string; now?: boolean } = {}) {
     filesRef.current = next;
@@ -183,40 +190,52 @@ export function ProjectEditor({ initial, nonce, zipName, java = false, readOnly 
           </button>
         </p>
       )}
-      <div className="ide">
-        <FileTree
-          paths={files.map((f) => f.path)}
-          current={current}
-          readOnly={readOnly}
-          onOpen={setCurrent}
-          onAdd={(path) => update([...filesRef.current, { path, content: '' }], { open: path, now: true })}
-          onRename={(from, to) =>
-            update(
-              filesRef.current.map((f) => (f.path === from ? { ...f, path: to } : f)),
-              { reset: true, open: to },
-            )
-          }
-          onDelete={(path) => {
-            const next = filesRef.current.filter((f) => f.path !== path);
-            update(next, { reset: true, open: firstFile(next) });
-          }}
-        />
-        {open && isImagePath(open.path) ? (
-          <ImageView file={open} web={!!previewOrigin} />
-        ) : (
-          <CodeArea
-            ref={code}
-            path={current}
-            doc={doc}
-            nonce={nonce}
+      <div className={`project-main${run ? ' runnable' : ''}`}>
+        <div className="ide">
+          <FileTree
+            paths={files.map((f) => f.path)}
+            current={current}
             readOnly={readOnly}
-            resetKey={resetKey}
-            onChange={(path, text) =>
+            onOpen={setCurrent}
+            onAdd={(path) => update([...filesRef.current, { path, content: '' }], { open: path, now: true })}
+            onRename={(from, to) =>
               update(
-                filesRef.current.map((f) => (f.path === path ? { ...f, content: text } : f)),
-                { now: fixing.current },
+                filesRef.current.map((f) => (f.path === from ? { ...f, path: to } : f)),
+                { reset: true, open: to },
               )
             }
+            onDelete={(path) => {
+              const next = filesRef.current.filter((f) => f.path !== path);
+              update(next, { reset: true, open: firstFile(next) });
+            }}
+          />
+          {open && isImagePath(open.path) ? (
+            <ImageView file={open} web={!!previewOrigin} />
+          ) : (
+            <CodeArea
+              ref={code}
+              path={current}
+              doc={doc}
+              nonce={nonce}
+              readOnly={readOnly}
+              resetKey={resetKey}
+              onChange={(path, text) =>
+                update(
+                  filesRef.current.map((f) => (f.path === path ? { ...f, content: text } : f)),
+                  { now: fixing.current },
+                )
+              }
+            />
+          )}
+        </div>
+        {run && (
+          <RunPanel
+            language={run}
+            files={files}
+            onGoTo={(path, line) => {
+              setCurrent(path);
+              setGoTo({ path, line, at: Date.now() });
+            }}
           />
         )}
       </div>

@@ -11,11 +11,12 @@ type Props = {
   nonce: string;
   java: boolean;
   previewOrigin?: string;
+  run?: 'python' | 'java'; // the Run panel (M11)
   zipName: string;
 };
 
 // FR-CODE-06: the teacher's starter files, copied into each student's project when they first open the work.
-export function StarterEditor({ classId, assessmentId, initial, nonce, java, previewOrigin, zipName }: Props) {
+export function StarterEditor({ classId, assessmentId, initial, nonce, java, previewOrigin, run, zipName }: Props) {
   const files = useRef(initial);
   const [dirty, setDirty] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
@@ -61,6 +62,7 @@ export function StarterEditor({ classId, assessmentId, initial, nonce, java, pre
         nonce={nonce}
         java={java}
         previewOrigin={previewOrigin}
+        run={run}
         zipName={zipName}
         onChange={(next: ProjectFile[]) => {
           files.current = next;

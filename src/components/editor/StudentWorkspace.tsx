@@ -37,6 +37,7 @@ type Props = {
   nonce: string;
   java: boolean;
   previewOrigin?: string;
+  run?: 'python' | 'java'; // the Run panel (M11)
   zipName: string;
   timeZone: string;
   submit: SubmitPanel;
@@ -52,6 +53,7 @@ export function StudentWorkspace({
   nonce,
   java,
   previewOrigin,
+  run,
   zipName,
   timeZone,
   submit,
@@ -100,7 +102,15 @@ export function StudentWorkspace({
           <h2 id="project-title">Your project</h2>
           <SaveStatus state={state} timeZone={timeZone} />
         </div>
-        <ProjectEditor initial={initial} nonce={nonce} java={java} previewOrigin={previewOrigin} zipName={zipName} onChange={changed} />
+        <ProjectEditor
+          initial={initial}
+          nonce={nonce}
+          java={java}
+          previewOrigin={previewOrigin}
+          run={run}
+          zipName={zipName}
+          onChange={changed}
+        />
       </section>
       <section className="card stack" aria-labelledby="submit-title">
         <div className="spread">

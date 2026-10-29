@@ -86,6 +86,7 @@ export default async function TeacherWorkPage({ params }: { params: Promise<{ id
         nonce={nonce}
         java={a.language === 'java'}
         previewOrigin={a.language === 'web' ? PREVIEW_ORIGIN : undefined}
+        run={a.language === 'python' || a.language === 'java' ? a.language : undefined}
         zipName={`${zipNameFor(a.title)}-starter`}
       />
     </>

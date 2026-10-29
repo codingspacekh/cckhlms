@@ -124,6 +124,7 @@ export default async function MarkPage({
                 nonce={nonce}
                 readOnly
                 previewOrigin={g.work.language === 'web' ? PREVIEW_ORIGIN : undefined}
+                run={g.work.language === 'python' || g.work.language === 'java' ? g.work.language : undefined}
                 zipName={`${zipNameFor(g.work.title, g.student.username)}-v${shown.version}`}
               />
             )}
