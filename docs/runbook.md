@@ -205,7 +205,20 @@ Students whose personal data was deleted (NFR-07). Ids only, never names. After 
 M7 ran these checks against the production build on a laptop sized like the server. G1 repeats them on the real one, **before any real data is on it**:
 
 1. Set up the accounts and the server (§2), deploy (§2.8), and sign in as the first admin.
-2. **Load test** (NFR-01/03), while the database is still empty: seed it with `tests/load/seed.ts` and run `tests/load/weekend.js` with k6 from the laptop against `https://lms.cckh.dev`, so Cloudflare is in the path too. Expect page p95 < 500 ms, 0 failures, nobody signed out. Still to work out at G1: the server has no Node.js, so the seed runs on the laptop over an SSH tunnel to the database, and its database-name check (`lms_load`) needs a one-off override. Afterwards reset the database (`docker compose … down -v`, deploy again) so no test data stays.
+2. **Load test** (NFR-01/03), while the database is still empty (only the first admin). From the repo folder, with Colima running:
+   ```bash
+   ssh deploy@SERVER_IP 'cd /opt/cckhlms && docker exec cckhlms-db-1 pg_dump -U lms -d lms -Fc > pre-load.dump'
+   SERVER=SERVER_IP sh tests/load/live.sh
+   ```
+   `live.sh` refuses a database with more than one account, seeds it from the laptop over SSH (`tests/load/db-over-ssh.mjs`: no port opens and no password leaves the server), then runs k6 against `https://lms.cckh.dev` and records the server's memory and CPU. Expect page and save p95 < 500 ms and no container out of memory. All 450 people come from the laptop's one address, and Better Auth lets one address sign in 60 times and then refuses it until a full minute passes with no sign-in, so about 180 of them can't sign in and the failure counts are not meaningful from one laptop; judge the run by the times. Then put the empty database back, so no test data stays:
+   ```bash
+   ssh deploy@SERVER_IP 'set -e; cd /opt/cckhlms; export APP_TAG=$(cat .deployed-tag); C="docker compose -f compose.prod.yaml"
+     $C stop app backup
+     docker exec cckhlms-db-1 psql -U postgres -d postgres -qc "drop database lms with (force)" -c "create database lms owner lms"
+     docker exec -i cckhlms-db-1 pg_restore -U lms -d lms --exit-on-error < pre-load.dump
+     $C up -d && rm pre-load.dump'
+   ```
+   **G1 result (2026-10-29, Singapore, 2 vCPU / 4 GB):** page p95 302 ms, autosave p95 190 ms, sign-in p95 448 ms; app 415 MiB and 130 % CPU at peak, database 111 MiB; nothing out of memory. 268 of 450 signed in (the one-address limit above; the club has about 50 students, so the owner kept the limit). 9 of 53,590 requests got a 502 from Cloudflare (`stream canceled by remote` in cloudflared).
 3. **ZAP baseline** (`docs/security-review.md`): `sh infra/security/zap-baseline.sh https://lms.cckh.dev/login live`, then signed in as an admin, a teacher and a student. Expect 0 high.
 4. **Disaster recovery on Hetzner** (§4): take a backup, create a second server, restore onto it, time it, record it in §6, then delete the second server.
 5. Check the edge: `http://lms.cckh.dev` redirects to `https://`, the rate-limiting rule (§2.4) exists, and `docker compose ps` shows cloudflared running with `cap_drop: [ALL]`.
