@@ -109,6 +109,21 @@ What remains, and why it stays:
 - **Big Redirect Detected** (low): `/` redirects to sign-in or the person's home with Next.js's standard redirect page (the app shell, no data).
 - Informational: "User Controllable HTML Element Attribute" is form fields that React fills in, escaped.
 
+## ZAP baseline on production (G1, 2026-10-29)
+
+The same scans against `https://lms.cckh.dev`, through Cloudflare, signed in with test accounts made for them and deleted afterwards.
+
+| Scan | URLs | High |
+|---|---|---|
+| Anonymous | 25 | **0** |
+| Admin | 52 | **0** |
+| Teacher | 27 | **0** |
+| Student | 32 | **0** |
+
+The same findings as above, plus two that come only from Cloudflare being in front:
+- **Strict-Transport-Security header not set** (low): the edge serves HTTPS only and redirects HTTP. To close it, turn on HSTS in Cloudflare (SSL/TLS → Edge Certificates → HSTS), or have the app send the header. *Open: the owner to decide.*
+- **Retrieved from Cache** (informational): only on `/_next/static/*`, files that are public and never change. No page or data is cached.
+
 ## Findings (all fixed in M7)
 
 1. **A form sent before the page's script loaded put its fields in the address**, including **the sign-in password** (`/login?username=…&password=…`), in the browser history and in proxy logs. 17 forms now say `method="post"`, and `tests/unit/forms.test.ts` keeps it that way. *(PR 3, found by ZAP.)*
@@ -127,10 +142,10 @@ A second pass before G1 covered the code added since this review (pictures, the 
 
 ## At G1 (operational)
 
-- Run `sh infra/security/zap-baseline.sh https://lms.cckh.dev/login live` and the three signed-in scans against production; expect 0 high.
-- Create the Cloudflare rate-limiting rule (runbook §2.4) and check that HTTP redirects to HTTPS at the edge.
-- Confirm cloudflared runs with `cap_drop: [ALL]` (it can't be tried without a real tunnel token).
-- Store the backup private key and the first admin's password in the password manager; never on the server.
+- ✅ Run `sh infra/security/zap-baseline.sh https://lms.cckh.dev/login live` and the three signed-in scans against production; expect 0 high. *0 high, 2026-10-29 (above).*
+- ✅ Create the Cloudflare rate-limiting rule (runbook §2.4) and check that HTTP redirects to HTTPS at the edge. *2026-10-29.*
+- ✅ Confirm cloudflared runs with `cap_drop: [ALL]` (it can't be tried without a real tunnel token). *2026-10-29, runbook §8 step 5.*
+- ✅ Store the backup private key and the first admin's password in the password manager; never on the server. *The key was there without its `AGE-SECRET-KEY-` start, found and fixed by the restore drill on 2026-10-30 (runbook §6).*
 
 ## How to re-check
 
