@@ -13,6 +13,12 @@ const actions = {
 vi.mock('@/modules/teaching/qa-actions', () =>
   Object.fromEntries(Object.entries(actions).map(([k, fn]) => [k, (...a: unknown[]) => fn(...a)])),
 );
+// The compact editor (M12) has its own tests (post-editor.test.tsx); here a textarea stands in, with its name and label.
+vi.mock('@/components/teaching/note-editor/NoteEditor', () => ({
+  NoteEditor: (p: { name: string; label: string; initialMarkdown: string; defaultLanguage?: string }) => (
+    <textarea name={p.name} aria-label={p.label} defaultValue={p.initialMarkdown} data-language={p.defaultLanguage} />
+  ),
+}));
 const { QaBoard } = await import('@/components/teaching/QaBoard');
 
 beforeAll(() => {
@@ -67,21 +73,27 @@ describe('QaBoard for a student', () => {
 
   it('asks a question and clears the form when it posts', async () => {
     actions.askQuestionAction.mockResolvedValue({ ok: true, message: 'Question posted.' });
-    render(<QaBoard {...base} role="student" questions={[]} />);
+    render(<QaBoard {...base} role="student" questions={[]} codeLanguage="java" />);
     expect(screen.getByText('No questions yet.')).toBeTruthy();
-    fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'How?' } });
-    fireEvent.change(screen.getByLabelText('Code (optional)'), { target: { value: 'x = 1' } });
+    // The editor, in the class's language; the code goes in the question as a code block (no separate box any more).
+    const box = await screen.findByLabelText('Your question');
+    expect(box.dataset.language).toBe('java');
+    expect(screen.queryByLabelText('Code (optional)')).toBeNull();
+    fireEvent.change(box, { target: { value: 'How?\n\n```java\nint x = 1;\n```' } });
     fireEvent.click(screen.getByRole('button', { name: 'Post question' }));
     // The status line is always there (empty until something happens), so wait for its text, not for it.
     await waitFor(() => expect(screen.getByRole('status').textContent).toBe('Question posted.'));
-    expect(actions.askQuestionAction).toHaveBeenCalledWith('c1', 3, 'How?', 'x = 1');
+    expect(actions.askQuestionAction).toHaveBeenCalledWith('c1', 3, 'How?\n\n```java\nint x = 1;\n```', '');
     expect((screen.getByLabelText('Your question') as HTMLTextAreaElement).value).toBe('');
   });
 
   it('replies, and shows the reason when posting fails', async () => {
     actions.replyAction.mockResolvedValue({ ok: false, error: 'Write your reply first.' });
     render(<QaBoard {...base} role="student" questions={[q()]} />);
-    fireEvent.change(screen.getByLabelText('Your reply to Rithy Som'), { target: { value: ' ' } });
+    // One editor at a time: Write a reply opens it under that question.
+    expect(screen.queryByLabelText('Your reply to Rithy Som')).toBeNull();
+    fireEvent.click(within(article()).getByRole('button', { name: 'Write a reply to Rithy Som' }));
+    fireEvent.change(await screen.findByLabelText('Your reply to Rithy Som'), { target: { value: ' ' } });
     fireEvent.click(within(article()).getByRole('button', { name: 'Reply' }));
     expect((await screen.findByRole('alert')).textContent).toBe('Write your reply first.');
     expect(actions.replyAction).toHaveBeenCalledWith('c1', 'q1', ' ');

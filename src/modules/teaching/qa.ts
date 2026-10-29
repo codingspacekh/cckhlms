@@ -1,12 +1,13 @@
 // Questions and replies on a lesson (FR-STU-03/04/10, FR-TCH-03). Students see their own class only (BR-11).
 // A reported post is hidden from other students and shown to its author as "under review" until a teacher
 // restores or removes it (BR-20). A teacher's post can't be reported, so one student can't hide an answer.
+// Since M12 a post is written in the compact editor and shown with renderPost: code blocks, no pictures (BR-26).
 import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/db/client';
-import { classSession, lesson, postReport, question, reply, user } from '@/db/schema';
+import { classSession, course, klass, lesson, postReport, question, reply, user } from '@/db/schema';
 import { classAccess } from '@/modules/academics/access';
-import { renderMarkdown } from '@/lib/markdown';
+import { renderPost } from '@/lib/markdown';
 import type { Actor } from '@/server/actor';
 import { audit } from '@/server/audit';
 import { assertCan, ValidationError } from '@/server/errors';
@@ -36,7 +37,8 @@ export type QuestionView = Omit<ReplyView, 'byTeacher'> & {
   replies: ReplyView[];
 };
 
-const MAX = 4000;
+// Room for a question with its code in it (M12); before, the code had its own box.
+const MAX = 8000;
 const bodySchema = (what: string) =>
   z
     .string()
@@ -61,11 +63,19 @@ export async function lessonQuestions(
   classId: string,
   week: number,
   opts: Opts = {},
-): Promise<{ open: boolean; questions: QuestionView[]; toReview: number }> {
+): Promise<{ open: boolean; questions: QuestionView[]; toReview: number; codeLanguage: string }> {
   const ctx = await classAccess(classId, 'read');
   assertCan(actor, 'lesson.read', ctx);
+  // For new code blocks in a post: the course's language (a web course writes HTML).
+  const [c] = await db
+    .select({ language: course.defaultLanguage })
+    .from(klass)
+    .innerJoin(course, eq(course.id, klass.courseId))
+    .where(eq(klass.id, classId))
+    .limit(1);
+  const codeLanguage = c?.language === 'web' ? 'html' : (c?.language ?? 'python');
   const l = await visibleLesson(classId, week, opts.now ?? new Date());
-  if (!l) return { open: false, questions: [], toReview: 0 };
+  if (!l) return { open: false, questions: [], toReview: 0, codeLanguage };
   const moderator = can(actor, 'qa.moderate', ctx);
   const teacherIds = new Set(ctx.classTeacherIds);
 
@@ -95,7 +105,7 @@ export async function lessonQuestions(
     author,
     byTeacher: teacherIds.has(p.authorId),
     mine: p.authorId === actor.userId,
-    bodyHtml: renderMarkdown(p.bodyMd),
+    bodyHtml: renderPost(p.bodyMd),
     createdAt: p.createdAt,
     state: p.visibility as Visibility,
     reports: openReports.get(p.id) ?? [],
@@ -113,7 +123,7 @@ export async function lessonQuestions(
     ? questions.filter((q) => q.state === 'under_review').length +
       questions.flatMap((q) => q.replies).filter((r) => r.state === 'under_review').length
     : 0;
-  return { open: true, questions, toReview };
+  return { open: true, questions, toReview, codeLanguage };
 }
 
 async function reportsFor(postIds: string[]) {

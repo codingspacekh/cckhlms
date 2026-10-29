@@ -10,7 +10,9 @@ test.describe.configure({ mode: 'serial' });
 let c: TeachingClass;
 const WEEK = 7;
 const as = async (browser: Browser, who: string) =>
-  (await browser.newContext({ storageState: stateFile(who), baseURL: E2E.lms })).newPage();
+  (
+    await browser.newContext({ storageState: stateFile(who), baseURL: E2E.lms, permissions: ['clipboard-read', 'clipboard-write'] })
+  ).newPage();
 
 test.beforeAll(async ({ browser }) => {
   c = await teachingClass();
@@ -24,19 +26,28 @@ test.beforeAll(async ({ browser }) => {
   await page.context().close();
 });
 
+// M12: the question is written in the compact editor, with its code in a code block (prototype boards 3–4).
 test('the student reads the lesson and asks a question with code', async ({ browser }) => {
   const page = await as(browser, 'student');
   const problems = await watchProblems(page);
   await page.goto(`/student/classes/${c.classId}/weeks/${WEEK}`);
   await expect(page.getByRole('heading', { level: 1, name: 'Lists' })).toBeVisible();
   const ask = page.getByRole('form', { name: 'Ask a question' });
-  await ask.getByLabel('Your question').fill('How do I add to a list? <img src=x onerror=alert(1)>');
-  await ask.getByLabel('Code (optional)').fill('nums = [1, 2]\nnums.add(3)');
+  await expect(ask.getByRole('toolbar', { name: 'Formatting' }).getByRole('button', { name: 'Code block' })).toBeVisible();
+  await writeNote(
+    page,
+    'How do I add to a list? <img src=x onerror=alert(1)>\n\n```python\nnums = [1, 2]\nnums.add(3)\n```',
+    'Your question',
+  );
   await ask.getByRole('button', { name: 'Post question' }).click();
   const q = page.getByRole('article', { name: `Question from ${USERS.student.name}` });
   await expect(q).toContainText('How do I add to a list? <img src=x onerror=alert(1)>');
-  await expect(q.locator('pre code')).toHaveText('nums = [1, 2]\nnums.add(3)');
-  await expect(ask.getByLabel('Your question')).toHaveValue('');
+  await expect(q.locator('.code-block .code-lang')).toHaveText('Python');
+  await expect(q.locator('.code-block code')).toHaveText('nums = [1, 2]\nnums.add(3)');
+  await q.getByRole('button', { name: 'Copy' }).click();
+  await expect(q.getByRole('button', { name: 'Copied' })).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('nums = [1, 2]\nnums.add(3)');
+  await expect(page.getByRole('textbox', { name: 'Your question', exact: true })).toHaveText('');
   await expectAccessible(page);
   expect(await problems.cspViolations()).toEqual([]);
   await page.context().close();
@@ -46,9 +57,12 @@ test('a classmate replies, and the teacher marks it as the answer', async ({ bro
   const mate = await as(browser, 'classmate');
   await mate.goto(`/student/classes/${c.classId}/weeks/${WEEK}`);
   const q = mate.getByRole('article', { name: `Question from ${USERS.student.name}` });
-  await q.getByLabel(`Your reply to ${USERS.student.name}`).fill('Use `nums.append(3)`.');
+  await q.getByRole('button', { name: `Write a reply to ${USERS.student.name}` }).click();
+  await writeNote(mate, 'Use `append`:\n\n```python\nnums.append(3)\n```', `Your reply to ${USERS.student.name}`);
   await q.getByRole('button', { name: 'Reply' }).click();
-  await expect(q.getByRole('listitem', { name: `Reply from ${CLASSMATE}` })).toContainText('nums.append(3)');
+  const answer = q.getByRole('listitem', { name: `Reply from ${CLASSMATE}` });
+  await expect(answer.locator('code').first()).toHaveText('append');
+  await expect(answer.locator('.code-block code')).toHaveText('nums.append(3)');
   await mate.context().close();
 
   const teacher = await as(browser, 'teacher');

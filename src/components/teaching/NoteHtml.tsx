@@ -3,9 +3,10 @@ import { useEffect, useRef, useState, type MouseEvent } from 'react';
 
 const COPIED_FOR_MS = 2000;
 
-// A lesson note rendered by renderNote (FR-STU-12). Its code blocks' Copy buttons come in the HTML, so one click
-// handler here serves them all: the buttons are real <button>s, so they work from the keyboard too.
-export function NoteHtml({ html }: { html: string }) {
+// A lesson note rendered by renderNote (FR-STU-12), or a question or reply rendered by renderPost (M12). Its code
+// blocks' Copy buttons come in the HTML, so one click handler here serves them all: the buttons are real <button>s,
+// so they work from the keyboard too.
+export function NoteHtml({ html, className = 'md reading' }: { html: string; className?: string }) {
   const [status, setStatus] = useState('');
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
@@ -31,8 +32,8 @@ export function NoteHtml({ html }: { html: string }) {
 
   return (
     <>
-      {/* Sanitised by renderNote on the server (src/lib/markdown.ts). */}
-      <div className="md reading" onClick={copy} dangerouslySetInnerHTML={{ __html: html }} />
+      {/* Sanitised by renderNote or renderPost on the server (src/lib/markdown.ts). */}
+      <div className={className} onClick={copy} dangerouslySetInnerHTML={{ __html: html }} />
       {/* A plain live region, not role="status", so it doesn't compete with the page's own status messages. */}
       <span aria-live="polite" className="sr-only" data-testid="copy-status">
         {status}

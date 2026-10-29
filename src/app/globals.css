@@ -3061,6 +3061,17 @@ td.text {
   margin: 0;
 }
 
+/* Q&A posts (M12): written in the compact editor, read with the note's code blocks. */
+.note-doc.post-doc {
+  min-height: 7.5rem;
+}
+.reply-form {
+  margin-top: 4px;
+}
+.md.post .code-block {
+  margin: 10px 0;
+}
+
 /* marking (FR-TCH-11/12, FR-STU-06) */
 .score {
   font-size: 1.4rem;

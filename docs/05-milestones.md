@@ -615,7 +615,7 @@ The next milestone does not start until all four are true.
 >   - *Found by the existing guard tests:* the NFR-07 check that only admin code mentions guardian contact flagged the audit labels (they name the field, not the value); the FR-SYS-02 check that every sensitive action is recorded made `account.update` and `account.delete` part of its run.
 > - **Tests:** 4 new files (integration: terms, classes, accounts; component: terms, class, people dialogs) and 3 new Playwright journeys with axe on each open dialog.
 
-### M11 — Run code (4 days) — 🔨 started 2026-10-29
+### M11 — Run code (4 days) — 🔨 code done 2026-10-30 · owner sign-off on `lms.cckh.dev` pending
 **Why:** students write Python and Java but can only hand it in; only Web work runs (owner, 2026-10-29: "there is no way to run python and java. the same should apply to the playground"). Prototype approved the same day (https://claude.ai/artifact/QFLzXG1LhQZaQ2YAk6BbmF, boards 1–2). The owner chose the **same server** (free) and an **input box before Run**; ADR-0004 records how the runner stays safe without a privileged container.
 
 **Goal:** a student presses Run on their Python or Java homework or Playground project, with input typed in a box, and sees what it prints, or why it didn't compile, within a few seconds, on any laptop or phone.
@@ -635,7 +635,14 @@ The next milestone does not start until all four are true.
 
 **Exit criteria:** the runner checks all pass in CI; on `lms.cckh.dev` a Python homework and a Java Playground project run with input from a student account; ten runs at once from a class finish without the site slowing (page p95 < 500 ms); the owner signs off M11.
 
-### M12 — The editor in Q&A (2 days)
+> **Result** (PRs #60 runner → #61 Run panel, 2026-10-29/30).
+> - **The runner, #60:** `infra/runner/` (Temurin JDK 21 + Ubuntu's Python 3.12, `runner.py` with the standard library only). A Python run takes about 0.1 s and a Java one about 0.9 s with compiling, on the laptop. 22 checks in `infra/tests/runner-image.sh`, now in CI's infrastructure job.
+>   - *Changed from the plan:* the runner has **no network at all** and talks to the app over a Unix socket in a shared volume; on the `internal` network a program could have called the LMS from inside the server, without Cloudflare's sign-in limits. gVisor is left for later: it needs root and extra set-up for the socket. The runner needs `KILL` as well as `SETUID`, `SETGID` and `CHOWN`, to stop a program that runs as another user.
+>   - *Found by the checks:* Python's `cwd` is entered before the user switch, which root can't do in a slot's folder, so the folder is entered after it; root can't change a folder's permissions after giving it away; equal soft and hard CPU limits kill with SIGKILL straight away, so the hard limit is a second later and an endless loop reads as "ran longer than 10 seconds".
+>   - The runner's image is tagged with `infra/runner`'s git tree and sent only when the server doesn't have it; `deploy.sh` also tags it `current` for commands typed by hand.
+> - **Run in the editor, #61:** the Run panel beside the code (under it on a narrow screen), in homework, the Playground, the starter files and the teacher's view of a hand-in. *Found by axe:* beside the panel the code was narrow enough to scroll sideways, out of reach of the keyboard; the file list narrows beside Run, and the code is focusable, read-only too.
+
+### M12 — The editor in Q&A (2 days) — 🔨 code done 2026-10-30 · owner sign-off pending
 **Why:** students ask about code ("explain this piece of code"), and the question box is plain text with a separate code box (owner, 2026-10-29). Prototype approved (boards 3–4); the owner chose the editor for **questions and replies**.
 
 **Goal:** asking or answering, anyone can write text with code blocks in the class's language, and everyone reads them with colours and Copy.
@@ -645,6 +652,9 @@ The next milestone does not start until all four are true.
 **Tests first:** unit: the Q&A renderer keeps the XSS corpus out and shows code blocks with colours, and refuses pictures and raw HTML; component: the compact toolbar, a code block in the class's language, the length limit; integration: a question and a reply with code are saved as Markdown and shown to the class; Playwright + axe: a student asks with a Python code block, a teacher replies with code and marks it as the answer, a classmate copies the code.
 
 **Exit criteria:** a real question with code is asked and answered on `lms.cckh.dev`; old questions look the same; the owner signs off M12.
+
+> **Result** (PR #62, 2026-10-30). `NoteEditor` takes `variant="post"`: the toolbar a question needs (bold, italic, code, link, lists, Code block, undo/redo), no text style, picture, tip box or + and `/` menu, its own field name and label, and it empties when its form is reset. Questions and replies are shown with `renderPost` (the note's code blocks with colours and Copy; pictures stay links). Each question has **Write a reply**, which opens one editor under it, and the editor loads only when the page needs it. A post may be 8,000 characters (it was 4,000, without its code).
+> - *Changed from the plan:* the post editor keeps the lesson note's document model. Leaving out tip boxes or pictures made Markdown with one of them crash the editor; what a post may show is `renderPost`'s job, which its XSS corpus checks.
 
 ### R2 — Club-wide launch
 - All classes of the next term (e.g. Term 2 · 2027) are set up and run on `lms.cckh.dev`. Teachers get a short walkthrough, and students get login slips.
