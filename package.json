@@ -8,9 +8,9 @@
     "node": ">=24"
   },
   "scripts": {
-    "dev": "next dev -p 3000",
+    "dev": "next dev -p 3300",
     "build": "next build",
-    "start": "next start -p 3000",
+    "start": "next start -p 3300",
     "preview": "node preview/server.mjs",
     "db:up": "docker compose up -d --wait db",
     "db:down": "docker compose down",

@@ -26,7 +26,7 @@ npm install
 cp .env.example .env        # local-only values
 npm run db:up               # PostgreSQL in Docker (port 54329)
 npm run seed:dev            # demo people, terms, courses, classes and M3 teaching data; every password is demo-password-1
-npm run dev                 # http://lms.localhost:3000  (admin · sophea · bopha.l …)
+npm run dev                 # http://lms.localhost:3300  (admin · sophea · bopha.l …)
 ```
 `seed:dev` only fills an empty database. To start again with the latest demo data: `npm run db:down -- -v && npm run db:up && npm run seed:dev`.
 Tests: `npm test` (unit + component), `npm run test:int` (PostgreSQL), `npm run build && npm run test:e2e` (browser).

@@ -9,7 +9,7 @@ import { audit } from './audit';
 import { recordSignIn, signInRefusal } from './sign-in-limit';
 
 const DAY = 24 * 3600;
-export const LMS_ORIGIN = process.env.BETTER_AUTH_URL ?? 'http://lms.localhost:3000';
+export const LMS_ORIGIN = process.env.BETTER_AUTH_URL ?? 'http://lms.localhost:3300';
 
 // ADR 0003 finding 2: Better Auth checks Origin only when the request already has a cookie, and the username
 // sign-in has no first-login CSRF check. So every browser POST must come from the LMS itself.

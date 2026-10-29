@@ -3,7 +3,7 @@
 // Python Level 1: lessons, attendance, Q&A (one post waiting for review) and weekly reports; and M4 work:
 // homework with hand-ins (one marked, one to mark), Web homework, and a paper quiz in the gradebook; and M5:
 // draft term reports, one student flagged as needing support (see the admin dashboard and Statistics).
-//   npm run db:up && npm run seed:dev && npm run dev   → http://lms.localhost:3000
+//   npm run db:up && npm run seed:dev && npm run dev   → http://lms.localhost:3300
 import { sql } from 'drizzle-orm';
 import { db, pool } from '../src/db/client';
 import { term as termTable } from '../src/db/schema';
@@ -240,5 +240,5 @@ await reportFor(4, 'good', 'Neat, careful work.');
 
 console.log(`Demo data added. Every account uses the password "${PASSWORD}":
   admin · sophea, dara, vibol (teachers) · ${students.map((s) => s.username).join(', ')} (students)
-Open http://lms.localhost:3000 after "npm run dev".`);
+Open http://lms.localhost:3300 after "npm run dev".`);
 await pool.end();
