@@ -68,6 +68,21 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
 
+      # The runner (M11, ADR-0004) is ~450 MB and changes rarely: its tag is infra/runner's git tree, and it is built and
+      # sent only when the server doesn't have that one yet.
+      - name: Runner image, if the server doesn't have it
+        if: steps.day.outputs.go == 'true'
+        id: runner
+        run: |
+          tag=$(git rev-parse --short=12 HEAD:infra/runner)
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if ssh "deploy@$HOST" "docker image inspect cckhlms-runner:$tag" >/dev/null 2>&1; then
+            echo "::notice::The server already has runner $tag"
+          else
+            docker build -t "cckhlms-runner:$tag" infra/runner
+            docker save "cckhlms-runner:$tag" | gzip -1 | ssh "deploy@$HOST" 'gunzip | docker load'
+          fi
+
       - name: Send images and files to the server
         if: steps.day.outputs.go == 'true'
         run: |
@@ -76,7 +91,7 @@ jobs:
 
       - name: Start the new version (rolls back automatically if unhealthy)
         if: steps.day.outputs.go == 'true'
-        run: ssh "deploy@$HOST" "sh /opt/cckhlms/deploy.sh $SHA"
+        run: ssh "deploy@$HOST" "sh /opt/cckhlms/deploy.sh $SHA ${{ steps.runner.outputs.tag }}"
 
       - name: Check the public site reports the new version
         if: steps.day.outputs.go == 'true'

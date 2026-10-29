@@ -40,6 +40,7 @@ const MATRIX: Record<Action, Record<Role, Rule>> = {
   'certificate.download': { admin: true, teacher: false, student: 'self' },
   'audit.view': { admin: true, teacher: false, student: false },
   'playground.use': { admin: false, teacher: false, student: true },
+  'code.run': { admin: false, teacher: true, student: true },
   'student.data': { admin: true, teacher: false, student: false },
 };
 

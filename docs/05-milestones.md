@@ -48,6 +48,8 @@ flowchart LR
 | **M8** ✅ | Club look | Champion Coders brand (logo, dark blue, Titillium Web), kid-friendly styling, new home pages for all three roles, term puzzle | NFR-08 · FR-STU-01, 11 · FR-TCH-21 · FR-ADM-10 · BR-21 | 4 days |
 | **M9** ✅ | Lesson note editor | Word-processor-style lesson note with code blocks, pictures and tip boxes; notes that read like a book page for students | FR-TCH-22 · FR-STU-12 · BR-22 | 4 days |
 | **M10** 🔨 | Fix mistakes | Edit, undo and delete-if-unused for terms, courses, classes and people (reopen a closed term, change a class after it is created) | FR-ADM-01…05 · BR-23, 24 | 3 days |
+| **M11** 🔨 | Run code | Run Python and Java from the editor and the Playground, with an input box, on our own locked-down runner on the same server | FR-CODE-09, 10 · BR-25 · ADR-0004 | 4 days |
+| **M12** | Q&A editor | The word-processor-style editor, with code blocks, in questions and replies | FR-STU-03, 04 · FR-TCH-03 · BR-26 | 2 days |
 | — | **R2: Club-wide launch** | Every class of the next term runs on `lms.cckh.dev` | | |
 
 \* *Effort = focused working days for one developer, tests included. Total ≈ **45 focused days**. At 2–3 focused days a week alongside teaching, that is about **4–5 months**: R1 could pilot in **Term 1 · 2027** (from Sat 9 Jan 2027) and R2 launch in **Term 2 · 2027**. These are planning ranges (±30%), not promises. AI-assisted pace on codingspacekh was faster, but the server work here is new.*
@@ -613,12 +615,42 @@ The next milestone does not start until all four are true.
 >   - *Found by the existing guard tests:* the NFR-07 check that only admin code mentions guardian contact flagged the audit labels (they name the field, not the value); the FR-SYS-02 check that every sensitive action is recorded made `account.update` and `account.delete` part of its run.
 > - **Tests:** 4 new files (integration: terms, classes, accounts; component: terms, class, people dialogs) and 3 new Playwright journeys with axe on each open dialog.
 
+### M11 — Run code (4 days) — 🔨 started 2026-10-29
+**Why:** students write Python and Java but can only hand it in; only Web work runs (owner, 2026-10-29: "there is no way to run python and java. the same should apply to the playground"). Prototype approved the same day (https://claude.ai/artifact/QFLzXG1LhQZaQ2YAk6BbmF, boards 1–2). The owner chose the **same server** (free) and an **input box before Run**; ADR-0004 records how the runner stays safe without a privileged container.
+
+**Goal:** a student presses Run on their Python or Java homework or Playground project, with input typed in a box, and sees what it prints, or why it didn't compile, within a few seconds, on any laptop or phone.
+
+**Build (stacked PRs, merged in order):**
+1. **The runner** (`m11-runner`, FR-CODE-09, BR-25, ADR-0004): `infra/runner/` (image: Python 3.12 + Java 21 + `runner.py`), the `runner` service in `compose.prod.yaml` (no network, a socket shared with the app, read-only, no secrets, limits), the `CodeRunner` client (`src/server/runner.ts`), `runCode` with the checks (signed in, file limits, 20 runs a minute, 10 KB input) and its Server Action; a dev service in `compose.yaml`; the deploy sends the runner image only when it changed; runbook §2.9.
+2. **Run in the editor** (`m11-run-ui`, FR-CODE-10): a Run panel beside the code for Python and Java: Input, Run/Stop, Output (input lines in green, errors in pink), "Finished in … s", and for an error a link to the file and line; in homework and classwork, the Playground, the teacher's starter files and the teacher's view of a student's work.
+
+**Left out on purpose:** an interactive terminal (owner chose the input box); automatic tests or marks from runs; pictures or files written by a program; Run for Web work (it already has its preview).
+
+**Tests first:**
+- Runner (`infra/tests/runner-image.sh`, in CI's infrastructure job): Python and multi-file Java with packages print the expected output; input lines are read and echoed with markers; a compile error and an exception come back as such; an endless loop stops at the time limit; a fork bomb, a memory hog and a flood of output are stopped and reported; there is no network at all; a program can't read another run's folder or anything outside its own; file paths with `..` or `/` are refused; a wrong token is refused on TCP; a third run at once waits, and the runner says "busy" when it can't.
+- Unit: the runner client turns every reply (and a timeout or a runner that's down) into a result the editor can show; input echo markers; the error line finder for Python tracebacks and `javac` errors.
+- Integration: `runCode` refuses someone signed out, a language other than Python or Java, too many or too big files, too much input, and the 21st run in a minute; passes the files to the runner and returns its result.
+- Component: the Run panel sends the files and input, shows Running…, the output with input in green, the error with its line link, and Stop.
+- Playwright + axe (with the runner in CI): a student runs Python homework with input; a Java Playground project with two classes in a package runs, then a compile error shows its line; the panel passes axe in light and dark and at 360 px.
+
+**Exit criteria:** the runner checks all pass in CI; on `lms.cckh.dev` a Python homework and a Java Playground project run with input from a student account; ten runs at once from a class finish without the site slowing (page p95 < 500 ms); the owner signs off M11.
+
+### M12 — The editor in Q&A (2 days)
+**Why:** students ask about code ("explain this piece of code"), and the question box is plain text with a separate code box (owner, 2026-10-29). Prototype approved (boards 3–4); the owner chose the editor for **questions and replies**.
+
+**Goal:** asking or answering, anyone can write text with code blocks in the class's language, and everyone reads them with colours and Copy.
+
+**Build:** a compact version of the M9 editor (`src/components/teaching/note-editor/`): bold, italic, code in a sentence, lists, link and code blocks with a language, Markdown shortcuts and paste; no pictures, headings or tip boxes. Saved as Markdown in the same `body_md` (BR-26); shown with the reader's code blocks (colours, Copy). Questions written before M12 keep their separate code box.
+
+**Tests first:** unit: the Q&A renderer keeps the XSS corpus out and shows code blocks with colours, and refuses pictures and raw HTML; component: the compact toolbar, a code block in the class's language, the length limit; integration: a question and a reply with code are saved as Markdown and shown to the class; Playwright + axe: a student asks with a Python code block, a teacher replies with code and marks it as the answer, a classmate copies the code.
+
+**Exit criteria:** a real question with code is asked and answered on `lms.cckh.dev`; old questions look the same; the owner signs off M12.
+
 ### R2 — Club-wide launch
 - All classes of the next term (e.g. Term 2 · 2027) are set up and run on `lms.cckh.dev`. Teachers get a short walkthrough, and students get login slips.
 
 ### Later (separate milestones, when wanted)
-- **Python in the browser** (Pyodide), at no server cost (FR-CODE-08).
-- **Server runner** for Python/Java: Piston on the same VPS behind `CodeRunner` (FR-CODE-09, 10).
+- **Python in the browser** (Pyodide), at no server cost (FR-CODE-08): not needed now that M11 runs Python on the server.
 - Exports, inline code comments, parent access (only if the club decides).
 
 ---

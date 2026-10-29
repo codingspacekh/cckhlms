@@ -90,7 +90,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Shell scripts (shellcheck, pinned; the runner's own copy is older)
-        run: docker run --rm -v "$PWD":/mnt -w /mnt koalaman/shellcheck:v0.11.0 infra/server/provision.sh infra/server/deploy.sh infra/db-app-role.sh infra/backup/backup.sh infra/backup/restore.sh infra/backup/entrypoint.sh infra/tests/app-image.sh infra/tests/backup-restore.sh infra/tests/compose-config.sh infra/security/zap-baseline.sh tests/load/run.sh infra/tests/deploy-script.sh
+        run: docker run --rm -v "$PWD":/mnt -w /mnt koalaman/shellcheck:v0.11.0 infra/server/provision.sh infra/server/deploy.sh infra/db-app-role.sh infra/backup/backup.sh infra/backup/restore.sh infra/backup/entrypoint.sh infra/tests/app-image.sh infra/tests/backup-restore.sh infra/tests/compose-config.sh infra/security/zap-baseline.sh tests/load/run.sh infra/tests/deploy-script.sh infra/tests/runner-image.sh
       - name: Production compose file
         run: sh infra/tests/compose-config.sh
       - name: Deploy script (version on every Compose command, rollback)
@@ -99,3 +99,5 @@ jobs:
         run: sh infra/tests/backup-restore.sh
       - name: App image starts, migrates, reports its version
         run: GIT_SHA=${{ github.sha }} sh infra/tests/app-image.sh
+      - name: Code runner (M11, ADR-0004) runs Python and Java within its limits and away from the network
+        run: sh infra/tests/runner-image.sh

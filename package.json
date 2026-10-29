@@ -14,6 +14,7 @@
     "preview": "node preview/server.mjs",
     "db:up": "docker compose up -d --wait db",
     "db:down": "docker compose down",
+    "runner:up": "docker compose up -d --build runner",
     "db:generate": "drizzle-kit generate",
     "seed:dev": "tsx --env-file=.env scripts/seed-dev.ts",
     "typecheck": "tsc --noEmit",
