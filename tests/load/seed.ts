@@ -1,7 +1,8 @@
 // Data for the k6 load test (M7, NFR-03): a Saturday morning at 3× the club's peak. 15 Python classes of 30
 // students meet at 09:00, each with its teacher; weeks 1–3 have lesson notes, and week 2 has homework the students
 // are working on. Writes tests/load/out/data.json, which the k6 script reads. Run by tests/load/run.sh against its
-// own database (lms_load), never a real one.
+// own database (lms_load), never a real one. The one exception is G1's live run (tests/load/live.sh): the production
+// database before any real data is on it, named in LOAD_SEED_LIVE_DB and reset afterwards.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { pool } from '../../src/db/client';
 import { createClass } from '../../src/modules/academics/classes';
@@ -20,7 +21,9 @@ import { startup } from '../../src/server/startup';
 const CLASSES = 15;
 const PER_CLASS = 30;
 const passwordOf = (username: string) => `load-password-${username}`;
-if (!/\/lms_load$/.test(process.env.DATABASE_URL ?? '')) throw new Error('The load seed only runs against the lms_load database.');
+const target = (process.env.DATABASE_URL ?? '').split('/').pop();
+if (target !== 'lms_load' && !(target && target === process.env.LOAD_SEED_LIVE_DB))
+  throw new Error('The load seed only runs against the lms_load database.');
 
 await startup({ bootstrapAdmin: { username: 'admin', password: passwordOf('admin') } });
 const { rows } = await pool.query(`select id from "user" where username = 'admin'`);
