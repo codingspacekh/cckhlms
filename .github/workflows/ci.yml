@@ -66,6 +66,14 @@ jobs:
         with: { node-version-file: .nvmrc, cache: npm }
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+      # The code runner for the Run specs (M11), locked down as in compose.yaml, on TCP with the development token.
+      - name: Code runner
+        run: |
+          docker build -q -t cckhlms-runner:ci infra/runner
+          docker run -d --name runner -p 127.0.0.1:8090:8090 -e RUNNER_LISTEN=0.0.0.0:8090 -e RUNNER_TOKEN=dev-runner-token \
+            --read-only --tmpfs /work:size=96m,mode=755 --tmpfs /tmp:size=16m --cap-drop ALL \
+            --cap-add SETUID --cap-add SETGID --cap-add CHOWN --cap-add KILL --security-opt no-new-privileges:true \
+            --memory 1g --pids-limit 512 cckhlms-runner:ci
       - run: npm run build
       - run: node scripts/check-standalone.mjs
       - run: npm run test:e2e

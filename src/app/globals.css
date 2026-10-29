@@ -2983,6 +2983,84 @@ td.text {
   color: var(--warn-text);
 }
 
+/* Run (M11, RunPanel.tsx): beside the code on a wide screen, under it on a narrow one. The output is a dark console
+   in both themes; lines the program read from the Input box are green, errors pink (the note editor's code colours). */
+.project-main {
+  display: grid;
+  gap: 10px;
+}
+@media (min-width: 1100px) {
+  .project-main.runnable {
+    grid-template-columns: minmax(0, 1fr) 340px;
+  }
+  /* Beside the Run panel, a narrower file list leaves the code room for a line of Java. */
+  .project-main.runnable .ide {
+    grid-template-columns: 180px minmax(0, 1fr);
+  }
+}
+.run-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--surface);
+}
+.run-input {
+  font-family: var(--f-mono);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.btn.run {
+  background: var(--green);
+  border-color: var(--green);
+  color: var(--on-green);
+}
+.btn.run:hover {
+  filter: brightness(0.95);
+}
+.good-text {
+  color: var(--good-text);
+}
+.run-out {
+  min-height: 160px;
+  max-height: 360px;
+  overflow: auto;
+  padding: 12px 14px;
+  border-radius: var(--r-sm);
+  background: var(--nc-bg);
+  color: var(--nc-ink);
+  font-family: var(--f-mono);
+  font-size: 0.88rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.run-in {
+  color: var(--nc-string);
+}
+.run-err {
+  color: var(--nc-keyword);
+}
+.run-muted {
+  color: var(--nc-muted);
+}
+.run-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--pink-soft);
+  color: var(--pink-text);
+}
+.run-hint p {
+  margin: 0;
+}
+
 /* marking (FR-TCH-11/12, FR-STU-06) */
 .score {
   font-size: 1.4rem;

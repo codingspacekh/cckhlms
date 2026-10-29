@@ -4,6 +4,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { strToU8, unzipSync, zipSync } from 'fflate';
 import { forwardRef, useImperativeHandle } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+const { runCodeAction, wentTo } = vi.hoisted(() => ({ runCodeAction: vi.fn(), wentTo: vi.fn() }));
+vi.mock('@/modules/running/actions', () => ({ runCodeAction }));
 
 // A stand-in for CodeMirror: a textarea per open file, with the same props and handle.
 vi.mock('@/components/editor/CodeArea', () => ({
@@ -11,7 +13,10 @@ vi.mock('@/components/editor/CodeArea', () => ({
     p: { path: string; doc: string; resetKey: number; onChange: (path: string, text: string) => void },
     ref,
   ) {
-    useImperativeHandle(ref, () => ({ replaceDoc: (text: string) => p.onChange(p.path, text) }));
+    useImperativeHandle(ref, () => ({
+      replaceDoc: (text: string) => p.onChange(p.path, text),
+      goToLine: (line: number) => wentTo(p.path, line),
+    }));
     return (
       <textarea
         aria-label={`Code for ${p.path}`}
@@ -218,5 +223,41 @@ describe('ProjectEditor', () => {
     expect(screen.queryByRole('button', { name: 'New file' })).toBeNull();
     expect(screen.queryByTestId('package-warning')).toBeNull();
     expect(screen.getByRole('button', { name: 'Download .zip' })).toBeTruthy();
+  });
+});
+
+// M11: Python and Java get the Run panel beside the code; an error's line link opens that file at that line.
+describe('Run', () => {
+  it('appears only for Python and Java work', () => {
+    const { unmount } = render(<ProjectEditor initial={java} nonce="n" zipName="p" java run="java" />);
+    expect(screen.getByRole('region', { name: 'Run' })).toBeTruthy();
+    unmount();
+    render(<ProjectEditor initial={java} nonce="n" zipName="p" java />);
+    expect(screen.queryByRole('region', { name: 'Run' })).toBeNull();
+  });
+
+  it('sends the files as they are now, and goes to the line of an error in another file', async () => {
+    runCodeAction.mockResolvedValue({
+      ok: true,
+      data: {
+        status: 'compile_error',
+        stdout: '',
+        stderr: 'src/com/club/shapes/Square.java:2: error: class Square is public\n',
+        exitCode: 1,
+        ms: 800,
+        truncated: false,
+        mainClass: 'com.club.shapes.Main',
+      },
+    });
+    render(<ProjectEditor initial={java} nonce="n" zipName="p" java run="java" />);
+    fireEvent.change(screen.getByLabelText('Code for src/com/club/shapes/Main.java'), {
+      target: { value: 'package com.club.shapes;\nclass Main { }' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Run' }));
+    await screen.findByText('Didn’t compile');
+    expect(runCodeAction.mock.calls[0]![0].files[0].content).toBe('package com.club.shapes;\nclass Main { }');
+    fireEvent.click(screen.getByRole('button', { name: 'Go to line 2 of Square.java' }));
+    expect(screen.getByLabelText('Code for src/com/club/shapes/Square.java')).toBeTruthy();
+    await waitFor(() => expect(wentTo).toHaveBeenCalledWith('src/com/club/shapes/Square.java', 2));
   });
 });

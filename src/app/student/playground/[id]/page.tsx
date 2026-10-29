@@ -39,6 +39,7 @@ export default async function PlaygroundProjectPage({ params }: { params: Promis
         nonce={nonce}
         java={p.language === 'java'}
         previewOrigin={p.language === 'web' ? PREVIEW_ORIGIN : undefined}
+        run={p.language === 'python' || p.language === 'java' ? p.language : undefined}
         zipName={zipNameFor(p.name, actor.username)}
         timeZone={timeZone}
       />

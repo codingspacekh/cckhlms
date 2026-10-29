@@ -15,11 +15,12 @@ type Props = {
   nonce: string;
   java: boolean;
   previewOrigin?: string;
+  run?: 'python' | 'java'; // the Run panel (M11)
   zipName: string;
   timeZone: string;
 };
 
-export function PlaygroundWorkspace({ id, name, initial, savedAt, nonce, java, previewOrigin, zipName, timeZone }: Props) {
+export function PlaygroundWorkspace({ id, name, initial, savedAt, nonce, java, previewOrigin, run, zipName, timeZone }: Props) {
   const { state, changed } = useAutosave((files) => saveProjectAction(id, files), savedAt, initial);
   const [newName, setNewName] = useState(name);
   const [renamed, setRenamed] = useState<{ ok: boolean; text: string } | null>(null);
@@ -41,7 +42,15 @@ export function PlaygroundWorkspace({ id, name, initial, savedAt, nonce, java, p
           <h2 id="project-title">Project files</h2>
           <SaveStatus state={state} timeZone={timeZone} />
         </div>
-        <ProjectEditor initial={initial} nonce={nonce} java={java} previewOrigin={previewOrigin} zipName={zipName} onChange={changed} />
+        <ProjectEditor
+          initial={initial}
+          nonce={nonce}
+          java={java}
+          previewOrigin={previewOrigin}
+          run={run}
+          zipName={zipName}
+          onChange={changed}
+        />
       </section>
       <form method="post" className="card stack narrow-form" aria-labelledby="rename-title" onSubmit={rename}>
         <h2 id="rename-title">Rename project</h2>

@@ -8,6 +8,9 @@ export const E2E = {
   preview: 'http://preview.localhost:3102',
   databaseUrl: process.env.E2E_DATABASE_URL ?? 'postgres://lms:lms-dev-only@localhost:54329/lms_e2e',
   secret: 'e2e-secret-0123456789-abcdefghijklmnopqrstuv',
+  // The code runner (M11): `npm run runner:up` on a laptop (compose.yaml), started by CI before the tests.
+  runner: process.env.E2E_RUNNER_URL ?? 'http://127.0.0.1:8090',
+  runnerToken: 'dev-runner-token',
 };
 
 export default defineConfig({
@@ -32,6 +35,8 @@ export default defineConfig({
         BETTER_AUTH_SECRET: E2E.secret,
         PREVIEW_ORIGIN: E2E.preview,
         UPLOADS_DIR: path.resolve('test-results/uploads-e2e'),
+        RUNNER_URL: E2E.runner,
+        RUNNER_TOKEN: E2E.runnerToken,
       },
     },
     {

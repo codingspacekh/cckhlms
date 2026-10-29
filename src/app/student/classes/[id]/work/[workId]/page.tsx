@@ -111,6 +111,7 @@ async function Workspace(props: {
       nonce={nonce}
       java={props.java}
       previewOrigin={props.web ? PREVIEW_ORIGIN : undefined}
+      run={props.web ? undefined : props.java ? 'java' : 'python'}
       zipName={zipNameFor(props.title, props.username)}
       timeZone={props.timeZone}
       submit={{
