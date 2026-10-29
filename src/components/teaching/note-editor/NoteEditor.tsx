@@ -9,6 +9,11 @@ import { Select } from '@/components/ui/Select';
 
 type Props = {
   initialMarkdown: string;
+  // 'post': a question or a reply (M12, BR-26), with the toolbar a question needs and no + menu.
+  variant?: 'note' | 'post';
+  name?: string; // the hidden field the Markdown goes in
+  label?: string; // the editor's accessible name
+  placeholder?: string;
   // The class's language, for new code blocks.
   defaultLanguage?: string;
   onChange?: (markdown: string) => void;
@@ -27,8 +32,19 @@ const LOOKS_LIKE_MARKDOWN = /(^|\n)(#{1,6} |[-*+] |\d+[.)] |> |```|~~~)|\*\*[^*\
 type MenuItem = { id: string; label: string; hint: string; mark: string; run: (e: Editor) => void };
 
 // The lesson note editor (FR-TCH-22): a word-processor-style editor that still saves Markdown in a hidden
-// `contentMd` field, so the lesson form sends what it always sent.
-export function NoteEditor({ initialMarkdown, defaultLanguage, onChange, onPicture }: Props) {
+// `contentMd` field, so the lesson form sends what it always sent. As a post editor (M12) it is the same, smaller.
+export function NoteEditor({
+  initialMarkdown,
+  variant = 'note',
+  name = 'contentMd',
+  label = 'Lesson note',
+  placeholder,
+  defaultLanguage,
+  onChange,
+  onPicture: pictures_,
+}: Props) {
+  const post = variant === 'post';
+  const onPicture = post ? undefined : pictures_;
   const [markdown, setMarkdown] = useState(initialMarkdown);
   const [linking, setLinking] = useState(false);
   const [adding, setAdding] = useState<string | null>(null);
@@ -62,7 +78,7 @@ export function NoteEditor({ initialMarkdown, defaultLanguage, onChange, onPictu
     extensions: noteExtensions({
       codeBlockView: () => ReactNodeViewRenderer(CodeBlockView),
       pictureView: () => ReactNodeViewRenderer(PictureView),
-      placeholder: PLACEHOLDER,
+      placeholder: placeholder ?? PLACEHOLDER,
       defaultLanguage,
     }),
     content: initialMarkdown,
@@ -70,10 +86,15 @@ export function NoteEditor({ initialMarkdown, defaultLanguage, onChange, onPictu
     immediatelyRender: false,
     injectCSS: false, // the CSP only allows our own stylesheet; the editor's base styles are in globals.css
     editorProps: {
-      attributes: { class: 'md reading note-doc', role: 'textbox', 'aria-multiline': 'true', 'aria-label': 'Lesson note' },
+      attributes: {
+        class: `md note-doc${post ? ' post-doc' : ' reading'}`,
+        role: 'textbox',
+        'aria-multiline': 'true',
+        'aria-label': label,
+      },
       // A "/" typed on an empty line opens the menu; the "/" stays if the menu is closed without choosing.
       handleTextInput: (view, from, _to, text) => {
-        if (text === '/' && view.state.selection.$from.parent.textContent === '') setMenu({ slashAt: from });
+        if (!post && text === '/' && view.state.selection.$from.parent.textContent === '') setMenu({ slashAt: from });
         return false;
       },
       handlePaste: (view, e) => {
@@ -112,6 +133,19 @@ export function NoteEditor({ initialMarkdown, defaultLanguage, onChange, onPictu
       changed.current?.(md);
     },
   });
+
+  // A form reset (Q&A clears its form after posting) starts the editor again from its first text.
+  const hidden = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const form = hidden.current?.form;
+    if (!form || !editor) return;
+    const reset = () => {
+      editor.commands.setContent(initialMarkdown, { contentType: 'markdown' });
+      setMarkdown(initialMarkdown);
+    };
+    form.addEventListener('reset', reset);
+    return () => form.removeEventListener('reset', reset);
+  }, [editor, initialMarkdown]);
 
   const items: MenuItem[] = [
     {
@@ -159,7 +193,9 @@ export function NoteEditor({ initialMarkdown, defaultLanguage, onChange, onPictu
 
   return (
     <div className="note-editor">
-      {editor && <Toolbar editor={editor} onLink={() => setLinking(true)} onPicture={onPicture && (() => picker.current?.click())} />}
+      {editor && (
+        <Toolbar editor={editor} post={post} onLink={() => setLinking(true)} onPicture={onPicture && (() => picker.current?.click())} />
+      )}
       {onPicture && (
         <input
           ref={picker}
@@ -183,36 +219,38 @@ export function NoteEditor({ initialMarkdown, defaultLanguage, onChange, onPictu
           {pictureError}
         </p>
       )}
-      <div className="note-add">
-        <button
-          type="button"
-          className="note-add-button"
-          aria-label="Add code, a picture or a tip"
-          aria-haspopup="menu"
-          aria-expanded={menu !== null}
-          onClick={() => setMenu(menu ? null : { slashAt: null })}
-        >
-          <Icon name="plus" />
-        </button>
-        <span className="small muted">Add code, a picture or a tip</span>
-        {editor && menu && (
-          <InsertMenu
-            items={items}
-            onChoose={choose}
-            onClose={(typed) => {
-              setMenu(null);
-              editor.commands.focus();
-              if (typed) editor.commands.insertContent(typed);
-            }}
-          />
-        )}
-      </div>
-      <input type="hidden" name="contentMd" value={markdown} />
+      {!post && (
+        <div className="note-add">
+          <button
+            type="button"
+            className="note-add-button"
+            aria-label="Add code, a picture or a tip"
+            aria-haspopup="menu"
+            aria-expanded={menu !== null}
+            onClick={() => setMenu(menu ? null : { slashAt: null })}
+          >
+            <Icon name="plus" />
+          </button>
+          <span className="small muted">Add code, a picture or a tip</span>
+          {editor && menu && (
+            <InsertMenu
+              items={items}
+              onChoose={choose}
+              onClose={(typed) => {
+                setMenu(null);
+                editor.commands.focus();
+                if (typed) editor.commands.insertContent(typed);
+              }}
+            />
+          )}
+        </div>
+      )}
+      <input ref={hidden} type="hidden" name={name} value={markdown} />
     </div>
   );
 }
 
-function Toolbar({ editor, onLink, onPicture }: { editor: Editor; onLink: () => void; onPicture?: () => void }) {
+function Toolbar({ editor, post, onLink, onPicture }: { editor: Editor; post: boolean; onLink: () => void; onPicture?: () => void }) {
   const s = useEditorState({
     editor,
     selector: ({ editor: e }) => ({
@@ -232,20 +270,24 @@ function Toolbar({ editor, onLink, onPicture }: { editor: Editor; onLink: () => 
   const run = (f: (c: ReturnType<Editor['chain']>) => ReturnType<Editor['chain']>) => f(editor.chain().focus()).run();
   return (
     <div className="note-toolbar" role="toolbar" aria-label="Formatting">
-      <label className="note-style">
-        <span className="sr-only">Text style</span>
-        <Select
-          value={s.style}
-          onChange={(e) =>
-            run((c) => (e.target.value === 'p' ? c.setParagraph() : c.setHeading({ level: e.target.value === 'h2' ? 2 : 3 })))
-          }
-        >
-          <option value="p">Normal text</option>
-          <option value="h2">Heading</option>
-          <option value="h3">Small heading</option>
-        </Select>
-      </label>
-      <span className="note-sep" aria-hidden="true" />
+      {!post && (
+        <>
+          <label className="note-style">
+            <span className="sr-only">Text style</span>
+            <Select
+              value={s.style}
+              onChange={(e) =>
+                run((c) => (e.target.value === 'p' ? c.setParagraph() : c.setHeading({ level: e.target.value === 'h2' ? 2 : 3 })))
+              }
+            >
+              <option value="p">Normal text</option>
+              <option value="h2">Heading</option>
+              <option value="h3">Small heading</option>
+            </Select>
+          </label>
+          <span className="note-sep" aria-hidden="true" />
+        </>
+      )}
       <Tool icon="bold" label="Bold (Ctrl+B)" pressed={s.bold} onClick={() => run((c) => c.toggleBold())} />
       <Tool icon="italic" label="Italic (Ctrl+I)" pressed={s.italic} onClick={() => run((c) => c.toggleItalic())} />
       <Tool icon="code" label="Code in a sentence" pressed={s.code} onClick={() => run((c) => c.toggleCode())} />
@@ -256,7 +298,7 @@ function Toolbar({ editor, onLink, onPicture }: { editor: Editor; onLink: () => 
       <span className="note-sep" aria-hidden="true" />
       <Tool icon="code-block" label="Code block" text="Code" pressed={s.codeBlock} onClick={() => run((c) => c.toggleCodeBlock())} />
       {onPicture && <Tool icon="image" label="Picture" text="Picture" onClick={onPicture} />}
-      <Tool icon="tip" label="Tip box" text="Tip box" pressed={s.tip} onClick={() => run((c) => c.toggleTipBox())} />
+      {!post && <Tool icon="tip" label="Tip box" text="Tip box" pressed={s.tip} onClick={() => run((c) => c.toggleTipBox())} />}
       <span className="note-gap" />
       <Tool icon="undo" label="Undo (Ctrl+Z)" disabled={!s.undo} onClick={() => run((c) => c.undo())} />
       <Tool icon="redo" label="Redo (Ctrl+Shift+Z)" disabled={!s.redo} onClick={() => run((c) => c.redo())} />

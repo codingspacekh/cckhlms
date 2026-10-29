@@ -6,7 +6,7 @@ import { request } from 'node:http';
 
 export type RunLanguage = 'python' | 'java';
 export type RunRequest = { language: RunLanguage; files: { path: string; content: string }[]; stdin: string };
-export type RunStatus = 'ok' | 'error' | 'compile_error' | 'timeout' | 'output_limit' | 'busy' | 'unavailable';
+export type RunStatus = 'ok' | 'error' | 'compile_error' | 'timeout' | 'output_limit' | 'needs_input' | 'busy' | 'unavailable';
 export type RunResult = {
   status: RunStatus;
   stdout: string;

@@ -1,6 +1,7 @@
 """The code runner (ADR-0004, BR-25). POST /run {language, files: [{path, content}], stdin} runs a student's Python or
 Java program and replies {status, stdout, stderr, exitCode, ms, truncated, mainClass}. Status is ok, error,
-compile_error, timeout or output_limit; 503 means every slot stayed busy, 400 a request it won't run.
+compile_error, timeout, output_limit or needs_input (it wanted more lines than the Input box had); 503 means every
+slot stayed busy, 400 a request it won't run.
 
 It listens on a Unix socket that belongs to the app's group (production: the container has no network at all), or on
 RUNNER_LISTEN=host:port with RUNNER_TOKEN (development and CI). Each run gets a slot: its own Linux user and folder,
@@ -42,12 +43,18 @@ MAX_STDIN = 16 * 1024
 MAX_BODY = 2 * 1024 * 1024
 
 # Python's input() shows the line it read, between markers the editor colours (not a terminal, so no echo otherwise).
-# The traceback leaves out this wrapper's own frame, so it starts at the student's file.
+# Running out of lines isn't the student's mistake to read as a traceback: the program stops with NEEDS_INPUT, and the
+# editor asks for more lines in the Input box. The traceback of a real error leaves out this wrapper's own frame.
+NEEDS_INPUT = 75
 PYTHON_BOOT = r'''
-import builtins, sys
+import builtins, os, sys
 _input = builtins.input
 def input(prompt=""):
-    line = _input(prompt)
+    try:
+        line = _input(prompt)
+    except EOFError:
+        sys.stdout.flush()
+        os._exit(75)
     sys.stdout.write("\x1e" + line + "\x1f\n")
     return line
 builtins.input = input
@@ -235,7 +242,12 @@ def run(slot, language, files, stdin):
             code, out, err, timed_out, too_long = as_user(
                 uid, ['java', *JVM, '-Xmx256m', '-Xss1m', '-cp', '.classes', main], job, stdin, RUN_SECONDS, CPU_SECONDS, 192)
             result['mainClass'] = main
-        status = 'output_limit' if too_long else 'timeout' if timed_out else 'ok' if code == 0 else 'error'
+        needs_input = (language == 'python' and code == NEEDS_INPUT) or (
+            language == 'java' and code != 0 and 'java.util.NoSuchElementException' in err and 'java.util.Scanner' in err)
+        if needs_input:
+            err = ''
+        status = ('output_limit' if too_long else 'timeout' if timed_out else 'needs_input' if needs_input
+                  else 'ok' if code == 0 else 'error')
         return {**result, 'status': status, 'stdout': out, 'stderr': err, 'exitCode': code, 'truncated': too_long,
                 'ms': ms(started)}
     finally:

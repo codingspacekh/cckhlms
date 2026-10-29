@@ -1,5 +1,7 @@
 'use client';
+import dynamic from 'next/dynamic';
 import { useRef, useState, useTransition, type FormEvent, type ReactNode } from 'react';
+import { NoteHtml } from '@/components/teaching/NoteHtml';
 import { Pill } from '@/components/ui/Pill';
 import { formatDate, formatDayMonth, toClubTime } from '@/modules/academics/schedule';
 import { acceptReplyAction, askQuestionAction, moderatePostAction, replyAction, reportPostAction } from '@/modules/teaching/qa-actions';
@@ -13,11 +15,20 @@ type Props = {
   open: boolean;
   questions: QuestionView[];
   timeZone: string;
+  codeLanguage?: string; // the class's, for new code blocks
 };
 
-// Q&A under a lesson (FR-STU-03/04/10, FR-TCH-03). Bodies are rendered by the server's sanitiser.
-export function QaBoard({ classId, week, role, open, questions, timeZone }: Props) {
+// The compact editor (M12) is loaded when the page needs it, so reading a lesson stays light.
+const PostEditor = dynamic(() => import('./note-editor/NoteEditor').then((m) => m.NoteEditor), {
+  ssr: false,
+  loading: () => <p className="small muted">Loading the editor…</p>,
+});
+
+// Q&A under a lesson (FR-STU-03/04/10, FR-TCH-03). Posts are written in the compact editor (M12) and rendered by the
+// server's sanitiser (renderPost); their code blocks have Copy buttons.
+export function QaBoard({ classId, week, role, open, questions, timeZone, codeLanguage }: Props) {
   const [result, setResult] = useState<FormResult | null>(null);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [reporting, setReporting] = useState<(PostRef & { author: string }) | null>(null);
   const [pending, startTransition] = useTransition();
   const dialog = useRef<HTMLDialogElement>(null);
@@ -34,8 +45,9 @@ export function QaBoard({ classId, week, role, open, questions, timeZone }: Prop
     e.preventDefault();
     const form = e.currentTarget;
     const f = new FormData(form);
+    // The code now goes in the question itself, as code blocks; the separate code box is gone (M12).
     run(
-      () => askQuestionAction(classId, week, String(f.get('body') ?? ''), String(f.get('code') ?? '')),
+      () => askQuestionAction(classId, week, String(f.get('body') ?? ''), ''),
       () => form.reset(),
     );
   }
@@ -45,7 +57,7 @@ export function QaBoard({ classId, week, role, open, questions, timeZone }: Prop
     const form = e.currentTarget;
     run(
       () => replyAction(classId, questionId, String(new FormData(form).get('body') ?? '')),
-      () => form.reset(),
+      () => setReplyingTo(null),
     );
   }
 
@@ -151,15 +163,17 @@ export function QaBoard({ classId, week, role, open, questions, timeZone }: Prop
       {!open && <p className="card small muted">Questions open once the lesson is published.</p>}
       {open && !teacher && (
         <form method="post" className="card stack" aria-label="Ask a question" onSubmit={ask}>
-          <label className="f">
-            Your question
-            <textarea name="body" rows={3} maxLength={4000} placeholder="What are you stuck on?" required />
-          </label>
-          <label className="f">
-            Code (optional)
-            <textarea name="code" rows={3} maxLength={4000} className="mono" spellCheck={false} />
-          </label>
-          <div>
+          <h3>Your question</h3>
+          <PostEditor
+            variant="post"
+            name="body"
+            label="Your question"
+            placeholder="What are you stuck on? Add your code with the Code button."
+            initialMarkdown=""
+            defaultLanguage={codeLanguage}
+          />
+          <div className="spread">
+            <span className="xs muted">Tip: type ``` on a new line to start a code block, or paste code straight in.</span>
             <button type="submit" className="btn primary" disabled={pending}>
               Post question
             </button>
@@ -182,7 +196,7 @@ export function QaBoard({ classId, week, role, open, questions, timeZone }: Prop
               <article className={`q ${q.state === 'visible' ? '' : 'review'}`} aria-label={`Question from ${q.author}`}>
                 {header({ type: 'question', id: q.id }, q)}
                 {reportsNote(q)}
-                <div className="md" dangerouslySetInnerHTML={{ __html: q.bodyHtml }} />
+                <NoteHtml className="md post" html={q.bodyHtml} />
                 {q.code && (
                   <pre className="code">
                     <code>{q.code}</code>
@@ -216,28 +230,45 @@ export function QaBoard({ classId, week, role, open, questions, timeZone }: Prop
                             </>,
                           )}
                           {reportsNote(r)}
-                          <div className="md small" dangerouslySetInnerHTML={{ __html: r.bodyHtml }} />
+                          <NoteHtml className="md post small" html={r.bodyHtml} />
                         </li>
                       );
                     })}
                   </ul>
                 )}
-                {q.state === 'visible' && (
-                  <form method="post" className="row" onSubmit={(e) => answer(e, q.id)} aria-label={`Reply to ${q.author}`}>
-                    <input
-                      type="text"
-                      name="body"
-                      maxLength={4000}
-                      required
-                      aria-label={`Your reply to ${q.author}`}
-                      placeholder={teacher ? 'Answer as teacher…' : 'Help with an answer…'}
-                      className="grow"
-                    />
-                    <button type="submit" className="btn sm" disabled={pending}>
-                      Reply
+                {q.state === 'visible' &&
+                  (replyingTo === q.id ? (
+                    <form method="post" className="stack reply-form" onSubmit={(e) => answer(e, q.id)} aria-label={`Reply to ${q.author}`}>
+                      <PostEditor
+                        variant="post"
+                        name="body"
+                        label={`Your reply to ${q.author}`}
+                        placeholder={teacher ? 'Answer as teacher…' : 'Help with an answer…'}
+                        initialMarkdown=""
+                        defaultLanguage={codeLanguage}
+                      />
+                      <div className="row end">
+                        <button type="button" className="btn sm ghost" onClick={() => setReplyingTo(null)}>
+                          Cancel
+                        </button>
+                        <button type="submit" className="btn sm primary" disabled={pending}>
+                          Reply
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn sm"
+                      aria-label={`Write a reply to ${q.author}`}
+                      onClick={() => {
+                        setResult(null);
+                        setReplyingTo(q.id);
+                      }}
+                    >
+                      Write a reply
                     </button>
-                  </form>
-                )}
+                  ))}
               </article>
             </li>
           ))}

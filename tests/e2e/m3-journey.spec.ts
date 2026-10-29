@@ -39,7 +39,7 @@ test('the student reads it and asks; the classmate answers; the teacher marks th
   await student.getByRole('link', { name: 'Week 2: Links and images' }).click();
   await expect(student.getByRole('article', { name: 'Lesson note' })).toContainText('to link pages');
   const ask = student.getByRole('form', { name: 'Ask a question' });
-  await ask.getByLabel('Your question').fill('How do I open a link in a new tab?');
+  await writeNote(student, 'How do I open a link in a new tab?', 'Your question');
   await ask.getByRole('button', { name: 'Post question' }).click();
   await expect(student.getByRole('article', { name: `Question from ${USERS.student.name}` })).toBeVisible();
   await student.context().close();
@@ -47,7 +47,8 @@ test('the student reads it and asks; the classmate answers; the teacher marks th
   const mate = await as(browser, 'classmate');
   await mate.goto(`/student/classes/${c.classId}/weeks/2`);
   const q = mate.getByRole('article', { name: `Question from ${USERS.student.name}` });
-  await q.getByLabel(`Your reply to ${USERS.student.name}`).fill('Add `target="_blank"`.');
+  await q.getByRole('button', { name: `Write a reply to ${USERS.student.name}` }).click();
+  await writeNote(mate, 'Add `target="_blank"`.', `Your reply to ${USERS.student.name}`);
   await q.getByRole('button', { name: 'Reply' }).click();
   await expect(q.getByRole('listitem', { name: `Reply from ${CLASSMATE}` })).toBeVisible();
   await mate.context().close();

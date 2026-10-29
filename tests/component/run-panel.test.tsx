@@ -71,11 +71,6 @@ describe('RunPanel', () => {
 
   it('explains running out of input, the time limit and a busy runner in plain words', async () => {
     render(<RunPanel language="python" files={pyFiles} onGoTo={vi.fn()} />);
-    runCodeAction.mockResolvedValueOnce(
-      result({ status: 'error', exitCode: 1, stderr: 'Traceback…\nEOFError: EOF when reading a line\n' }),
-    );
-    run();
-    expect(await screen.findByText(/asked for more input than the Input box has/)).toBeTruthy();
     runCodeAction.mockResolvedValueOnce(result({ status: 'timeout', exitCode: null }));
     run();
     expect(await screen.findByText(/longer than 10 seconds/)).toBeTruthy();
@@ -85,5 +80,24 @@ describe('RunPanel', () => {
     runCodeAction.mockResolvedValueOnce({ ok: false, error: "That's 20 runs a minute, the most allowed." });
     run();
     expect((await screen.findByRole('alert')).textContent).toMatch(/20 runs a minute/);
+  });
+
+  it('says before running that a program reading input needs the Input box filled', () => {
+    render(<RunPanel language="python" files={pyFiles} onGoTo={vi.fn()} />);
+    expect(screen.getByText(/uses input\(\): type its answers here/)).toBeTruthy();
+    fireEvent.change(screen.getByLabelText(/^Input/), { target: { value: 'Dara' } });
+    expect(screen.queryByText(/uses input\(\)/)).toBeNull();
+  });
+
+  it('when the program wants more input than the box has, asks for it there instead of showing an error', async () => {
+    runCodeAction.mockResolvedValue(result({ status: 'needs_input', exitCode: 75, stdout: 'Name? ' }));
+    render(<RunPanel language="python" files={pyFiles} onGoTo={vi.fn()} />);
+    run();
+    expect(await screen.findByText('Waiting for input')).toBeTruthy();
+    expect(output().textContent).toBe('Name? ');
+    expect(screen.getByText(/Type what your program should read in the Input box/)).toBeTruthy();
+    const box = screen.getByLabelText(/^Input/);
+    expect(box.getAttribute('aria-invalid')).toBe('true');
+    expect(document.activeElement).toBe(box);
   });
 });

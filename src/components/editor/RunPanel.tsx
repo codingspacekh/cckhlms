@@ -2,7 +2,7 @@
 // The Run panel (M11, FR-CODE-09/10, prototype boards 1–2): beside the code for Python and Java. Students type the
 // program's input first (owner's choice: no interactive terminal); the lines Python's input() read show in green,
 // errors in pink, and an error in one of the project's files links to its line. Nothing about a run is saved.
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import type { ProjectFile } from '@/lib/project/files';
 import { errorPlace, outputParts } from '@/lib/run-output';
@@ -14,6 +14,11 @@ type Props = { language: Language; files: ProjectFile[]; onGoTo: (path: string, 
 
 const VERSION: Record<Language, string> = { python: 'Python 3.12', java: 'Java 21' };
 const INPUT_HINT: Record<Language, string> = { python: 'one line for each input()', java: 'what Scanner reads' };
+// A program that reads input, by what it calls: said before running, while the Input box is empty.
+const READS: Record<Language, { test: RegExp; what: string }> = {
+  python: { test: /\binput\s*\(/, what: 'uses input()' },
+  java: { test: /\bScanner\b|System\.in\b/, what: 'reads with Scanner' },
+};
 const seconds = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
 
 // The line under the buttons: how the run ended.
@@ -29,6 +34,8 @@ function ending(r: RunResult): { text: string; tone: 'good-text' | 'bad-text' | 
       return { text: 'Stopped: it ran longer than 10 seconds', tone: 'bad-text' };
     case 'output_limit':
       return { text: 'Stopped: it printed too much (more than 64 KB)', tone: 'bad-text' };
+    case 'needs_input':
+      return { text: 'Waiting for input', tone: 'muted' };
     case 'busy':
       return { text: 'Run is busy: every place is in use. Try again in a moment.', tone: 'muted' };
     default:
@@ -38,8 +45,8 @@ function ending(r: RunResult): { text: string; tone: 'good-text' | 'bad-text' | 
 
 // A plain-words hint for the mistakes beginners make most.
 function hint(r: RunResult): string | null {
-  if (/EOFError|NoSuchElementException/.test(r.stderr))
-    return 'Your program asked for more input than the Input box has. Add a line for each input it reads.';
+  if (r.status === 'needs_input')
+    return 'Your program is asking for input. Type what your program should read in the Input box, one line for each answer, then press Run again.';
   if (r.status === 'timeout') return 'Is there a loop that never ends? Check its condition changes each time round.';
   return null;
 }
@@ -51,6 +58,13 @@ export function RunPanel({ language, files, onGoTo }: Props) {
   const [result, setResult] = useState<RunResult | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const attempt = useRef(0); // a run that was stopped (or overtaken) is ignored when it finishes
+  const inputBox = useRef<HTMLTextAreaElement>(null);
+  const needsInput = !running && result?.status === 'needs_input';
+  const reads = READS[language];
+  const readsInput = stdin.trim() === '' && files.some((f) => reads.test.test(f.content));
+  useEffect(() => {
+    if (needsInput) inputBox.current?.focus();
+  }, [needsInput, result]);
 
   async function run() {
     const mine = ++attempt.current;
@@ -95,6 +109,9 @@ export function RunPanel({ language, files, onGoTo }: Props) {
           Input <span className="xs muted">· {INPUT_HINT[language]}</span>
         </span>
         <textarea
+          ref={inputBox}
+          aria-invalid={needsInput || undefined}
+          aria-describedby={readsInput ? 'run-reads' : undefined}
           className="run-input"
           rows={3}
           value={stdin}
@@ -103,6 +120,11 @@ export function RunPanel({ language, files, onGoTo }: Props) {
           onChange={(e) => setStdin(e.target.value)}
         />
       </label>
+      {readsInput && !needsInput && (
+        <p id="run-reads" className="xs muted">
+          Your program {reads.what}: type its answers here first, one per line.
+        </p>
+      )}
       <div className="row">
         {running ? (
           <>
@@ -155,7 +177,7 @@ export function RunPanel({ language, files, onGoTo }: Props) {
         )}
       </div>
       {(place || tip) && (
-        <div className="run-hint">
+        <div className={`run-hint${needsInput ? ' ask' : ''}`}>
           {tip && <p className="small">{tip}</p>}
           {place && (
             <button type="button" className="btn sm" onClick={() => onGoTo(place.path, place.line)}>

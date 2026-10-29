@@ -11,5 +11,15 @@ export default async function QuestionsPage({ params }: { params: Promise<{ id: 
   const actor = await requireActor('teacher.area');
   const { id, week } = await params;
   const [qa, { timeZone }] = await Promise.all([pageData(lessonQuestions(actor, id, Number(week))), getClubSettings()]);
-  return <QaBoard classId={id} week={Number(week)} role="teacher" open={qa.open} questions={qa.questions} timeZone={timeZone} />;
+  return (
+    <QaBoard
+      classId={id}
+      week={Number(week)}
+      role="teacher"
+      open={qa.open}
+      questions={qa.questions}
+      timeZone={timeZone}
+      codeLanguage={qa.codeLanguage}
+    />
+  );
 }

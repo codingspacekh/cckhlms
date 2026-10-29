@@ -91,13 +91,13 @@ describe('asking and replying', () => {
 
   it('refuses empty or very long posts', async () => {
     await expect(askQuestion(rithy, classId, 3, { body: '   ', code: '' })).rejects.toThrow(/question/i);
-    await expect(askQuestion(rithy, classId, 3, { body: 'x', code: 'y'.repeat(4001) })).rejects.toBeInstanceOf(ValidationError);
-    await expect(replyToQuestion(rithy, q1, 'z'.repeat(4001))).rejects.toBeInstanceOf(ValidationError);
+    await expect(askQuestion(rithy, classId, 3, { body: 'x', code: 'y'.repeat(8001) })).rejects.toBeInstanceOf(ValidationError);
+    await expect(replyToQuestion(rithy, q1, 'z'.repeat(8001))).rejects.toBeInstanceOf(ValidationError);
   });
 
   it('only on a lesson students can see', async () => {
     await expect(askQuestion(rithy, classId, 4, { body: 'Is this ready?', code: '' })).rejects.toThrow(/published/);
-    expect(await lessonQuestions(rithy, classId, 4)).toEqual({ open: false, questions: [], toReview: 0 });
+    expect(await lessonQuestions(rithy, classId, 4)).toEqual({ open: false, questions: [], toReview: 0, codeLanguage: 'python' });
   });
 
   it('only people in the class can post; admins and other classes can’t', async () => {
@@ -195,5 +195,22 @@ describe('reporting (BR-20)', () => {
     await reportPost(chenda, { type: 'question', id: q1 }, '');
     expect((await lessonQuestions(sophea, classId, 3)).toReview).toBe(1);
     expect((await classWeeks(sophea, classId)).find((w) => w.week === 3)?.toReview).toBe(1);
+  });
+});
+
+// M12 · BR-26: posts written in the compact editor.
+describe('a question with code in it', () => {
+  it('shows its code block with colours and Copy, keeps a picture out, and gives the class language for new code', async () => {
+    const { id } = await askQuestion(rithy, classId, 3, {
+      body: 'Why does this print 0?\n\n```python\nfor i in range(5):\n    print(i)\n```\n\n![shot](/api/files/abc)',
+      code: '',
+    });
+    const qa = await lessonQuestions(rithy, classId, 3);
+    const q = qa.questions.find((x) => x.id === id)!;
+    expect(q.bodyHtml).toContain('<div class="code-block">');
+    expect(q.bodyHtml).toContain('class="code-copy">Copy</button>');
+    expect(q.bodyHtml).not.toContain('<img');
+    expect(q.code).toBeNull();
+    expect(qa.codeLanguage).toBe('python');
   });
 });

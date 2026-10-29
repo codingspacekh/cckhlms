@@ -29,8 +29,10 @@ export async function watchProblems(page: Page) {
 
 // Writes a lesson note in the editor (M9) by pasting Markdown over what's there, as a teacher pasting a note they
 // kept elsewhere would. Typing and the toolbar are tested in lessons.spec.ts.
-export async function writeNote(page: Page, markdown: string) {
-  const doc = page.getByRole('textbox', { name: 'Lesson note' });
+// Writes into the note editor by pasting Markdown, which it turns into formatting: the lesson note, or (M12) a
+// question or reply by its label.
+export async function writeNote(page: Page, markdown: string, label = 'Lesson note') {
+  const doc = page.getByRole('textbox', { name: label, exact: true });
   await doc.click();
   await page.keyboard.press('ControlOrMeta+a');
   await page.keyboard.press('Delete');

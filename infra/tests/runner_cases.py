@@ -77,8 +77,13 @@ def main():
     check('Python reads the input box, and shows each line it read between markers',
           r.get('stdout') == 'Name? \x1eDara\x1f\n\x1e11\x1f\nHi Dara 12\n', r)
 
-    status, r = run('python', 'input("Name? ")')
-    check('Python asking for more input than given ends with EOFError', r['status'] == 'error' and 'EOFError' in r['stderr'], r)
+    status, r = run('python', 'name = input("Name? ")\nprint("Hi", name)')
+    check('Python asking for more input than the box has is "needs input", with the prompt and no traceback',
+          r['status'] == 'needs_input' and r['stdout'] == 'Name? ' and r['stderr'] == '', r)
+
+    status, r = run('java', 'import java.util.Scanner;\npublic class Main { public static void main(String[] a) {\n'
+                    '  Scanner in = new Scanner(System.in); System.out.print("Age? "); int n = in.nextInt(); } }')
+    check('Java reading more than the box has is "needs input" too', r['status'] == 'needs_input' and r['stdout'] == 'Age? ', r)
 
     status, r = run('python', 'x = 1\nprint(x / 0)')
     check('a Python exception shows its traceback with the file and line',

@@ -108,7 +108,15 @@ export default async function StudentLessonPage({ params }: { params: Promise<{ 
             </section>
           )}
         </div>
-        <QaBoard classId={id} week={l.week} role="student" open={qa.open} questions={qa.questions} timeZone={timeZone} />
+        <QaBoard
+          classId={id}
+          week={l.week}
+          role="student"
+          open={qa.open}
+          questions={qa.questions}
+          timeZone={timeZone}
+          codeLanguage={qa.codeLanguage}
+        />
       </div>
     </>
   );

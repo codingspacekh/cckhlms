@@ -4,6 +4,7 @@
 //
 // renderNote adds the lesson note's reading view on top (FR-STU-12, BR-22): code blocks with a language label,
 // colours, line numbers and a Copy button; `> [!TIP]` tip boxes; a picture on its own line as a captioned figure.
+// renderPost is for questions and replies (M12, BR-26): the note's code blocks, but no pictures and no tip boxes.
 import MarkdownIt from 'markdown-it';
 import type { Token } from 'markdown-it';
 import { codeLanguage, highlightLines } from './code-highlight';
@@ -11,8 +12,9 @@ import { codeLanguage, highlightLines } from './code-highlight';
 const md = new MarkdownIt('default', { html: false, linkify: true, breaks: true });
 const { escapeHtml } = md.utils;
 
-type NoteEnv = { note?: boolean };
+type NoteEnv = { note?: boolean; post?: boolean };
 const inNote = (env: unknown) => (env as NoteEnv | undefined)?.note === true;
+const inPost = (env: unknown) => (env as NoteEnv | undefined)?.post === true;
 
 const isWeb = (url: string) => /^https?:\/\//i.test(url);
 const isLocal = (url: string) => url.startsWith('/') && !url.startsWith('//');
@@ -48,7 +50,7 @@ md.renderer.rules.image = (tokens, idx, options, env, self) => {
   const t = tokens[idx]!;
   const src = String(t.attrGet('src') ?? '');
   const alt = self.renderInlineAsText(t.children ?? [], options, env);
-  if (!isPicture(src)) {
+  if (!isPicture(src) || inPost(env)) {
     const attrs = isLocal(src) ? '' : webLinkAttrs;
     return `<a href="${escapeHtml(src)}"${attrs}>${escapeHtml(alt || src)}</a>`;
   }
@@ -72,7 +74,7 @@ md.renderer.rules.fence = (tokens, idx, _options, env) => {
   const lang = t.info.trim().split(/\s+/)[0] ?? '';
   const word = /^[\w+#-]+$/.test(lang) ? lang : '';
   const cls = word ? ` class="language-${word}"` : '';
-  if (!inNote(env)) return `<pre><code${cls}>${escapeHtml(t.content)}</code></pre>\n`;
+  if (!inNote(env) && !inPost(env)) return `<pre><code${cls}>${escapeHtml(t.content)}</code></pre>\n`;
   // In a note: one span per line (numbered by CSS, so copying the code doesn't copy the numbers) and coloured runs.
   const lines = highlightLines(t.content.replace(/\n$/, ''), word)
     .map((runs) => {
@@ -136,4 +138,8 @@ export function renderMarkdown(source: string): string {
 
 export function renderNote(source: string): string {
   return source.trim() ? md.render(source, { note: true } satisfies NoteEnv) : '';
+}
+
+export function renderPost(source: string): string {
+  return source.trim() ? md.render(source, { post: true } satisfies NoteEnv) : '';
 }
