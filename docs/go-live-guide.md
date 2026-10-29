@@ -88,7 +88,7 @@ Then Part 2 starts: one healthchecks.io check (runbook §2.5 step 4, the `cckhlm
 ## Parts 2–5 (details when we get there)
 - **Part 2 — Server set-up:** runbook §2.2 steps 4–5.
 - **Part 3 — Tunnel, rate limit, backups, secrets:** runbook §2.3, §2.4, §2.5, §2.6.
-  - Tunnel: pick **Docker** as the environment and copy only the `eyJ…` token. The page then waits for a connector forever; leave it, open the tunnel from the list, and add the two hostnames under **Routes → Add route → Published application**. The site answers `530` until the first deploy.
+  - Tunnel: pick **Docker** as the environment and copy only the `eyJ…` token. The page then waits for a connector forever; leave it, open the tunnel from the list, and add the two hostnames under **Routes → Add route → Published application**. Service type must be **HTTP**, not HTTPS (the app speaks plain HTTP inside the server; with HTTPS the site answers `502` and cloudflared logs `tls: first record does not look like a TLS handshake`). After saving, check each route still has its own URL: `lms` → `app:3000`, `preview` → `preview:8080`. The site answers `530` until the first deploy.
   - R2 tokens: **R2 Object Storage → Overview → Account Details → API Tokens → Manage**.
   - The `.env` gets the age **public** key (`age1…`). The `AGE-SECRET-KEY-…` line stays in the password manager only. Three secrets from `openssl rand -hex 32`: the database superuser's password, the app's database password (`LMS_DB_PASSWORD`) and the auth secret. Install `age` first with `brew install age`; it isn't on the laptop yet.
 - **Part 4 — GitHub and first deploy:** runbook §2.7, §2.8.
