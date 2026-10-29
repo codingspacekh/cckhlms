@@ -43,9 +43,11 @@ Use a password manager, and turn on **two-factor sign-in** (an authenticator app
    This installs Docker, creates the `deploy` user (allowed to run Docker, update the system and reboot), turns off root and password login, opens only SSH, enables automatic security updates and fail2ban, and starts the disk alert. Afterwards `ssh deploy@SERVER_IP` works and `ssh root@…` doesn't.
 5. Check it worked:
    ```bash
-   ssh deploy@SERVER_IP 'sudo sshd -T | grep -E "^(permitrootlogin|passwordauthentication|kbdinteractiveauthentication) "; sudo ufw status; sudo fail2ban-client status sshd | head -3; cat /etc/apt/apt.conf.d/20auto-upgrades; sudo ss -tlnp'
+   ssh deploy@SERVER_IP 'cat /etc/ssh/sshd_config.d/10-cckhlms.conf; systemctl is-active ufw fail2ban; cat /etc/apt/apt.conf.d/20auto-upgrades; ss -tln; ls /var/run/reboot-required'
+   ssh root@SERVER_IP true
+   ssh -o PubkeyAuthentication=no deploy@SERVER_IP true
    ```
-   Expect `permitrootlogin no`, `passwordauthentication no`, `kbdinteractiveauthentication no`; ufw active with only 22; fail2ban's `sshd` jail; both auto-upgrade lines `"1"`; and `ss` listening publicly on port 22 only. From your laptop, `nc -zv -w 3 SERVER_IP 80 443 5432 3000` should fail for every port.
+   `deploy` may only use `sudo` for updates and reboots, so these checks don't need it. Expect `PermitRootLogin no`, `PasswordAuthentication no`, `KbdInteractiveAuthentication no`; ufw and fail2ban `active`; both auto-upgrade lines `"1"`; and `ss` listening publicly on port 22 only (`127.0.0.53` is the local DNS resolver). Both `ssh … true` lines must say `Permission denied (publickey)`. From your laptop, `nc -zv -w 3 SERVER_IP 80 443 5432 3000` should fail for every port. If `reboot-required` exists (the first upgrade often installs a new kernel), run `ssh deploy@SERVER_IP 'sudo reboot'` now, while nothing is running yet.
 
 ### 2.3 Cloudflare Tunnel
 1. Cloudflare **Zero Trust → Networks → Tunnels → Create a tunnel → Cloudflared**, name `cckhlms`.
