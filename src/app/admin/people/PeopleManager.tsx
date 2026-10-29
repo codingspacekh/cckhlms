@@ -9,15 +9,18 @@ import { Pill } from '@/components/ui/Pill';
 import { TableScroll } from '@/components/ui/TableScroll';
 import {
   createAccountAction,
+  deleteAccountAction,
   resetPasswordAction,
   setActiveAction,
   signOutEverywhereAction,
+  updateAccountAction,
   type ActionResult,
   type Slip,
 } from '@/modules/identity/actions';
 import type { Person, Role } from '@/modules/identity/service';
 
-// The accounts table takes the full width; adding a person and the one-time login slip open in a dialog.
+// The accounts table takes the full width; adding a person, editing one (M10) and the one-time login slip open in a
+// dialog.
 export function PeopleManager({
   people,
   role,
@@ -35,7 +38,8 @@ export function PeopleManager({
 }) {
   const router = useRouter();
   const dialog = useRef<HTMLDialogElement>(null);
-  const [view, setView] = useState<'add' | 'slip' | null>(null);
+  const [view, setView] = useState<'add' | 'slip' | 'edit' | null>(null);
+  const [editing, setEditing] = useState<Person | null>(null);
   const [formKey, setFormKey] = useState(0); // a fresh form each time the dialog opens
   const [slip, setSlip] = useState<Slip | null>(null);
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
@@ -45,6 +49,17 @@ export function PeopleManager({
     setFormKey((k) => k + 1);
     setView('add');
     dialog.current?.showModal();
+  }
+  function openEdit(p: Person) {
+    setEditing(p);
+    setStatus(null);
+    setFormKey((k) => k + 1);
+    setView('edit');
+    dialog.current?.showModal();
+  }
+  function edited(r: ActionResult) {
+    dialog.current?.close();
+    if (r.ok && r.message) setStatus({ ok: true, text: r.message });
   }
   function showSlip(s: Slip) {
     setSlip(s);
@@ -125,6 +140,11 @@ export function PeopleManager({
                   </td>
                   <td>
                     <div className="row end nowrap">
+                      {!p.erased && (
+                        <button type="button" className="btn sm" aria-label={`Edit ${p.name}`} onClick={() => openEdit(p)}>
+                          Edit
+                        </button>
+                      )}
                       {role === 'student' && (
                         <Link className="btn sm" href={`/admin/students/${p.id}`} aria-label={`Report for ${p.name}`}>
                           Report
@@ -164,6 +184,9 @@ export function PeopleManager({
 
       <dialog ref={dialog} className="dialog" aria-labelledby="people-dialog-title" onClose={() => setView(null)}>
         {view === 'slip' && slip && <LoginSlip slip={slip} clubName={clubName} site={site} onDone={() => dialog.current?.close()} />}
+        {view === 'edit' && editing && (
+          <EditPersonForm key={formKey} person={editing} role={role} onDone={edited} onCancel={() => dialog.current?.close()} />
+        )}
         {view === 'add' && (
           <AddPersonForm
             key={formKey}
@@ -250,6 +273,121 @@ function AddPersonForm({
         <button type="submit" className="btn primary" disabled={creating}>
           {creating ? 'Creating…' : 'Create account'}
         </button>
+      </div>
+    </form>
+  );
+}
+
+// The role can't change here: an account made with the wrong role is deleted (when unused) and added again.
+function EditPersonForm({
+  person: p,
+  role,
+  onDone,
+  onCancel,
+}: {
+  person: Person;
+  role: Role;
+  onDone: (r: ActionResult) => void;
+  onCancel: () => void;
+}) {
+  const [saved, formAction, saving] = useActionState(async (prev: ActionResult | null, form: FormData) => {
+    const r = await updateAccountAction(prev, form);
+    if (r.ok) onDone(r);
+    return r;
+  }, null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleting, startDelete] = useTransition();
+  const problem = deleteError ?? (saved && !saved.ok ? saved.error : null);
+
+  return (
+    <form className="stack" action={formAction} aria-label={`Edit ${p.name}`}>
+      <h2 id="people-dialog-title">Edit {p.name}</h2>
+      <input type="hidden" name="userId" value={p.id} />
+      <label className="f">
+        Full name
+        <input name="name" type="text" defaultValue={p.name} autoComplete="off" required maxLength={100} />
+      </label>
+      <label className="f">
+        Username <span className="xs muted">(they sign in with the new one straight away)</span>
+        <input
+          name="username"
+          type="text"
+          defaultValue={p.username}
+          autoComplete="off"
+          autoCapitalize="none"
+          spellCheck={false}
+          required
+          maxLength={30}
+        />
+      </label>
+      {role === 'student' && (
+        <>
+          <label className="f">
+            Guardian name <span className="xs muted">(only admins can see this)</span>
+            <input name="guardianName" type="text" defaultValue={p.guardianName ?? ''} autoComplete="off" maxLength={100} />
+          </label>
+          <label className="f">
+            Guardian phone
+            <input
+              name="guardianPhone"
+              type="text"
+              inputMode="tel"
+              defaultValue={p.guardianPhone ?? ''}
+              autoComplete="off"
+              maxLength={30}
+            />
+          </label>
+        </>
+      )}
+      {role === 'teacher' && (
+        <label className="f">
+          Phone
+          <input name="phone" type="text" inputMode="tel" defaultValue={p.phone ?? ''} autoComplete="off" maxLength={30} />
+        </label>
+      )}
+      {role !== 'admin' && (
+        <label className="f">
+          Notes <span className="xs muted">(optional)</span>
+          <textarea name="notes" rows={2} defaultValue={p.notes ?? ''} maxLength={1000} />
+        </label>
+      )}
+      {problem && (
+        <p className="note bad" role="alert">
+          {problem}
+        </p>
+      )}
+      <div className="spread">
+        <div className="row">
+          {confirmDelete ? (
+            <button
+              type="button"
+              className="btn sm"
+              disabled={deleting}
+              onClick={() =>
+                startDelete(async () => {
+                  const r = await deleteAccountAction(p.id);
+                  if (r.ok) onDone(r);
+                  else setDeleteError(r.error);
+                })
+              }
+            >
+              Yes, delete {p.name}
+            </button>
+          ) : (
+            <button type="button" className="btn sm ghost" onClick={() => setConfirmDelete(true)}>
+              Delete account
+            </button>
+          )}
+        </div>
+        <div className="row end">
+          <button type="button" className="btn ghost" onClick={onCancel}>
+            Cancel
+          </button>
+          <button type="submit" className="btn primary" disabled={saving}>
+            {saving ? 'Saving…' : 'Save details'}
+          </button>
+        </div>
       </div>
     </form>
   );

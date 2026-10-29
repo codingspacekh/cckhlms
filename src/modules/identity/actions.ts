@@ -6,7 +6,7 @@ import { formText, toResult, type FormResult } from '@/server/action-result';
 import { currentActor } from '@/server/guard';
 import { checkStudentImport, importStudents, resetForSlips, type LoginSlip } from './batches';
 import type { ImportCheck } from './import-rules';
-import { createAccount, resetPassword, setActive, signOutEverywhere } from './service';
+import { createAccount, deleteAccount, resetPassword, setActive, signOutEverywhere, updateAccount } from './service';
 
 export type Slip = { name: string; username: string; password: string; reason: 'created' | 'reset' };
 export type ActionResult = FormResult<Slip>;
@@ -26,6 +26,29 @@ export async function createAccountAction(_prev: ActionResult | null, form: Form
     });
     revalidatePath('/admin/people');
     return { ok: true, data: { name: name.trim(), username: r.username, password: r.password, reason: 'created' } };
+  });
+}
+
+export async function updateAccountAction(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+  return toResult(async () => {
+    await updateAccount(await currentActor(), formText(form, 'userId') ?? '', {
+      name: formText(form, 'name') ?? '',
+      username: formText(form, 'username'),
+      guardianName: formText(form, 'guardianName'),
+      guardianPhone: formText(form, 'guardianPhone'),
+      phone: formText(form, 'phone'),
+      notes: formText(form, 'notes'),
+    });
+    revalidatePath('/', 'layout'); // names show on class, roster and report pages too
+    return { ok: true, message: 'Details saved.' };
+  });
+}
+
+export async function deleteAccountAction(userId: string): Promise<ActionResult> {
+  return toResult(async () => {
+    await deleteAccount(await currentActor(), userId);
+    revalidatePath('/admin/people');
+    return { ok: true, message: 'Account deleted.' };
   });
 }
 

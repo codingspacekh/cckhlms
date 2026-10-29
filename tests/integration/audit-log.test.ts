@@ -14,7 +14,7 @@ import { submitWork } from '@/modules/assessments/submissions';
 import { auditEntries } from '@/modules/audit/audit-log';
 import { actionsIn, PAGE_SIZE, parseAuditFilters, SENSITIVE_GROUPS, type AuditFilters } from '@/modules/audit/rules';
 import { issueCertificate, reissueCertificate, revokeCertificate } from '@/modules/certificates/certificates';
-import { createAccount, resetPassword, setActive, signOutEverywhere } from '@/modules/identity/service';
+import { createAccount, deleteAccount, resetPassword, setActive, signOutEverywhere, updateAccount } from '@/modules/identity/service';
 import { eraseStudent } from '@/modules/privacy/erase';
 import { exportStudentData } from '@/modules/privacy/export';
 import { promote } from '@/modules/promotion/promotion';
@@ -148,6 +148,10 @@ beforeAll(async () => {
   const leaving = await createAccount(admin, { role: 'student', name: 'Vanna Sok' });
   await exportStudentData(admin, leaving.userId);
   await eraseStudent(admin, leaving.userId, leaving.username);
+  // An account added by mistake (M10): its name corrected, then deleted while nobody has used it.
+  const typo = await createAccount(admin, { role: 'student', name: 'Vana Sok' });
+  await updateAccount(admin, typo.userId, { name: 'Vanna Sok', username: typo.username });
+  await deleteAccount(admin, typo.userId);
 
   // A sign-in, and an entry whose person has since been deleted.
   await audit({ actorId: bopha.userId, action: 'auth.sign_in', ip: '203.0.113.7' });
