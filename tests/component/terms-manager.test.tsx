@@ -43,7 +43,7 @@ describe('editing a term', () => {
     openEdit('Term 2 · 2027');
     const form = within(dialog()).getByRole('form', { name: 'Edit Term 2 · 2027' });
     expect((within(form).getByLabelText('Year') as HTMLInputElement).value).toBe('2027');
-    expect((within(form).getByLabelText('Term') as HTMLSelectElement).value).toBe('2');
+    expect((within(form).getByLabelText('Term') as HTMLButtonElement).value).toBe('2');
     expect((form.querySelector('input[name=startDate]') as HTMLInputElement).value).toBe('2027-04-17');
     fireEvent.click(within(form).getByRole('button', { name: 'Save term' }));
     await waitFor(() => expect(updateTermAction).toHaveBeenCalled());

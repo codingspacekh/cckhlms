@@ -18,6 +18,7 @@ import {
   type Slip,
 } from '@/modules/identity/actions';
 import type { Person, Role } from '@/modules/identity/service';
+import { Select } from '@/components/ui/Select';
 
 // The accounts table takes the full width; adding a person, editing one (M10) and the one-time login slip open in a
 // dialog.
@@ -217,11 +218,11 @@ function AddPersonForm({
       <h2 id="people-dialog-title">Add a person</h2>
       <label className="f">
         Role
-        <select name="role" value={newRole} onChange={(e) => setNewRole(e.target.value as Role)}>
+        <Select name="role" value={newRole} onChange={(e) => setNewRole(e.target.value as Role)}>
           <option value="student">Student</option>
           <option value="teacher">Teacher</option>
           <option value="admin">Admin</option>
-        </select>
+        </Select>
       </label>
       <label className="f">
         Full name

@@ -4,6 +4,7 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { AuditLogView, type AuditRowView } from '@/components/audit/AuditLogView';
 import { parseAuditFilters } from '@/modules/audit/rules';
+import { optionsOf } from './select-helpers';
 
 afterEach(cleanup);
 
@@ -61,10 +62,11 @@ describe('AuditLogView', () => {
     );
     const form = screen.getByRole('search', { name: 'Filter the audit log' });
     expect(form.getAttribute('method')).toBe('get');
-    const what = within(form).getByLabelText('What') as HTMLSelectElement;
+    const what = within(form).getByLabelText('What') as HTMLButtonElement;
     expect(what.value).toBe('certificates');
-    expect([...what.querySelectorAll('optgroup')].map((g) => g.label)).toEqual(['Sensitive', 'Everyday']);
-    expect(what.options[0]!.textContent).toBe('All changes (not sign-ins)');
+    const options = optionsOf(what);
+    expect([...new Set(options.map((o) => o.group).filter(Boolean))]).toEqual(['Sensitive', 'Everyday']);
+    expect(options[0]!.label).toBe('All changes (not sign-ins)');
     expect((within(form).getByLabelText('Person') as HTMLInputElement).value).toBe('bopha');
     expect((within(form).getByLabelText('From') as HTMLInputElement).value).toBe('Thu 1 Apr 2027');
     expect((within(form).getByLabelText('To') as HTMLInputElement).value).toBe('Fri 30 Apr 2027');

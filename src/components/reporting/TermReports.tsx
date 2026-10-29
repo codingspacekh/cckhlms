@@ -11,6 +11,7 @@ import { publishTermReportsAction, saveTermReportAction } from '@/modules/report
 import { RATING_LABEL, RATINGS, RESULT_LABEL, type Rating } from '@/modules/reporting/term-report-rules';
 import type { TermReportRow } from '@/modules/reporting/term-reports';
 import type { FormResult } from '@/server/action-result';
+import { Select } from '@/components/ui/Select';
 
 type Props = { classId: string; passMark: number; canWrite: boolean; canAmend: boolean; rows: TermReportRow[] };
 type View = { kind: 'report'; row: TermReportRow } | { kind: 'publish' } | null;
@@ -201,14 +202,14 @@ function ReportForm({
       <div className="grid g3">
         <label className="f">
           Rating
-          <select name="rating" defaultValue={row.rating ?? ''}>
+          <Select name="rating" defaultValue={row.rating ?? ''}>
             <option value="">Choose…</option>
             {RATINGS.map((r: Rating) => (
               <option key={r} value={r}>
                 {RATING_LABEL[r]}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label className="f">
           Final score <span className="xs muted">(empty = calculated)</span>
@@ -224,7 +225,7 @@ function ReportForm({
         </label>
         <label className="f">
           Result
-          <select name="result" value={result} onChange={(e) => setResult(e.target.value as Result | '')}>
+          <Select name="result" value={result} onChange={(e) => setResult(e.target.value as Result | '')}>
             <option value="">Choose…</option>
             {(['pass', 'fail'] as const).map((r) => (
               <option key={r} value={r}>
@@ -232,7 +233,7 @@ function ReportForm({
                 {r === suggested ? ' (suggested)' : ''}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
       </div>
       {departs && (

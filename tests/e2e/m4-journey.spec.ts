@@ -8,7 +8,7 @@ import { expect, test, type Browser } from '@playwright/test';
 import { E2E } from '../../playwright.config';
 import { rehearsalClass, type TeachingClass } from './fixtures';
 import { stateFile, USERS } from './global-setup';
-import { expectAccessible } from './helpers';
+import { choose, expectAccessible } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 let c: TeachingClass;
@@ -26,7 +26,7 @@ test('the teacher sets Java homework for week 5', async ({ browser }) => {
   await page.getByRole('link', { name: 'Classwork & homework' }).click();
   await page.getByRole('button', { name: 'Set new work' }).click();
   const dialog = page.getByRole('dialog', { name: 'Set new work' });
-  await dialog.getByLabel('Language').selectOption('java');
+  await choose(dialog.getByLabel('Language'), 'java');
   await dialog.getByLabel('Title').fill(TITLE);
   await dialog.getByLabel(/^Instructions/).fill('Add a `Circle` class in `src/shapes/` and print its area from `Main`.');
   await dialog.getByRole('button', { name: 'Publish' }).click();

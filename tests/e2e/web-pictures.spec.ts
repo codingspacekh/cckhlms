@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { teachingClass } from './fixtures';
 import { stateFile } from './global-setup';
-import { expectAccessible, watchProblems } from './helpers';
+import { choose, expectAccessible, watchProblems } from './helpers';
 
 test.beforeAll(async () => {
   await teachingClass(); // signs in the classmate
@@ -26,7 +26,7 @@ test('a folder with pictures, and a big photo, show in the preview and are saved
   await page.goto('/student/playground');
   const form = page.getByRole('form', { name: 'New project' });
   await form.getByLabel('Name').fill('Pet page');
-  await form.getByLabel('Language').selectOption({ label: 'HTML/CSS/JS' });
+  await choose(form.getByLabel('Language'), { label: 'HTML/CSS/JS' });
   await form.getByRole('button', { name: 'Start project' }).click();
   await expect(preview(page).locator('h1')).toHaveText('Hello!');
 

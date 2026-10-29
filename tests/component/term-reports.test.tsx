@@ -4,6 +4,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { TermReportRow } from '@/modules/reporting/term-reports';
+import { pickOption } from './select-helpers';
 
 const saveTermReportAction = vi.fn();
 const publishTermReportsAction = vi.fn();
@@ -80,9 +81,9 @@ describe('TermReports', () => {
     render(<TermReports {...props} />);
     fireEvent.click(within(screen.getByRole('row', { name: /Bopha Lim/ })).getByRole('button', { name: /^Write/ }));
     expect(within(dialog()).getByText('Calculated 72.5 · exam 80.0 · classwork 70.0 · homework 50.0')).toBeTruthy();
-    expect((within(dialog()).getByLabelText('Result') as HTMLSelectElement).value).toBe('pass');
+    expect((within(dialog()).getByLabelText('Result') as HTMLButtonElement).value).toBe('pass');
     expect(within(dialog()).queryByLabelText(/Reason/)).toBeNull();
-    fireEvent.change(within(dialog()).getByLabelText('Rating'), { target: { value: 'good' } });
+    pickOption(within(dialog()).getByLabelText('Rating'), 'good');
     fireEvent.change(within(dialog()).getByLabelText('Comment'), { target: { value: 'Helps others.' } });
     fireEvent.click(within(dialog()).getByRole('button', { name: 'Save draft' }));
     await waitFor(() => expect(saveTermReportAction).toHaveBeenCalled());
@@ -101,10 +102,10 @@ describe('TermReports', () => {
   it('asks for a reason when the result or the final score departs from the calculation', () => {
     render(<TermReports {...props} />);
     fireEvent.click(within(screen.getByRole('row', { name: /Bopha Lim/ })).getByRole('button', { name: /^Write/ }));
-    fireEvent.change(within(dialog()).getByLabelText('Result'), { target: { value: 'fail' } });
+    pickOption(within(dialog()).getByLabelText('Result'), 'fail');
     expect(within(dialog()).getByLabelText(/Reason/)).toBeTruthy();
     expect(within(dialog()).getByText('The score suggests Pass.')).toBeTruthy();
-    fireEvent.change(within(dialog()).getByLabelText('Result'), { target: { value: 'pass' } });
+    pickOption(within(dialog()).getByLabelText('Result'), 'pass');
     expect(within(dialog()).queryByLabelText(/Reason/)).toBeNull();
     fireEvent.change(within(dialog()).getByLabelText(/Final score/), { target: { value: '58' } });
     expect(within(dialog()).getByLabelText(/Reason/)).toBeTruthy();

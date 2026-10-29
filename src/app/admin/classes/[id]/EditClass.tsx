@@ -4,6 +4,7 @@ import { DateField, TimeField } from '@/components/ui/DateTimeFields';
 import { Icon } from '@/components/ui/Icon';
 import { deleteClassAction, updateClassAction, type CreateClassFormResult } from '@/modules/academics/class-actions';
 import { DAY_NAME, formatDate, type Day } from '@/modules/academics/schedule';
+import { Select } from '@/components/ui/Select';
 
 type Option = { id: string; label: string };
 type ClassValues = {
@@ -120,23 +121,23 @@ function EditClassForm({
           <div className="grid g2">
             <label className="f">
               Course
-              <select name="courseId" defaultValue={k.courseId}>
+              <Select name="courseId" defaultValue={k.courseId}>
                 {courses.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="f">
               Term
-              <select name="termId" defaultValue={k.termId}>
+              <Select name="termId" defaultValue={k.termId}>
                 {terms.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           </div>
           <div className="grid g3 date-mid">
@@ -154,13 +155,13 @@ function EditClassForm({
             <DateField label="First session" name="firstDate" defaultValue={k.firstDate} required />
             <label className="f">
               Weeks
-              <select name="weeks" defaultValue={String(k.weeks)}>
+              <Select name="weeks" defaultValue={String(k.weeks)}>
                 {[10, 11, 12].map((w) => (
                   <option key={w} value={w}>
                     {w}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           </div>
           <p className="small muted">Changing these makes the weekly sessions again.</p>
@@ -194,13 +195,13 @@ function EditClassForm({
       </div>
       <label className="f">
         Lead teacher
-        <select name="leadTeacherId" value={lead} onChange={(e) => setLead(e.target.value)}>
+        <Select name="leadTeacherId" value={lead} onChange={(e) => setLead(e.target.value)}>
           {teachers.map((t) => (
             <option key={t.id} value={t.id}>
               {t.name}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
       {teachers.length > 1 && (
         <fieldset className="fs f">

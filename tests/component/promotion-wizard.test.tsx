@@ -3,6 +3,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PromotionPlan } from '@/modules/promotion/promotion';
+import { pickOption } from './select-helpers';
 
 const refresh = vi.fn();
 const promoteAction = vi.fn();
@@ -31,7 +32,7 @@ const plan: PromotionPlan = {
     { enrolmentId: 'e3', studentId: 's3', name: 'Kosal Meas', score: 84, result: 'pass', target: 'l2' },
   ],
 };
-const nextFor = (name: string) => screen.getByLabelText(`Next class for ${name}`) as HTMLSelectElement;
+const nextFor = (name: string) => screen.getByLabelText(`Next class for ${name}`) as HTMLButtonElement;
 
 describe('PromotionWizard', () => {
   it('pre-selects the next-level class for passed students and the repeat class for the others', () => {
@@ -44,9 +45,9 @@ describe('PromotionWizard', () => {
 
   it('changes a whole group at once, and one student on their own', () => {
     render(<PromotionWizard plan={plan} />);
-    fireEvent.change(screen.getByLabelText('Passed (2) move to'), { target: { value: 'w1' } });
+    pickOption(screen.getByLabelText('Passed (2) move to'), 'w1');
     expect([nextFor('Bopha Lim').value, nextFor('Kosal Meas').value, nextFor('Chenda Ouk').value]).toEqual(['w1', 'w1', 'r1']);
-    fireEvent.change(nextFor('Kosal Meas'), { target: { value: 'leave' } });
+    pickOption(nextFor('Kosal Meas'), 'leave');
     expect(nextFor('Kosal Meas').value).toBe('leave');
   });
 
@@ -68,7 +69,7 @@ describe('PromotionWizard', () => {
   it('sends every move, "leave" as no class, and keeps the result on screen after the refresh', async () => {
     promoteAction.mockResolvedValue({ ok: true, message: 'Done: 2 students moved on, 1 student leaves the club. The class is archived.' });
     const { rerender } = render(<PromotionWizard plan={plan} />);
-    fireEvent.change(nextFor('Kosal Meas'), { target: { value: 'leave' } });
+    pickOption(nextFor('Kosal Meas'), 'leave');
     fireEvent.click(screen.getByRole('button', { name: 'Confirm promotion' }));
     await waitFor(() => expect(refresh).toHaveBeenCalled());
     expect(promoteAction).toHaveBeenCalledWith('c1', [

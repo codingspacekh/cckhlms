@@ -6,7 +6,7 @@ import { expect, test, type Browser } from '@playwright/test';
 import { E2E } from '../../playwright.config';
 import { CLASSMATE, journeyClass, type TeachingClass } from './fixtures';
 import { stateFile, USERS } from './global-setup';
-import { expectAccessible } from './helpers';
+import { choose, expectAccessible } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 let c: TeachingClass;
@@ -27,14 +27,14 @@ test('the teacher checks the statistics and finalises the term reports', async (
     .click();
   const dialog = page.getByRole('dialog');
   await page.getByRole('button', { name: `Write report for ${USERS.student.name}` }).click();
-  await dialog.getByLabel('Rating').selectOption('excellent');
+  await choose(dialog.getByLabel('Rating'), 'excellent');
   await dialog.getByLabel('Comment').fill('A pleasure to teach. Ready for Level 2.');
   await dialog.getByRole('button', { name: 'Save draft' }).click();
   await expect(page.getByRole('status')).toHaveText(`Report saved for ${USERS.student.name}.`);
 
   await page.getByRole('button', { name: `Write report for ${CLASSMATE}` }).click();
-  await expect(dialog.getByLabel('Result')).toHaveValue('fail');
-  await dialog.getByLabel('Rating').selectOption('needs_work');
+  await expect(dialog.getByLabel('Result')).toHaveAttribute('value', 'fail');
+  await choose(dialog.getByLabel('Rating'), 'needs_work');
   await dialog.getByLabel('Needs support').check();
   await dialog.getByLabel('What support?').fill('Practise loops at home before repeating Level 1');
   await dialog.getByRole('button', { name: 'Save draft' }).click();

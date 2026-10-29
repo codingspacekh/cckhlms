@@ -7,6 +7,7 @@ import { TableScroll } from '@/components/ui/TableScroll';
 import { WORK_LANGUAGE_LABEL } from '@/modules/assessments/rules';
 import { createProjectAction, deleteProjectAction } from '@/modules/playground/actions';
 import type { PlaygroundLanguage } from '@/modules/playground/playground';
+import { Select } from '@/components/ui/Select';
 
 export type PlaygroundRow = { id: string; name: string; language: PlaygroundLanguage; files: number; saved: string };
 const LANGUAGES: PlaygroundLanguage[] = ['python', 'java', 'web'];
@@ -44,13 +45,13 @@ export function PlaygroundList({ projects, limit }: { projects: PlaygroundRow[];
           </label>
           <label className="f">
             Language
-            <select name="language" defaultValue="python" disabled={full}>
+            <Select name="language" defaultValue="python" disabled={full}>
               {LANGUAGES.map((l) => (
                 <option key={l} value={l}>
                   {WORK_LANGUAGE_LABEL[l]}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
         </div>
         {created && !created.ok && (

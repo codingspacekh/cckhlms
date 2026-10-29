@@ -4,7 +4,7 @@
 import { expect, test } from '@playwright/test';
 import { CLASSMATE, reportsClass, type TeachingClass } from './fixtures';
 import { stateFile, USERS } from './global-setup';
-import { expectAccessible } from './helpers';
+import { choose, expectAccessible } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 let c: TeachingClass;
@@ -29,16 +29,16 @@ test.describe('teacher', () => {
     // The suggested result is chosen to start with.
     await page.getByRole('button', { name: `Write report for ${USERS.student.name}` }).click();
     const dialog = page.getByRole('dialog');
-    await expect(dialog.getByLabel('Result')).toHaveValue('pass');
-    await dialog.getByLabel('Rating').selectOption('good');
+    await expect(dialog.getByLabel('Result')).toHaveAttribute('value', 'pass');
+    await choose(dialog.getByLabel('Rating'), 'good');
     await dialog.getByLabel('Comment').fill('Helps others in Q&A. Ready for Level 2.');
     await dialog.getByRole('button', { name: 'Save draft' }).click();
     await expect(page.getByRole('status')).toHaveText(`Report saved for ${USERS.student.name}.`);
 
     // Overriding the suggestion needs a reason; an error keeps what was typed.
     await page.getByRole('button', { name: `Write report for ${CLASSMATE}` }).click();
-    await dialog.getByLabel('Rating').selectOption('developing');
-    await dialog.getByLabel('Result').selectOption('pass');
+    await choose(dialog.getByLabel('Rating'), 'developing');
+    await choose(dialog.getByLabel('Result'), 'pass');
     await expect(dialog.getByText('The score suggests Fail.')).toBeVisible();
     await dialog.getByLabel('Comment').fill('Much stronger in class than in the exam.');
     await dialog.getByRole('button', { name: 'Save draft' }).click();

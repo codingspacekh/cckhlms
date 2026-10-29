@@ -17,7 +17,7 @@ describe('SettingsForm', () => {
   it('starts with the saved club name and time zone', () => {
     render(<SettingsForm settings={settings} timeZones={zones} />);
     expect((screen.getByLabelText('Club name') as HTMLInputElement).value).toBe('CCKH Coding Club');
-    expect((screen.getByLabelText(/Time zone/) as HTMLSelectElement).value).toBe('Asia/Phnom_Penh');
+    expect((screen.getByLabelText(/Time zone/) as HTMLButtonElement).value).toBe('Asia/Phnom_Penh');
     expect((screen.getByLabelText(/Signed by/) as HTMLInputElement).value).toBe('Club Director');
   });
 

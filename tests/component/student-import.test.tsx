@@ -2,6 +2,7 @@
 // Admin sees what will be created, may enrol everyone in a class, and gets the login slips.
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { optionsOf, pickOption } from './select-helpers';
 
 const checkImportAction = vi.fn();
 const importStudentsAction = vi.fn();
@@ -44,8 +45,7 @@ describe('ImportStudents', () => {
     const template = screen.getByRole('link', { name: 'Download the template' });
     expect(template.getAttribute('download')).toBe('students.csv');
     expect(decodeURIComponent(template.getAttribute('href')!)).toContain('name,username,guardian name,guardian phone,notes');
-    const select = screen.getByLabelText('Enrol them in') as HTMLSelectElement;
-    expect([...select.options].map((o) => [o.textContent, o.disabled])).toEqual([
+    expect(optionsOf(screen.getByLabelText('Enrol them in')).map((o) => [o.label, o.disabled])).toEqual([
       ['Don’t enrol them yet', false],
       ['Python Level 1 · Sat 09:00', false],
       ['Web Level 1 · Sun 09:00 (full)', true],
@@ -88,7 +88,7 @@ describe('ImportStudents', () => {
     expect(within(preview).getByRole('row', { name: /Bopha Lim/ }).textContent).toContain('bopha.lsuggested');
     expect(screen.getByRole('note').textContent).toContain('already has an account');
 
-    fireEvent.change(screen.getByLabelText('Enrol them in'), { target: { value: 'c1' } });
+    pickOption(screen.getByLabelText('Enrol them in'), 'c1');
     fireEvent.click(screen.getByRole('button', { name: 'Create 2 accounts' }));
     const sheet = await screen.findByRole('region', { name: 'Login slips' });
     expect(importStudentsAction).toHaveBeenCalledWith(CSV, 'c1');

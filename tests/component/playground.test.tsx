@@ -3,6 +3,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { ProjectFile } from '@/lib/project/files';
+import { optionsOf, pickOption } from './select-helpers';
 
 vi.mock('@/components/editor/ProjectEditor', () => ({
   ProjectEditor: (p: { onChange: (files: ProjectFile[], now: boolean) => void; previewOrigin?: string }) => (
@@ -54,11 +55,7 @@ describe('PlaygroundList', () => {
     expect(row.textContent).toContain('Python');
     expect(row.textContent).toContain('Sat 16 Jan 2027, 10:05');
     const form = screen.getByRole('form', { name: 'New project' });
-    expect([...(within(form).getByLabelText('Language') as HTMLSelectElement).options].map((o) => o.textContent)).toEqual([
-      'Python',
-      'Java',
-      'HTML/CSS/JS',
-    ]);
+    expect(optionsOf(within(form).getByLabelText('Language')).map((o) => o.label)).toEqual(['Python', 'Java', 'HTML/CSS/JS']);
     expect(screen.getByText('2 of 10 projects.')).toBeTruthy();
   });
 
@@ -67,7 +64,7 @@ describe('PlaygroundList', () => {
     render(<PlaygroundList projects={projects} limit={10} />);
     const form = screen.getByRole('form', { name: 'New project' });
     fireEvent.change(within(form).getByLabelText('Name'), { target: { value: 'Quiz' } });
-    fireEvent.change(within(form).getByLabelText('Language'), { target: { value: 'web' } });
+    pickOption(within(form).getByLabelText('Language'), 'web');
     fireEvent.click(within(form).getByRole('button', { name: 'Start project' }));
     await waitFor(() => expect(createProjectAction).toHaveBeenCalledTimes(1));
     const data = createProjectAction.mock.calls[0]![1] as FormData;

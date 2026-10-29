@@ -3,7 +3,7 @@
 import { devices, expect, test, type Page } from '@playwright/test';
 import { teachingClass } from './fixtures';
 import { stateFile } from './global-setup';
-import { expectAccessible, watchProblems } from './helpers';
+import { choose, expectAccessible, watchProblems } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 let projectUrl = '';
@@ -25,7 +25,7 @@ test.describe('student', () => {
 
     const form = page.getByRole('form', { name: 'New project' });
     await form.getByLabel('Name').fill('My web page');
-    await form.getByLabel('Language').selectOption({ label: 'HTML/CSS/JS' });
+    await choose(form.getByLabel('Language'), { label: 'HTML/CSS/JS' });
     await form.getByRole('button', { name: 'Start project' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'My web page' })).toBeVisible();
     projectUrl = new URL(page.url()).pathname;

@@ -2,6 +2,7 @@
 import { useActionState } from 'react';
 import { updateSettingsAction } from '@/modules/club/actions';
 import type { ClubSettings } from '@/modules/club/service';
+import { Select } from '@/components/ui/Select';
 
 export function SettingsForm({ settings, timeZones }: { settings: ClubSettings; timeZones: string[] }) {
   const [result, formAction, saving] = useActionState(updateSettingsAction, null);
@@ -13,13 +14,13 @@ export function SettingsForm({ settings, timeZones }: { settings: ClubSettings; 
       </label>
       <label className="f">
         Time zone <span className="xs muted">(all class times and due dates use this)</span>
-        <select name="timeZone" defaultValue={settings.timeZone}>
+        <Select name="timeZone" defaultValue={settings.timeZone}>
           {timeZones.map((tz) => (
             <option key={tz} value={tz}>
               {tz}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
       <label className="f">
         Signed by <span className="xs muted">(the name on the signature line of certificates)</span>

@@ -61,8 +61,8 @@ describe('EditClass', () => {
     render(<EditClass {...props} />);
     open();
     expect((within(form()).getByLabelText('Name') as HTMLInputElement).value).toBe('Python Level 1 · Sat 09:00');
-    expect((within(form()).getByLabelText('Course') as HTMLSelectElement).value).toBe('py1');
-    expect((within(form()).getByLabelText('Lead teacher') as HTMLSelectElement).value).toBe('u1');
+    expect((within(form()).getByLabelText('Course') as HTMLButtonElement).value).toBe('py1');
+    expect((within(form()).getByLabelText('Lead teacher') as HTMLButtonElement).value).toBe('u1');
     fireEvent.change(within(form()).getByLabelText('Room'), { target: { value: 'Lab A' } });
     fireEvent.click(within(form()).getByRole('checkbox', { name: 'Dara Kim' }));
     fireEvent.click(within(form()).getByRole('button', { name: 'Save class' }));

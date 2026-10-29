@@ -1,7 +1,7 @@
 // FR-ADM-03/04: Admin sets up terms and courses in the browser.
 import { expect, test } from '@playwright/test';
 import { stateFile } from './global-setup';
-import { expectAccessible } from './helpers';
+import { choose, expectAccessible } from './helpers';
 
 test.use({ storageState: stateFile('admin') });
 
@@ -12,7 +12,7 @@ test('Admin adds a term and makes it the active term', async ({ page }) => {
   await expectAccessible(page);
   const form = page.getByRole('form', { name: 'Add a term' });
   await form.getByLabel('Year').fill('2031');
-  await form.getByLabel('Term').selectOption('1');
+  await choose(form.getByLabel('Term'), '1');
   await form.getByLabel('First day').fill('2031-01-11');
   await form.getByLabel('Last day').fill('2031-03-30');
   await form.getByRole('button', { name: 'Add term' }).click();
@@ -27,7 +27,7 @@ test('a term that overlaps another is refused with a clear message', async ({ pa
   await page.goto('/admin/terms');
   const form = page.getByRole('form', { name: 'Add a term' });
   await form.getByLabel('Year').fill('2031');
-  await form.getByLabel('Term').selectOption('2');
+  await choose(form.getByLabel('Term'), '2');
   await form.getByLabel('First day').fill('2031-03-22');
   await form.getByLabel('Last day').fill('2031-06-29');
   await form.getByRole('button', { name: 'Add term' }).click();
@@ -55,7 +55,7 @@ test('Admin fixes a term, undoes closing it, and deletes an unused one', async (
 
   const form = page.getByRole('form', { name: 'Add a term' });
   await form.getByLabel('Year').fill('2031');
-  await form.getByLabel('Term').selectOption('4');
+  await choose(form.getByLabel('Term'), '4');
   await form.getByLabel('First day').fill('2031-10-04');
   await form.getByLabel('Last day').fill('2031-12-20');
   await form.getByRole('button', { name: 'Add term' }).click();
@@ -77,7 +77,7 @@ test('Admin adds a course and writes its syllabus', async ({ page }) => {
   const form = dialog.getByRole('form', { name: 'Add a course' });
   await form.getByLabel('Code').fill('py1');
   await form.getByLabel('Course name').fill('Python Level 1');
-  await form.getByLabel('Language').selectOption('python');
+  await choose(form.getByLabel('Language'), 'python');
   await form.getByRole('button', { name: 'Add course' }).click();
   await expect(dialog).toBeHidden();
   await expect(page.getByRole('status')).toHaveText('PY1 added.');
@@ -105,7 +105,7 @@ test('course weights must add up to 100', async ({ page }) => {
   const form = page.getByRole('form', { name: 'Add a course' });
   await form.getByLabel('Code').fill('WEB');
   await form.getByLabel('Course name').fill('Web Basics');
-  await form.getByLabel('Language').selectOption('web');
+  await choose(form.getByLabel('Language'), 'web');
   await form.getByLabel('Exam %').fill('70');
   await form.getByRole('button', { name: 'Add course' }).click();
   await expect(form.getByRole('alert')).toHaveText('Exam, classwork and homework weights must add up to 100.');

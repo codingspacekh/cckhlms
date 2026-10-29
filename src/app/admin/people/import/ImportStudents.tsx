@@ -6,6 +6,7 @@ import { TableScroll } from '@/components/ui/TableScroll';
 import { checkImportAction, importStudentsAction } from '@/modules/identity/actions';
 import type { ImportTarget } from '@/modules/identity/batches';
 import { IMPORT_TEMPLATE, type ImportCheck } from '@/modules/identity/import-rules';
+import { Select } from '@/components/ui/Select';
 
 const MAX_BYTES = 500_000;
 const TEMPLATE_HREF = `data:text/csv;charset=utf-8,${encodeURIComponent(IMPORT_TEMPLATE)}`;
@@ -99,7 +100,7 @@ export function ImportStudents({ targets, clubName, site }: { targets: ImportTar
         </label>
         <label className="f">
           Enrol them in
-          <select value={classId} onChange={(e) => setClassId(e.target.value)}>
+          <Select value={classId} onChange={(e) => setClassId(e.target.value)}>
             <option value="">Don’t enrol them yet</option>
             {terms.map((term) => (
               <optgroup key={term} label={term}>
@@ -112,7 +113,7 @@ export function ImportStudents({ targets, clubName, site }: { targets: ImportTar
                   ))}
               </optgroup>
             ))}
-          </select>
+          </Select>
         </label>
         {pending && !check && <p className="small muted">Checking the file…</p>}
       </section>

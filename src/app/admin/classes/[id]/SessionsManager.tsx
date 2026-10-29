@@ -6,6 +6,7 @@ import { addMakeUpAction, cancelSessionAction, moveSessionAction } from '@/modul
 import type { SessionRow } from '@/modules/academics/classes';
 import { addMinutes, formatDate } from '@/modules/academics/schedule';
 import { DateField, TimeField } from '@/components/ui/DateTimeFields';
+import { Select } from '@/components/ui/Select';
 
 type Props = {
   classId: string;
@@ -114,10 +115,10 @@ export function SessionsManager({ classId, weeks, defaultStart, defaultMinutes, 
             <TimeField label="Start time" name="startTime" defaultValue={defaultStart} required />
             <label className="f">
               Length
-              <select name="minutes" defaultValue={defaultMinutes}>
+              <Select name="minutes" defaultValue={defaultMinutes}>
                 <option value={90}>90 min</option>
                 <option value={120}>120 min</option>
-              </select>
+              </Select>
             </label>
           </div>
           {makeUp && !makeUp.ok && (

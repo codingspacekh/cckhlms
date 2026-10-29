@@ -1,6 +1,7 @@
 // FR-ADM-05/08 · BR-15: the new-class form previews every week and explains problems straight away.
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { pickOption } from './select-helpers';
 
 const createClassAction = vi.fn();
 vi.mock('@/modules/academics/class-actions', () => ({ createClassAction: (...a: unknown[]) => createClassAction(...a) }));
@@ -38,7 +39,7 @@ describe('NewClassForm', () => {
   it('follows the chosen length and number of weeks', () => {
     render(<NewClassForm {...props} />);
     fireEvent.click(screen.getByRole('radio', { name: '120 min' }));
-    fireEvent.change(screen.getByLabelText('Weeks'), { target: { value: '10' } });
+    pickOption(screen.getByLabelText('Weeks'), '10');
     firstSession('2027-01-09');
     const items = within(screen.getByRole('list', { name: 'Weekly sessions' })).getAllByRole('listitem');
     expect(items).toHaveLength(10);
@@ -60,9 +61,9 @@ describe('NewClassForm', () => {
       data: { warnings: ['Room A is booked for X on Saturday 09:00–10:30.'] },
     });
     render(<NewClassForm {...props} />);
-    fireEvent.change(screen.getByLabelText('Course'), { target: { value: 'c1' } });
-    fireEvent.change(screen.getByLabelText('Term'), { target: { value: 't1' } });
-    fireEvent.change(screen.getByLabelText('Lead teacher'), { target: { value: 'u1' } });
+    pickOption(screen.getByLabelText('Course'), 'c1');
+    pickOption(screen.getByLabelText('Term'), 't1');
+    pickOption(screen.getByLabelText('Lead teacher'), 'u1');
     firstSession('2027-01-09');
     fireEvent.click(screen.getByRole('button', { name: 'Create class' }));
     expect(await screen.findByRole('list', { name: 'Clashes' })).toBeTruthy();

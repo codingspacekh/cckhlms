@@ -3,6 +3,7 @@ import { useActionState } from 'react';
 import { createCourseAction, updateCourseAction } from '@/modules/academics/actions';
 import { LANGUAGE_LABEL, LANGUAGES } from '@/modules/academics/rules';
 import type { FormResult } from '@/server/action-result';
+import { Select } from '@/components/ui/Select';
 
 type Values = {
   id?: string;
@@ -44,13 +45,13 @@ export function CourseForm({ course, others = [], onSaved, onCancel }: Props) {
         </label>
         <label className="f">
           Language
-          <select name="defaultLanguage" defaultValue={v.defaultLanguage ?? 'python'}>
+          <Select name="defaultLanguage" defaultValue={v.defaultLanguage ?? 'python'}>
             {LANGUAGES.map((l) => (
               <option key={l} value={l}>
                 {LANGUAGE_LABEL[l]}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
       </div>
       <label className="f">
@@ -78,14 +79,14 @@ export function CourseForm({ course, others = [], onSaved, onCancel }: Props) {
       {editing && (
         <label className="f">
           Next level <span className="xs muted">(where passed students go at term end)</span>
-          <select name="nextCourseId" defaultValue={v.nextCourseId ?? ''}>
+          <Select name="nextCourseId" defaultValue={v.nextCourseId ?? ''}>
             <option value="">None</option>
             {others.map((o) => (
               <option key={o.id} value={o.id}>
                 {o.code} · {o.name}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
       )}
       <label className="f">

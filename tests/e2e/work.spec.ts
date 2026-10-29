@@ -2,7 +2,7 @@
 import { expect, test } from '@playwright/test';
 import { teachingClass, type TeachingClass } from './fixtures';
 import { stateFile } from './global-setup';
-import { expectAccessible } from './helpers';
+import { choose, expectAccessible } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 let c: TeachingClass;
@@ -21,7 +21,7 @@ test.describe('teacher', () => {
     await page.getByRole('button', { name: 'Set new work' }).click();
     const dialog = page.getByRole('dialog', { name: 'Set new work' });
     await expectAccessible(page);
-    await expect(dialog.getByLabel('Due')).toHaveValue('next_session');
+    await expect(dialog.getByLabel('Due')).toHaveAttribute('value', 'next_session');
     await dialog.getByLabel('Title').fill('Countdown to lift off');
     await dialog.getByLabel(/^Instructions/).fill('Use a **for loop** to count down from 10 to 1, then print `Lift off!`.');
     await dialog.getByRole('button', { name: 'Publish' }).click();
@@ -30,8 +30,8 @@ test.describe('teacher', () => {
 
     await page.getByRole('button', { name: 'Set new work' }).click();
     const quiz = page.getByRole('dialog', { name: 'Set new work' });
-    await quiz.getByLabel('Type').selectOption('classwork');
-    await quiz.getByLabel('Language').selectOption('paper');
+    await choose(quiz.getByLabel('Type'), 'classwork');
+    await choose(quiz.getByLabel('Language'), 'paper');
     await quiz.getByLabel('Title').fill('Loops quiz');
     await quiz.getByRole('button', { name: 'Save draft' }).click();
     await expect(quiz).toBeHidden();

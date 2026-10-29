@@ -2,7 +2,7 @@
 import { expect, test, type Browser } from '@playwright/test';
 import { E2E } from '../../playwright.config';
 import { stateFile } from './global-setup';
-import { expectAccessible } from './helpers';
+import { choose, expectAccessible } from './helpers';
 
 test.use({ storageState: stateFile('admin') });
 
@@ -26,7 +26,7 @@ async function addPerson(page: import('@playwright/test').Page, role: 'Student' 
   await page.goto('/admin/people');
   await page.getByRole('button', { name: 'Add a person' }).click();
   const form = page.getByRole('form', { name: 'Add a person' });
-  await form.getByLabel('Role').selectOption(role.toLowerCase());
+  await choose(form.getByLabel('Role'), role.toLowerCase());
   await form.getByLabel('Full name').fill(name);
   await form.getByRole('button', { name: 'Create account' }).click();
   const slip = page.getByRole('dialog').getByRole('region', { name: 'Login slip' });
