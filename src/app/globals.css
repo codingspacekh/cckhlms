@@ -3060,6 +3060,15 @@ td.text {
 .run-hint p {
   margin: 0;
 }
+/* Asking for input isn't an error: the hint is blue, and the Input box is marked. */
+.run-hint.ask {
+  background: var(--accent-soft);
+  color: var(--heading);
+}
+.run-input[aria-invalid='true'] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
 
 /* Q&A posts (M12): written in the compact editor, read with the note's code blocks. */
 .note-doc.post-doc {
