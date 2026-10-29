@@ -113,12 +113,12 @@ What remains, and why it stays:
 
 The same scans against `https://lms.cckh.dev`, through Cloudflare, signed in with test accounts made for them and deleted afterwards.
 
-| Scan | URLs | High |
-|---|---|---|
-| Anonymous | 25 | **0** |
-| Admin | 52 | **0** |
-| Teacher | 27 | **0** |
-| Student | 32 | **0** |
+| Scan | URLs | High | Signed in as |
+|---|---|---|---|
+| Anonymous, production | 25 | **0** | nobody |
+| Admin, production | 52 | **0** | a test admin |
+| Teacher, production | 27 | **0** | a test teacher |
+| Student, production | 32 | **0** | a test student |
 
 The same findings as above, plus two that come only from Cloudflare being in front:
 - **Strict-Transport-Security header not set** (low): the edge serves HTTPS only and redirects HTTP. To close it, turn on HSTS in Cloudflare (SSL/TLS → Edge Certificates → HSTS), or have the app send the header. *Open: the owner to decide.*
