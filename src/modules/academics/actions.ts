@@ -3,26 +3,53 @@ import { revalidatePath } from 'next/cache';
 import { formText as t, toResult, type FormResult } from '@/server/action-result';
 import { currentActor } from '@/server/guard';
 import { createCourse, setSyllabus, updateCourse } from './courses';
-import { createTerm, setTermStatus, type TermStatus } from './terms';
+import { createTerm, deleteTerm, setTermStatus, updateTerm, type TermStatus } from './terms';
+
+const termFields = (form: FormData) => ({
+  year: t(form, 'year'),
+  number: t(form, 'number'),
+  startDate: t(form, 'startDate'),
+  endDate: t(form, 'endDate'),
+});
 
 export async function createTermAction(_prev: FormResult | null, form: FormData): Promise<FormResult> {
   return toResult(async () => {
-    const term = await createTerm(await currentActor(), {
-      year: t(form, 'year'),
-      number: t(form, 'number'),
-      startDate: t(form, 'startDate'),
-      endDate: t(form, 'endDate'),
-    });
+    const term = await createTerm(await currentActor(), termFields(form));
     revalidatePath('/admin/terms');
     return { ok: true, message: `${term.name} added.` };
   });
 }
 
+export async function updateTermAction(_prev: FormResult | null, form: FormData): Promise<FormResult> {
+  return toResult(async () => {
+    await updateTerm(await currentActor(), t(form, 'termId') ?? '', termFields(form));
+    revalidatePath('/admin', 'layout');
+    return { ok: true, message: 'Term saved.' };
+  });
+}
+
+export async function deleteTermAction(id: string): Promise<FormResult> {
+  return toResult(async () => {
+    await deleteTerm(await currentActor(), id);
+    revalidatePath('/admin/terms');
+    return { ok: true, message: 'Term deleted.' };
+  });
+}
+
 export async function setTermStatusAction(id: string, status: TermStatus): Promise<FormResult> {
   return toResult(async () => {
-    await setTermStatus(await currentActor(), id, status);
-    revalidatePath('/admin/terms');
-    return { ok: true };
+    const { name, classes } = await setTermStatus(await currentActor(), id, status);
+    revalidatePath('/', 'layout'); // closing or reopening archives or reopens its classes, for teachers too
+    const n = `${classes} class${classes === 1 ? '' : 'es'}`;
+    const message =
+      status === 'closed'
+        ? `${name} is closed and ${n} archived. Reopen it if that was a mistake.`
+        : status === 'planned'
+          ? `${name} is planned again.`
+          : classes > 0
+            ? `${name} is active again and ${n} reopened.`
+            : `${name} is active.`;
+    return { ok: true, message };
   });
 }
 

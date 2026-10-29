@@ -34,6 +34,39 @@ test('a term that overlaps another is refused with a clear message', async ({ pa
   await expect(form.getByRole('alert')).toHaveText('These dates overlap Term 1 · 2031.');
 });
 
+// M10 · BR-23, BR-24: mistakes can be put right.
+test('Admin fixes a term, undoes closing it, and deletes an unused one', async ({ page }) => {
+  await page.goto('/admin/terms');
+  const table = page.getByRole('region', { name: 'Terms', exact: true });
+  const row = page.getByRole('row', { name: /Term 1 · 2031/ });
+  await row.getByRole('button', { name: 'Close term' }).click();
+  await expect(table.getByRole('status')).toContainText('Reopen it if that was a mistake');
+  await row.getByRole('button', { name: 'Reopen' }).click();
+  await expect(row.getByText('Active')).toBeVisible();
+
+  await row.getByRole('button', { name: 'Edit Term 1 · 2031' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Edit Term 1 · 2031' });
+  await expect(dialog.getByLabel('Year')).toHaveValue('2031');
+  await expectAccessible(page);
+  await dialog.getByLabel('Last day').fill('2031-04-06');
+  await dialog.getByRole('button', { name: 'Save term' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(row).toContainText('6 Apr 2031');
+
+  const form = page.getByRole('form', { name: 'Add a term' });
+  await form.getByLabel('Year').fill('2031');
+  await form.getByLabel('Term').selectOption('4');
+  await form.getByLabel('First day').fill('2031-10-04');
+  await form.getByLabel('Last day').fill('2031-12-20');
+  await form.getByRole('button', { name: 'Add term' }).click();
+  const unused = page.getByRole('row', { name: /Term 4 · 2031/ });
+  await unused.getByRole('button', { name: 'Edit Term 4 · 2031' }).click();
+  await page.getByRole('button', { name: 'Delete term' }).click();
+  await page.getByRole('button', { name: 'Yes, delete Term 4 · 2031' }).click();
+  await expect(table.getByRole('status')).toHaveText('Term deleted.');
+  await expect(unused).toHaveCount(0);
+});
+
 test('Admin adds a course and writes its syllabus', async ({ page }) => {
   await page.goto('/admin/courses');
   await expectAccessible(page);

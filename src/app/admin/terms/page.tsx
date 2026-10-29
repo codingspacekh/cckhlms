@@ -12,7 +12,17 @@ export default async function TermsPage() {
   return (
     <>
       <PageHeader eyebrow="Club" title="Terms" />
-      <TermsManager terms={terms.map((t) => ({ id: t.id, name: t.name, startDate: t.startDate, endDate: t.endDate, status: t.status }))} />
+      <TermsManager
+        terms={terms.map((t) => ({
+          id: t.id,
+          year: t.year,
+          number: t.number,
+          name: t.name,
+          startDate: t.startDate,
+          endDate: t.endDate,
+          status: t.status,
+        }))}
+      />
     </>
   );
 }
