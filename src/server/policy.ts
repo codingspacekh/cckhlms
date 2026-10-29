@@ -67,6 +67,9 @@ export const ACTIONS = {
   'audit.view': hasRole('admin'),
   // The playground (FR-CODE-07): students' own projects, outside any class. Each one is found by its owner only.
   'playground.use': hasRole('student'),
+  // Running Python or Java (M11, ADR-0004): students their work and Playground projects; teachers their starter files
+  // and the work students hand in.
+  'code.run': either(hasRole('student'), hasRole('teacher')),
   // A student's data on request (NFR-07): Admin downloads it, or deletes their personal data.
   'student.data': hasRole('admin'),
 } satisfies Record<string, Rule>;

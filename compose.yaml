@@ -1,4 +1,4 @@
-# Local development: PostgreSQL only. Production services are in infra/compose.prod.yaml (M1 PR 2).
+# Local development: PostgreSQL and the code runner. Production services are in infra/compose.prod.yaml (M1 PR 2).
 services:
   db:
     image: postgres:18-alpine
@@ -13,5 +13,21 @@ services:
       test: ['CMD-SHELL', 'pg_isready -U lms -d lms']
       interval: 2s
       retries: 30
+  # Runs Python and Java for the Run button (M11, ADR-0004), locked down as in production but on TCP with a token,
+  # since a socket can't be shared with the laptop. `npm run runner:up`; the app finds it with RUNNER_URL in .env.
+  runner:
+    build: infra/runner
+    image: cckhlms-runner:dev
+    environment:
+      RUNNER_LISTEN: 0.0.0.0:8090
+      RUNNER_TOKEN: dev-runner-token
+    ports: ['127.0.0.1:8090:8090']
+    read_only: true
+    tmpfs: ['/work:size=96m,mode=755', '/tmp:size=16m']
+    cap_drop: [ALL]
+    cap_add: [SETUID, SETGID, CHOWN, KILL]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 1g
+    pids_limit: 512
 volumes:
   pgdata:

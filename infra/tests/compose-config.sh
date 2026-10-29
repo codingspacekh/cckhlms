@@ -3,7 +3,7 @@
 # and refuses to start without its secrets. The app and backups use the database as `lms`, which isn't a superuser.
 set -eu
 cd "$(dirname "$0")/.."
-APP_TAG=t POSTGRES_PASSWORD=p LMS_DB_PASSWORD=l BETTER_AUTH_SECRET=s TUNNEL_TOKEN=t R2_ACCOUNT_ID=a R2_BUCKET=b \
+APP_TAG=t RUNNER_TAG=r POSTGRES_PASSWORD=p LMS_DB_PASSWORD=l BETTER_AUTH_SECRET=s TUNNEL_TOKEN=t R2_ACCOUNT_ID=a R2_BUCKET=b \
   R2_ACCESS_KEY_ID=k R2_SECRET_ACCESS_KEY=s BACKUP_AGE_RECIPIENT=age1x \
   docker compose -f compose.prod.yaml config --format json | python3 -c '
 import json, sys
@@ -35,6 +35,18 @@ assert any(v.get("target", "").startswith("/docker-entrypoint-initdb.d/") and v.
            for v in db.get("volumes", [])), "db-app-role.sh must run when the database is first created"
 assert s["app"]["environment"]["DATABASE_URL"] == "postgres://lms:l@db:5432/lms", "the app connects as lms with its own password"
 assert (s["backup"]["environment"]["PGUSER"], s["backup"]["environment"]["PGPASSWORD"]) == ("lms", "l"), "backups run as lms"
+# M11 (ADR-0004): the runner has no network, no secrets and no volume but its socket; it keeps only the capabilities it
+# needs to run each program as its own user, has hard limits, and the app finds it on the shared socket.
+r = s["runner"]
+assert r.get("network_mode") == "none" and not r.get("networks"), "the runner must have no network at all"
+assert r.get("read_only") is True and r.get("cap_drop") == ["ALL"], "the runner is read-only and drops every capability"
+assert sorted(r.get("cap_add", [])) == ["CHOWN", "KILL", "SETGID", "SETUID"], "the runner adds back only SETUID, SETGID, CHOWN, KILL"
+assert not r.get("privileged"), "the runner must not be privileged"
+assert not r.get("environment"), "the runner gets no environment: no secrets"
+assert [v["target"] for v in r.get("volumes", [])] == ["/sock"], "the only volume of the runner is its socket"
+assert r.get("pids_limit") and r.get("mem_limit") and r.get("cpus"), "the runner has process, memory and CPU limits"
+assert s["app"]["environment"]["RUNNER_URL"] == "unix:/run/runner/runner.sock", "the app reaches the runner on its socket"
+assert any(v.get("source") == "runner-socket" and v.get("target") == "/run/runner" for v in s["app"]["volumes"]), "the app mounts the socket"
 # The first-run init server listens only on a socket: ready means ready on TCP, after db-app-role.sh has run.
 assert "-h 127.0.0.1" in " ".join(db["healthcheck"]["test"]), "the database health check must use TCP"
 '
@@ -43,4 +55,4 @@ if APP_TAG=t POSTGRES_PASSWORD=p BETTER_AUTH_SECRET=s TUNNEL_TOKEN=t R2_ACCOUNT_
   R2_SECRET_ACCESS_KEY=s BACKUP_AGE_RECIPIENT=age1x docker compose -f compose.prod.yaml config >/dev/null 2>&1; then
   echo "FAIL: a missing LMS_DB_PASSWORD was not detected"; exit 1
 fi
-echo "PASS: compose config valid, no published ports, db internal-only, restarts + memory limits, terse db errors, read-only app + preview, no capabilities, no-new-privileges, app and backups as lms (not a superuser), missing secrets refused"
+echo "PASS: compose config valid, runner with no network or secrets and only the capabilities it needs, no published ports, db internal-only, restarts + memory limits, terse db errors, read-only app + preview, no capabilities, no-new-privileges, app and backups as lms (not a superuser), missing secrets refused"

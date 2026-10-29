@@ -38,7 +38,8 @@ services:
       BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-}
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
       WEB_WORKERS: '2' # one server process per vCPU (M7 load test)
-    volumes: [uploads:/app/uploads]
+      RUNNER_URL: unix:/run/runner/runner.sock
+    volumes: [uploads:/app/uploads, runner-socket:/run/runner]
     networks: [internal, edge]
     mem_limit: 1g
     # Locked down (M7): the image can't be changed, and the app needs no Linux capabilities. It writes only to its
@@ -47,6 +48,27 @@ services:
     tmpfs: ['/tmp:size=64m', '/app/.next/cache:size=64m']
     cap_drop: [ALL]
     security_opt: ['no-new-privileges:true']
+
+  # Runs students' Python and Java (M11, ADR-0004). No network at all: the app reaches it through a socket in a volume
+  # they share, which only the app's group (101) may open. Every capability is dropped but the four it needs to run
+  # each program as its own user and stop it; programs get their own folder in /work and strict limits (runner.py).
+  runner:
+    image: cckhlms-runner:${RUNNER_TAG:-current} # deploy.sh sets it; `current` for commands typed by hand
+    restart: unless-stopped
+    network_mode: none
+    volumes: [runner-socket:/sock]
+    read_only: true
+    tmpfs: ['/work:size=96m,mode=755', '/tmp:size=16m']
+    cap_drop: [ALL]
+    cap_add: [SETUID, SETGID, CHOWN, KILL]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 1g
+    pids_limit: 512
+    cpus: 1.5
+    healthcheck:
+      test: ['CMD', 'python3', '-I', '-c', "import socket; socket.socket(socket.AF_UNIX).connect('/sock/runner.sock')"]
+      interval: 15s
+      retries: 3
 
   preview:
     image: cckhlms-preview:${APP_TAG:?set by deploy.sh}
@@ -103,3 +125,4 @@ networks:
 volumes:
   pgdata: {}
   uploads: {}
+  runner-socket: {}

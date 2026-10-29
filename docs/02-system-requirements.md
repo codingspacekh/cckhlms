@@ -105,7 +105,7 @@
 |---|---|---|
 | FR-STU-01 | Dashboard: "My classes", next session (day/time), homework due, latest feedback. | M |
 | FR-STU-02 | Read published lesson notes/reviews of enrolled classes, organised by week. | M |
-| FR-STU-03 | **Ask a question** on a lesson (text + code snippet). | M |
+| FR-STU-03 | **Ask a question** on a lesson in the editor with code blocks (M12; text + code snippet before). | M |
 | FR-STU-04 | **Reply** to other students' questions; upvote helpful replies. (Upvote = C) | M |
 | FR-STU-05 | Open classwork/homework, write code in the editor (or **upload files** written in an IDE), preview Web work, and **submit**. Can resubmit until the due date (last submission counts). | M |
 | FR-STU-06 | See score and feedback on graded work. | M |
@@ -130,9 +130,9 @@ Languages: **Python 3**, **Java** (multi-file, packages), **Web (HTML/CSS/JS)**.
 | FR-CODE-05 | Auto-save drafts while typing. | M |
 | FR-CODE-06 | Teachers provide **starter files** (a template project) that are copied into each student's project. | M |
 | FR-CODE-07 | A "Playground" page where students can write and save code (and preview Web projects) outside any assessment. | S |
-| FR-CODE-08 | **Run Python in the browser** (Pyodide), at no server cost. | C |
-| FR-CODE-09 | **Run Python/Java on a server sandbox**, when budget allows. The design keeps a `CodeRunner` interface ready for this. | C |
-| FR-CODE-10 | Program input (stdin) / interactive terminal — only relevant once a runner exists. | C |
+| FR-CODE-08 | **Run Python in the browser** (Pyodide), at no server cost. Not needed since M11 runs Python on the server (ADR-0004). | C |
+| FR-CODE-09 | **Run Python/Java** from the editor and the Playground (M11, owner 2026-10-29): our own locked-down runner on the same server, behind the `CodeRunner` interface (ADR-0004, BR-25). | S |
+| FR-CODE-10 | Program input: an **Input box** typed before Run (M11, owner's choice); lines Python's `input()` reads show in the output. An interactive terminal is not planned. | S |
 
 ### 1.6 Notifications & Audit (SYS)
 
@@ -171,6 +171,8 @@ Languages: **Python 3**, **Java** (multi-file, packages), **Web (HTML/CSS/JS)**.
 | BR-22 | **Lesson note content** (FR-TCH-22): a note is stored as Markdown, so notes written before M9 open unchanged. A tip box is `> [!TIP]`; a picture is `![caption](/api/files/<id>#small\|medium\|full)`, its caption also being its text for screen readers. Pictures are PNG, JPEG, GIF or WebP, shrunk in the browser to at most 1600 px wide and 2 MB, up to 20 per note; they are lesson files marked *in the note*, so they don't appear in or count towards the 10 files to download. A picture taken out of the note is deleted when the note is saved. Students can open a picture only when they can read the note. Only **drafts** save by themselves: a published or scheduled note changes only when the teacher presses Update, so students never see half-written changes. |
 | BR-23 | **Delete only what nothing depends on** (M10, owner 2026-10-29): a term with no classes, a course no class uses, a class with no students, lessons or work, and an account never put in a class, never teaching one and with nothing written can be deleted (fixing a mistake). Anything else is switched off or archived and kept (§ data retention). Nobody can delete their own account or the last active admin. |
 | BR-24 | **Undoing a term's status** (M10): an active term can go back to planned; a closed term can be reopened (active again) when no other term is active, which un-archives the classes that closing archived (promoted classes stay archived). A term's dates can change as long as every session of its classes stays inside them. |
+| BR-25 | **Running code** (M11, ADR-0004): Python and Java only; the files obey the save limits (30 files, 200 KB) and the input is at most 10 KB; each person may start 20 runs a minute; a run stops after 10 s (5 s of CPU; Java gets 15 s more to compile), Python gets 256 MB and Java a 256 MB heap, and output is kept up to 64 KB. Runs have no network and see only their own files; nothing a run does is saved. |
+| BR-26 | **Q&A content** (M12): questions and replies are Markdown written in the compact editor: text, bold, italic, code, lists, links and code blocks; pictures and raw HTML are not shown. |
 
 ---
 
