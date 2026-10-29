@@ -4,13 +4,16 @@ import { ArchivedNote } from '@/components/academics/ArchivedNote';
 import { RosterTable } from '@/components/academics/RosterTable';
 import { CoverageCard } from '@/components/teaching/CoverageCard';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { getClass, listClasses } from '@/modules/academics/classes';
+import { getClass, listClasses, scheduleFixed } from '@/modules/academics/classes';
+import { listCourses } from '@/modules/academics/courses';
 import { listRoster } from '@/modules/academics/enrolments';
 import { scheduleLabel, todayIn } from '@/modules/academics/schedule';
+import { listTerms } from '@/modules/academics/terms';
 import { getClubSettings } from '@/modules/club/service';
 import { listPeople } from '@/modules/identity/service';
 import { syllabusCoverage } from '@/modules/teaching/reports';
 import { pageData, requireActor } from '@/server/guard';
+import { EditClass } from './EditClass';
 import { RosterManager } from './RosterManager';
 import { SessionsManager } from './SessionsManager';
 
@@ -20,17 +23,25 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
   const actor = await requireActor('admin.area');
   const { id } = await params;
   const c = await pageData(getClass(actor, id));
-  const [roster, students, termClasses, settings, coverage] = await Promise.all([
+  const [roster, people, termClasses, settings, coverage, courses, terms, fixed] = await Promise.all([
     listRoster(actor, id),
-    listPeople(actor, 'student'),
+    Promise.all([listPeople(actor, 'student'), listPeople(actor, 'teacher')]),
     listClasses(actor, { termId: c.termId }),
     getClubSettings(),
     syllabusCoverage(actor, id),
+    listCourses(actor),
+    listTerms(actor),
+    scheduleFixed(actor, id),
   ]);
+  const [students, teachers] = people;
   const inClass = new Set(roster.filter((r) => r.status === 'active').map((r) => r.studentId));
   const lead = c.teachers.find((t) => t.role === 'lead');
   const assistants = c.teachers.filter((t) => t.role === 'assistant');
   const archived = c.status === 'archived';
+  // For Edit class: active teachers, and a switched-off one while they are still on the class.
+  const classTeachers = teachers
+    .filter((p) => p.active || c.teachers.some((t) => t.userId === p.id))
+    .map((p) => ({ id: p.id, name: p.name }));
   return (
     <>
       <PageHeader
@@ -44,6 +55,29 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
             <Link className="btn" href={`/admin/classes/${c.id}/certificates`}>
               Certificates
             </Link>
+            {!archived && (
+              <EditClass
+                klass={{
+                  id: c.id,
+                  name: c.name,
+                  courseId: c.courseId,
+                  termId: c.termId,
+                  day: c.day,
+                  startTime: c.startTime,
+                  minutes: c.minutes,
+                  firstDate: c.firstDate,
+                  weeks: c.weeks,
+                  room: c.room,
+                  capacity: c.capacity,
+                  leadTeacherId: lead?.userId ?? '',
+                  assistantTeacherIds: assistants.map((a) => a.userId),
+                }}
+                fixed={fixed}
+                courses={courses.map((k) => ({ id: k.id, label: `${k.code} · ${k.name}` }))}
+                terms={terms.filter((t) => t.status !== 'closed' || t.id === c.termId).map((t) => ({ id: t.id, label: t.name }))}
+                teachers={classTeachers}
+              />
+            )}
             {!archived && (
               <Link className="btn" href={`/admin/classes/${c.id}/slips`}>
                 Login slips

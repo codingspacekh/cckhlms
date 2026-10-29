@@ -124,6 +124,15 @@ describe('the details', () => {
     ]);
   });
 
+  it('lists what changed in a class', () => {
+    expect(
+      detailLines('class.update', { name: 'Python 1 · Morning', changed: ['room', 'startTime', 'teachers'], warnings: [] }, names),
+    ).toEqual([
+      { label: 'Changed', value: 'Room, time, teachers' },
+      { label: 'Name', value: 'Python 1 · Morning' },
+    ]);
+  });
+
   it('shows what a published report was and became', () => {
     expect(
       detailLines(

@@ -47,8 +47,11 @@ export const AUDIT_ACTIONS: Record<string, { label: string; group: AuditGroup }>
   'term.delete': { label: 'Deleted a term', group: 'classes' },
   'course.create': { label: 'Added a course', group: 'classes' },
   'course.update': { label: 'Changed a course', group: 'classes' },
+  'course.delete': { label: 'Deleted a course', group: 'classes' },
   'course.syllabus': { label: 'Changed a syllabus', group: 'classes' },
   'class.create': { label: 'Added a class', group: 'classes' },
+  'class.update': { label: 'Changed a class', group: 'classes' },
+  'class.delete': { label: 'Deleted a class', group: 'classes' },
   'class.archive': { label: 'Archived a class', group: 'classes' },
   'class.unarchive': { label: 'Reopened a class', group: 'classes' },
   'session.add': { label: 'Added a session', group: 'classes' },
@@ -124,6 +127,20 @@ const TEXT: [key: string, label: string][] = [
   ['timeZone', 'Time zone'],
   ['certificateSigner', 'Certificate signer'],
 ];
+// class.update's list of what changed.
+const CHANGED: Record<string, string> = {
+  name: 'name',
+  course: 'course',
+  term: 'term',
+  day: 'day',
+  firstDate: 'first date',
+  weeks: 'number of weeks',
+  startTime: 'time',
+  minutes: 'length',
+  room: 'room',
+  capacity: 'capacity',
+  teachers: 'teachers',
+};
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, ' ');
 const num = (v: unknown) => (typeof v === 'number' ? String(v) : typeof v === 'string' && v !== '' ? v : '–');
 const resultOf = (v: unknown) => RESULT_LABEL[v as 'pass' | 'fail'] ?? null;
@@ -187,6 +204,7 @@ export function detailLines(action: string, detail: unknown, names: Map<string, 
       );
   }
 
+  if (Array.isArray(d.changed) && d.changed.length) add('Changed', cap(d.changed.map((f) => CHANGED[String(f)] ?? String(f)).join(', ')));
   if (typeof d.role === 'string') add('Role', cap(d.role));
   for (const [key, label] of TEXT) if (typeof d[key] === 'string' && !lines.some((l) => l.label === label)) add(label, d[key] as string);
   if (typeof d.status === 'string')

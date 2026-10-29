@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { getCourse, listCourses } from '@/modules/academics/courses';
 import { pageData, requireActor } from '@/server/guard';
 import { CourseForm } from '../CourseForm';
+import { DeleteCourse } from './DeleteCourse';
 import { SyllabusForm } from './SyllabusForm';
 
 export const metadata: Metadata = { title: 'Course' };
@@ -15,7 +16,11 @@ export default async function CoursePage({ params }: { params: Promise<{ id: str
   const others = (await listCourses(actor)).filter((c) => c.id !== id).map((c) => ({ id: c.id, code: c.code, name: c.name }));
   return (
     <>
-      <PageHeader eyebrow={<Link href="/admin/courses">Courses</Link>} title={`${course.code} · ${course.name}`} />
+      <PageHeader
+        eyebrow={<Link href="/admin/courses">Courses</Link>}
+        title={`${course.code} · ${course.name}`}
+        actions={<DeleteCourse courseId={course.id} code={course.code} />}
+      />
       <div className="grid g2 start">
         <CourseForm course={course} others={others} />
         <SyllabusForm courseId={course.id} topics={course.topics.map((t) => t.title)} />

@@ -1,8 +1,9 @@
 'use server';
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { formText as t, toResult, type FormResult } from '@/server/action-result';
 import { currentActor } from '@/server/guard';
-import { createCourse, setSyllabus, updateCourse } from './courses';
+import { createCourse, deleteCourse, setSyllabus, updateCourse } from './courses';
 import { createTerm, deleteTerm, setTermStatus, updateTerm, type TermStatus } from './terms';
 
 const termFields = (form: FormData) => ({
@@ -80,6 +81,14 @@ export async function updateCourseAction(_prev: FormResult | null, form: FormDat
     revalidatePath(`/admin/courses/${id}`);
     revalidatePath('/admin/courses');
     return { ok: true, message: 'Course saved.' };
+  });
+}
+
+export async function deleteCourseAction(id: string): Promise<FormResult> {
+  return toResult(async () => {
+    await deleteCourse(await currentActor(), id);
+    revalidatePath('/admin/courses');
+    redirect('/admin/courses');
   });
 }
 

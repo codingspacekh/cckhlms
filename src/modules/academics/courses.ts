@@ -1,8 +1,8 @@
-// Courses and their syllabus (FR-ADM-04).
-import { and, asc, eq, ne, sql } from 'drizzle-orm';
+// Courses and their syllabus (FR-ADM-04). A course no class uses can be deleted (M10, BR-23).
+import { and, asc, count, eq, ne, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { db } from '@/db/client';
-import { course, syllabusTopic } from '@/db/schema';
+import { course, klass, syllabusTopic } from '@/db/schema';
 import type { Actor } from '@/server/actor';
 import { audit } from '@/server/audit';
 import { assertCan, ValidationError } from '@/server/errors';
@@ -84,6 +84,19 @@ export async function updateCourse(actor: Actor | null, id: string, raw: CourseI
       .returning({ id: course.id });
     if (!res.length) throw new ValidationError('That course no longer exists.');
     await audit({ actorId: actor.userId, action: 'course.update', entity: 'course', entityId: id, detail: { code: c.code } }, tx);
+  });
+}
+
+// Only a course no class uses (BR-23). Its syllabus goes with it; a course that led to it has no next level any more.
+export async function deleteCourse(actor: Actor | null, id: string): Promise<void> {
+  assertCan(actor, 'courses.manage');
+  const [c] = await db.select({ code: course.code }).from(course).where(eq(course.id, id)).limit(1);
+  if (!c) throw new ValidationError('That course no longer exists.');
+  const [{ n } = { n: 0 }] = await db.select({ n: count() }).from(klass).where(eq(klass.courseId, id));
+  if (n > 0) throw new ValidationError(`${c.code} is used by ${n} class${n === 1 ? '' : 'es'}, so it can't be deleted.`);
+  await db.transaction(async (tx) => {
+    await tx.delete(course).where(eq(course.id, id));
+    await audit({ actorId: actor.userId, action: 'course.delete', entity: 'course', entityId: id, detail: { code: c.code } }, tx);
   });
 }
 
