@@ -4,7 +4,7 @@
 import { readFile } from 'node:fs/promises';
 import http from 'node:http';
 
-const LMS = process.env.LMS_ORIGIN ?? 'http://lms.localhost:3000';
+const LMS = process.env.LMS_ORIGIN ?? 'http://lms.localhost:3300';
 const PORT = Number(process.env.PREVIEW_PORT ?? 3102);
 const dir = new URL('.', import.meta.url);
 const FRAME_CSP = `default-src * data: blob: 'unsafe-inline' 'unsafe-eval'; frame-ancestors ${LMS}`;

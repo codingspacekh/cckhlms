@@ -1,6 +1,7 @@
 // FR-TCH-07/08: the teacher's "Classwork & homework" tab: the week's work, and the dialog that sets it.
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { pickOption } from './select-helpers';
 
 const saveAssessmentAction = vi.fn();
 const deleteAssessmentAction = vi.fn();
@@ -60,12 +61,12 @@ describe('WorkManager', () => {
     render(<WorkManager {...props} />);
     fireEvent.click(screen.getByRole('button', { name: 'Set new work' }));
     const dialog = screen.getByRole('dialog', { name: 'Set new work' });
-    const due = within(dialog).getByLabelText('Due') as HTMLSelectElement;
+    const due = within(dialog).getByLabelText('Due') as HTMLButtonElement;
     expect(due.value).toBe('next_session');
-    fireEvent.change(within(dialog).getByLabelText('Type'), { target: { value: 'classwork' } });
+    pickOption(within(dialog).getByLabelText('Type'), 'classwork');
     expect(due.value).toBe('session_end');
     expect(within(dialog).queryByLabelText('Due day')).toBeNull();
-    fireEvent.change(due, { target: { value: 'fixed' } });
+    pickOption(due, 'fixed');
     expect(within(dialog).getByLabelText('Due day')).toBeTruthy();
     expect(within(dialog).getByLabelText('Due time')).toBeTruthy();
   });
@@ -84,7 +85,7 @@ describe('WorkManager', () => {
     await waitFor(() => expect(publish.disabled).toBe(false));
     // what the teacher typed is still there to fix
     expect((within(dialog).getByLabelText('Title') as HTMLInputElement).value).toBe('Countdown');
-    expect((within(dialog).getByLabelText('Type') as HTMLSelectElement).value).toBe('homework');
+    expect((within(dialog).getByLabelText('Type') as HTMLButtonElement).value).toBe('homework');
     fireEvent.click(publish);
     expect((await screen.findByRole('status')).textContent).toBe('“Countdown” is published to the class.');
     expect(dialog.hasAttribute('open')).toBe(false);

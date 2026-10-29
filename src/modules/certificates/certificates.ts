@@ -303,7 +303,7 @@ export async function certificateFile(actor: Actor | null, id: string) {
     issuedOn: formatDay(todayIn(settings.timeZone, r.x.issuedAt)),
     signer: settings.certificateSigner,
     code: r.x.code,
-    origin: process.env.BETTER_AUTH_URL ?? 'http://localhost:3000',
+    origin: process.env.BETTER_AUTH_URL ?? 'http://localhost:3300',
   });
   return { filename: `Certificate - ${r.studentName} - ${r.courseName}.pdf`, data };
 }

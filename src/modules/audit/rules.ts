@@ -23,6 +23,8 @@ export const EVERYDAY_GROUPS: AuditGroup[] = ['classes', 'teaching', 'settings',
 
 export const AUDIT_ACTIONS: Record<string, { label: string; group: AuditGroup }> = {
   'account.create': { label: 'Created an account', group: 'accounts' },
+  'account.update': { label: 'Changed an account’s details', group: 'accounts' },
+  'account.delete': { label: 'Deleted an unused account', group: 'accounts' },
   'account.password_reset': { label: 'Reset a password', group: 'accounts' },
   'account.deactivate': { label: 'Switched off an account', group: 'accounts' },
   'account.reactivate': { label: 'Switched an account back on', group: 'accounts' },
@@ -127,9 +129,14 @@ const TEXT: [key: string, label: string][] = [
   ['timeZone', 'Time zone'],
   ['certificateSigner', 'Certificate signer'],
 ];
-// class.update's list of what changed.
+// class.update's and account.update's list of what changed.
 const CHANGED: Record<string, string> = {
   name: 'name',
+  username: 'username',
+  guardianName: 'guardian name',
+  guardianPhone: 'guardian phone',
+  phone: 'phone',
+  notes: 'notes',
   course: 'course',
   term: 'term',
   day: 'day',

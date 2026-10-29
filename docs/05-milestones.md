@@ -586,7 +586,7 @@ The next milestone does not start until all four are true.
 > - **Pictures in the note, #46:** choose a file, paste a screenshot or drop one in. The browser shrinks it to 1600 px and at most 2 MB, then it is stored as a lesson file marked `in_note` (migration `0022`). Small/Medium/Full and a caption; up to 20 a note; kept out of the files to download and their limit of 10. A picture taken out of the note is deleted when the note is saved, but not when a draft saves itself, so moving a picture never loses it. A new lesson is saved as a draft before its first picture.
 > - **Exit criterion:** met. The owner checked the editor and the student's note on a local production build and signed off M9 on 2026-10-24.
 
-### M10 — Fix mistakes: edit, undo, delete-if-unused (3 days) — 🔨 started 2026-10-29
+### M10 — Fix mistakes: edit, undo, delete-if-unused (3 days) — 🔨 code done 2026-10-29 · owner sign-off on `lms.cckh.dev` pending
 **Why:** setting up the real club on `lms.cckh.dev` (G1), the owner found the admin pages "really uncomfortable": terms, classes and people could only be added, a typo or a wrong date couldn't be fixed, a class's teachers, room or time couldn't change after it was created, and a term closed by accident couldn't be reopened (owner, 2026-10-29: "better if we can do CRUD on all"). The owner chose **delete only what nothing depends on yet**; anything with history is switched off or archived as before, so marks and attendance are never lost.
 
 **Goal:** an admin can put right any mistake in a term, course, class or account from the table it appears in, and can undo closing a term.
@@ -604,6 +604,14 @@ The next milestone does not start until all four are true.
 - Playwright + axe: an admin fixes a term's dates, closes and reopens it, edits a class's teacher and room, edits a student's guardian phone, and deletes an unused course; the dialogs pass axe in light and dark and at 360 px.
 
 **Exit criteria:** every term, course, class and account can be edited from its table or page; an accidental close can be undone; nothing with history can be deleted; the owner fixes real set-up data on `lms.cckh.dev` and signs off M10.
+
+> **Result** (stacked PRs `m10-terms` → `m10-classes` → `m10-people`, 2026-10-29). No database migration: every change uses the existing tables.
+> - **Terms:** Edit on each row opens a dialog (year, number, dates); **Reopen** on a closed term, **Back to planned** in the dialog of an active one; **Delete** a term with no classes. Closing says how many classes it archived and that Reopen undoes it.
+> - **Classes and courses:** **Edit class** on the class page. A new time or length moves the sessions still to come that had the old one; a session moved to its own time keeps it. Before the class starts, its sessions are made again and the dates cancelled at creation stay cancelled. A class name the LMS made follows the course, day and time; a typed one is kept. **Delete class** and **Delete course** when nothing uses them.
+>   - *Changed from the plan:* "started" doesn't count enrolments, because students are enrolled before week 1; it counts a passed session, lessons, work, attendance and weekly reports. Assistants can now be chosen (the New class form only had a lead).
+> - **People:** **Edit** on each row (name, username, guardian name and phone or phone, notes); a new username signs in straight away with the same password. **Delete account** only when the person was never in or teaching a class, wrote or marked nothing and made no change in the LMS (sign-ins don't count). The audit entry names the fields that changed, never a guardian's details.
+>   - *Found by the existing guard tests:* the NFR-07 check that only admin code mentions guardian contact flagged the audit labels (they name the field, not the value); the FR-SYS-02 check that every sensitive action is recorded made `account.update` and `account.delete` part of its run.
+> - **Tests:** 4 new files (integration: terms, classes, accounts; component: terms, class, people dialogs) and 3 new Playwright journeys with axe on each open dialog.
 
 ### R2 — Club-wide launch
 - All classes of the next term (e.g. Term 2 · 2027) are set up and run on `lms.cckh.dev`. Teachers get a short walkthrough, and students get login slips.

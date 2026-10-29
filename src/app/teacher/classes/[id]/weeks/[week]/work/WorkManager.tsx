@@ -17,6 +17,7 @@ import {
 } from '@/modules/assessments/rules';
 import type { FormResult } from '@/server/action-result';
 import { DateField, TimeField } from '@/components/ui/DateTimeFields';
+import { Select } from '@/components/ui/Select';
 
 export type WorkRow = {
   id: string;
@@ -166,7 +167,7 @@ function WorkForm({
       <div className="grid g3">
         <label className="f">
           Type
-          <select
+          <Select
             name="kind"
             value={kind}
             onChange={(e) => {
@@ -180,17 +181,17 @@ function WorkForm({
                 {KIND_LABEL[k]}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label className="f">
           Language
-          <select name="language" defaultValue={row?.language ?? 'python'}>
+          <Select name="language" defaultValue={row?.language ?? 'python'}>
             {WORK_LANGUAGES.map((l) => (
               <option key={l} value={l}>
                 {WORK_LANGUAGE_LABEL[l]}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label className="f">
           Out of
@@ -207,7 +208,7 @@ function WorkForm({
       </label>
       <label className="f">
         Due
-        <select
+        <Select
           name="dueMode"
           value={offered}
           onChange={(e) => {
@@ -220,7 +221,7 @@ function WorkForm({
               {c.label}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
       {offered === 'fixed' && (
         <div className="grid g2">

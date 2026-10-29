@@ -3,7 +3,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { E2E } from '../../playwright.config';
 import { stateFile } from './global-setup';
-import { expectAccessible } from './helpers';
+import { choose, expectAccessible } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 const slips: Record<string, { username: string; password: string }> = {};
@@ -15,7 +15,7 @@ test.describe('admin', () => {
     await page.goto('/admin/terms');
     const t = page.getByRole('form', { name: 'Add a term' });
     await t.getByLabel('Year').fill('2028');
-    await t.getByLabel('Term').selectOption('2');
+    await choose(t.getByLabel('Term'), '2');
     await t.getByLabel('First day').fill('2028-04-15');
     await t.getByLabel('Last day').fill('2028-07-09');
     await t.getByRole('button', { name: 'Add term' }).click();
@@ -26,16 +26,16 @@ test.describe('admin', () => {
     const c = page.getByRole('form', { name: 'Add a course' });
     await c.getByLabel('Code').fill('PY2');
     await c.getByLabel('Course name').fill('Python Level 2');
-    await c.getByLabel('Language').selectOption('python');
+    await choose(c.getByLabel('Language'), 'python');
     await c.getByRole('button', { name: 'Add course' }).click();
     await expect(page.getByRole('row', { name: /PY2/ })).toBeVisible();
 
     await page.goto('/admin/classes/new');
     const f = page.getByRole('form', { name: 'New class' });
-    await f.getByLabel('Course').selectOption({ label: 'PY2 · Python Level 2' });
-    await f.getByLabel('Term').selectOption({ label: 'Term 2 · 2028' });
+    await choose(f.getByLabel('Course'), { label: 'PY2 · Python Level 2' });
+    await choose(f.getByLabel('Term'), { label: 'Term 2 · 2028' });
     await f.getByLabel('First session').fill('2028-04-15');
-    await f.getByLabel('Lead teacher').selectOption({ label: 'Sophea Chan' });
+    await choose(f.getByLabel('Lead teacher'), { label: 'Sophea Chan' });
     await f.getByLabel('Room').fill('Room C');
     await f.getByRole('button', { name: 'Create class' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Python Level 2 · Sat 09:00' })).toBeVisible();
@@ -60,7 +60,7 @@ test.describe('admin', () => {
     await page.getByRole('link', { name: 'Python Level 2 · Sat 09:00' }).click();
     const enrol = page.getByRole('form', { name: 'Enrol a student' });
     for (const name of ['Kosal Meas', 'Nita Keo']) {
-      await enrol.getByLabel('Student').selectOption({ label: name });
+      await choose(enrol.getByLabel('Student'), { label: name });
       await enrol.getByRole('button', { name: 'Enrol' }).click();
       await expect(page.getByRole('table', { name: 'Students' }).getByRole('row', { name: new RegExp(name) })).toContainText('Active');
     }

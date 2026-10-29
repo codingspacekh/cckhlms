@@ -5,6 +5,7 @@ import { TableScroll } from '@/components/ui/TableScroll';
 import type { AuditView } from '@/modules/audit/audit-log';
 import { AUDIT_GROUPS, EVERYDAY_GROUPS, SENSITIVE_GROUPS, type AuditFilters } from '@/modules/audit/rules';
 import { DateField } from '@/components/ui/DateTimeFields';
+import { Select } from '@/components/ui/Select';
 
 export type AuditRowView = Omit<AuditView, 'at'> & { when: string }; // in the club's time zone
 
@@ -27,7 +28,7 @@ export function AuditLogView({ rows, next, filters }: { rows: AuditRowView[]; ne
       <form className="card audit-filters" method="get" action={BASE} role="search" aria-label="Filter the audit log">
         <label className="f">
           What
-          <select name="group" defaultValue={filters.group}>
+          <Select name="group" defaultValue={filters.group}>
             <option value="">All changes (not sign-ins)</option>
             <optgroup label="Sensitive">
               {SENSITIVE_GROUPS.map((g) => (
@@ -43,7 +44,7 @@ export function AuditLogView({ rows, next, filters }: { rows: AuditRowView[]; ne
                 </option>
               ))}
             </optgroup>
-          </select>
+          </Select>
         </label>
         <label className="f">
           Person

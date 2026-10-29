@@ -5,6 +5,7 @@ import { Icon, type IconName } from '@/components/ui/Icon';
 import { CodeBlockView } from './CodeBlockView';
 import { noteExtensions, tidyMarkdown } from './extensions';
 import { PictureView } from './PictureView';
+import { Select } from '@/components/ui/Select';
 
 type Props = {
   initialMarkdown: string;
@@ -233,7 +234,7 @@ function Toolbar({ editor, onLink, onPicture }: { editor: Editor; onLink: () => 
     <div className="note-toolbar" role="toolbar" aria-label="Formatting">
       <label className="note-style">
         <span className="sr-only">Text style</span>
-        <select
+        <Select
           value={s.style}
           onChange={(e) =>
             run((c) => (e.target.value === 'p' ? c.setParagraph() : c.setHeading({ level: e.target.value === 'h2' ? 2 : 3 })))
@@ -242,7 +243,7 @@ function Toolbar({ editor, onLink, onPicture }: { editor: Editor; onLink: () => 
           <option value="p">Normal text</option>
           <option value="h2">Heading</option>
           <option value="h3">Small heading</option>
-        </select>
+        </Select>
       </label>
       <span className="note-sep" aria-hidden="true" />
       <Tool icon="bold" label="Bold (Ctrl+B)" pressed={s.bold} onClick={() => run((c) => c.toggleBold())} />

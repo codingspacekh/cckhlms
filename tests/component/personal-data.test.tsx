@@ -76,8 +76,30 @@ describe('the People list', () => {
     render(
       <PeopleManager
         people={[
-          { id: 's1', name: 'Deleted student', username: '', role: 'student', active: false, erased: true, guardianPhone: null },
-          { id: 's2', name: 'Chenda Ouk', username: 'chenda.o', role: 'student', active: true, erased: false, guardianPhone: null },
+          {
+            id: 's1',
+            name: 'Deleted student',
+            username: '',
+            role: 'student',
+            active: false,
+            erased: true,
+            guardianName: null,
+            guardianPhone: null,
+            phone: null,
+            notes: null,
+          },
+          {
+            id: 's2',
+            name: 'Chenda Ouk',
+            username: 'chenda.o',
+            role: 'student',
+            active: true,
+            erased: false,
+            guardianName: null,
+            guardianPhone: null,
+            phone: null,
+            notes: null,
+          },
         ]}
         role="student"
         selfId="a1"

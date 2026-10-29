@@ -4,6 +4,7 @@ import { RosterTable } from '@/components/academics/RosterTable';
 import { enrolAction, transferAction, withdrawAction } from '@/modules/academics/enrolment-actions';
 import type { RosterRow } from '@/modules/academics/enrolments';
 import { DateField } from '@/components/ui/DateTimeFields';
+import { Select } from '@/components/ui/Select';
 
 type Props = {
   classId: string;
@@ -80,7 +81,7 @@ export function RosterManager({ classId, roster, candidates, otherClasses, today
             <>
               <label className="f">
                 Student
-                <select name="studentId" required defaultValue="">
+                <Select name="studentId" required defaultValue="">
                   <option value="" disabled>
                     Choose a student
                   </option>
@@ -89,7 +90,7 @@ export function RosterManager({ classId, roster, candidates, otherClasses, today
                       {c.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
               <DateField label="Joins on" name="enrolledOn" defaultValue={today} />
               <p className="xs muted">Work and sessions before this date don&apos;t count for the student (BR-17).</p>
@@ -132,7 +133,7 @@ export function RosterManager({ classId, roster, candidates, otherClasses, today
             {mode === 'move' && (
               <label className="f">
                 Move to
-                <select name="toClassId" required defaultValue="">
+                <Select name="toClassId" required defaultValue="">
                   <option value="" disabled>
                     Choose a class
                   </option>
@@ -141,7 +142,7 @@ export function RosterManager({ classId, roster, candidates, otherClasses, today
                       {c.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
             )}
             <DateField label={mode === 'withdraw' ? 'Last day in the class' : 'Moves on'} name="on" defaultValue={today} required />

@@ -2,7 +2,7 @@
 import { expect, test } from '@playwright/test';
 import { teachingClass, type TeachingClass } from './fixtures';
 import { stateFile } from './global-setup';
-import { expectAccessible, watchProblems, writeNote } from './helpers';
+import { choose, expectAccessible, watchProblems, writeNote } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 let c: TeachingClass;
@@ -76,7 +76,7 @@ test.describe('teacher', () => {
     const doc = page.getByRole('textbox', { name: 'Lesson note' });
     await doc.click();
     await page.keyboard.type('Rockets');
-    await page.getByRole('combobox', { name: 'Text style' }).selectOption('Heading');
+    await choose(page.getByRole('combobox', { name: 'Text style' }), 'Heading');
     await page.keyboard.press('End');
     await page.keyboard.press('Enter');
     await page.keyboard.type('- count down\nlift off\n\n'); // "- " starts a list; an empty item ends it
@@ -91,7 +91,7 @@ test.describe('teacher', () => {
     const tip = page.getByRole('toolbar', { name: 'Formatting' }).getByRole('button', { name: 'Tip box' });
     await tip.click();
     await expect(tip).toHaveAttribute('aria-pressed', 'true');
-    await expect(doc.getByRole('combobox', { name: 'Language' })).toHaveValue('python');
+    await expect(doc.getByRole('combobox', { name: 'Language' })).toHaveAttribute('value', 'python');
 
     await page.getByRole('button', { name: 'Student view' }).click();
     const preview = page.getByRole('region', { name: 'Student view' });

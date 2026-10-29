@@ -3,7 +3,7 @@
 import { expect, test } from '@playwright/test';
 import { termEndClass } from './fixtures';
 import { stateFile } from './global-setup';
-import { expectAccessible } from './helpers';
+import { choose, expectAccessible } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 let c: Awaited<ReturnType<typeof termEndClass>>;
@@ -24,12 +24,12 @@ test.describe('admin', () => {
 
     await expect(page.getByRole('heading', { level: 1, name: `Promote ${c.className}` })).toBeVisible();
     await expectAccessible(page);
-    await page.getByLabel('Passed (1) move to', { exact: true }).selectOption({ label: c.next });
-    await page.getByLabel('Not passed (1) move to', { exact: true }).selectOption({ label: c.repeat });
+    await choose(page.getByLabel('Passed (1) move to', { exact: true }), { label: c.next });
+    await choose(page.getByLabel('Not passed (1) move to', { exact: true }), { label: c.repeat });
     const students = page.getByRole('table');
     await expect(students.getByRole('row', { name: /Nita Ung/ })).toContainText('Pass');
-    await expect(page.getByLabel('Next class for Nita Ung').locator('option:checked')).toHaveText(c.next);
-    await expect(page.getByLabel('Next class for Pich Ros').locator('option:checked')).toHaveText(c.repeat);
+    await expect(page.getByLabel('Next class for Nita Ung')).toHaveText(c.next);
+    await expect(page.getByLabel('Next class for Pich Ros')).toHaveText(c.repeat);
 
     await page.getByRole('button', { name: 'Confirm promotion' }).click();
     await expect(page.getByRole('status')).toHaveText('Done: 2 students moved on. The class is archived.');

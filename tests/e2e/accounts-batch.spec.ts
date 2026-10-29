@@ -4,7 +4,7 @@ import { expect, test, type Browser } from '@playwright/test';
 import { E2E } from '../../playwright.config';
 import { slipsClass } from './fixtures';
 import { stateFile } from './global-setup';
-import { expectAccessible } from './helpers';
+import { choose, expectAccessible } from './helpers';
 
 test.use({ storageState: stateFile('admin') });
 test.describe.configure({ mode: 'serial' });
@@ -45,7 +45,7 @@ test('Admin checks a CSV, fixes it, imports it into a class and prints the slips
   await expect(preview.getByRole('row')).toHaveCount(4);
   await expect(preview.getByRole('row', { name: /Sreymom Keo/ })).toContainText('sreymom.ksuggested');
   await expectAccessible(page);
-  await page.getByLabel('Enrol them in').selectOption(c.classId);
+  await choose(page.getByLabel('Enrol them in'), c.classId);
   await page.getByRole('button', { name: 'Create 3 accounts' }).click();
 
   const sheet = page.getByRole('region', { name: 'Login slips' });

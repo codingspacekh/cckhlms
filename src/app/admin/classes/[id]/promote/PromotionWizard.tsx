@@ -6,6 +6,7 @@ import { Pill } from '@/components/ui/Pill';
 import { TableScroll } from '@/components/ui/TableScroll';
 import { promoteAction } from '@/modules/promotion/actions';
 import type { PromotionPlan } from '@/modules/promotion/promotion';
+import { Select } from '@/components/ui/Select';
 
 const LEAVE = 'leave';
 
@@ -98,27 +99,27 @@ export function PromotionWizard({ plan }: { plan: PromotionPlan }) {
           <label className="k" htmlFor={`${id}-pass`}>
             Passed ({passed.length}) move to
           </label>
-          <select
+          <Select
             id={`${id}-pass`}
             defaultValue={plan.defaults.pass ?? ''}
             onChange={(e) => setGroup(passed, e.target.value)}
             disabled={pending}
           >
             {choices}
-          </select>
+          </Select>
         </div>
         <div className="card tile">
           <label className="k" htmlFor={`${id}-fail`}>
             Not passed ({notPassed.length}) move to
           </label>
-          <select
+          <Select
             id={`${id}-fail`}
             defaultValue={plan.defaults.fail ?? ''}
             onChange={(e) => setGroup(notPassed, e.target.value)}
             disabled={pending}
           >
             {choices}
-          </select>
+          </Select>
         </div>
       </div>
       <section className="card flush" aria-label="Students">
@@ -153,14 +154,14 @@ export function PromotionWizard({ plan }: { plan: PromotionPlan }) {
                     )}
                   </td>
                   <td>
-                    <select
+                    <Select
                       aria-label={`Next class for ${s.name}`}
                       value={targets.get(s.enrolmentId) ?? ''}
                       onChange={(e) => setTargets((t) => new Map(t).set(s.enrolmentId, e.target.value))}
                       disabled={pending}
                     >
                       {choices}
-                    </select>
+                    </Select>
                   </td>
                 </tr>
               ))}

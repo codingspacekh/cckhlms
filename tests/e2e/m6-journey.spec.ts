@@ -6,7 +6,7 @@ import { E2E } from '../../playwright.config';
 import { readQrCode } from '../qr';
 import { m6JourneyClass } from './fixtures';
 import { stateFile } from './global-setup';
-import { expectAccessible } from './helpers';
+import { choose, expectAccessible } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 let c: Awaited<ReturnType<typeof m6JourneyClass>>;
@@ -33,8 +33,8 @@ test('Admin promotes the class, then issues the certificate', async ({ browser }
     .getByRole('row', { name: new RegExp(c.className) })
     .getByRole('link', { name: 'Open wizard' })
     .click();
-  await page.getByLabel('Passed (1) move to', { exact: true }).selectOption({ label: c.next });
-  await page.getByLabel('Not passed (1) move to', { exact: true }).selectOption({ label: c.repeat });
+  await choose(page.getByLabel('Passed (1) move to', { exact: true }), { label: c.next });
+  await choose(page.getByLabel('Not passed (1) move to', { exact: true }), { label: c.repeat });
   await page.getByRole('button', { name: 'Confirm promotion' }).click();
   await expect(page.getByRole('status')).toHaveText('Done: 2 students moved on. The class is archived.');
 
@@ -74,7 +74,7 @@ test('the audit log shows who published, promoted and issued', async ({ browser 
   await expect(log.getByRole('row', { name: /Issued a certificate/ })).toContainText(`${c.passed} · ${c.className}`);
   await expect(log.getByRole('row', { name: /Published a term report/ })).toContainText('Result: Pass · 85');
 
-  await page.getByLabel('What').selectOption({ label: 'Promotion' });
+  await choose(page.getByLabel('What'), { label: 'Promotion' });
   await page.getByLabel('Person').fill('');
   await page.getByRole('button', { name: 'Show' }).click();
   await expect(page).toHaveURL(/group=promotion/);

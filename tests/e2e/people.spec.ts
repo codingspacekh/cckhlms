@@ -2,7 +2,7 @@
 import { expect, test, type Browser } from '@playwright/test';
 import { E2E } from '../../playwright.config';
 import { stateFile } from './global-setup';
-import { expectAccessible } from './helpers';
+import { choose, expectAccessible } from './helpers';
 
 test.use({ storageState: stateFile('admin') });
 
@@ -26,7 +26,7 @@ async function addPerson(page: import('@playwright/test').Page, role: 'Student' 
   await page.goto('/admin/people');
   await page.getByRole('button', { name: 'Add a person' }).click();
   const form = page.getByRole('form', { name: 'Add a person' });
-  await form.getByLabel('Role').selectOption(role.toLowerCase());
+  await choose(form.getByLabel('Role'), role.toLowerCase());
   await form.getByLabel('Full name').fill(name);
   await form.getByRole('button', { name: 'Create account' }).click();
   const slip = page.getByRole('dialog').getByRole('region', { name: 'Login slip' });
@@ -102,4 +102,36 @@ test('Admin changes the club name and it appears in the top bar', async ({ page 
   await page.getByLabel('Club name').fill('CCKH Coding Club');
   await page.getByRole('button', { name: 'Save settings' }).click();
   await expect(page.locator('.crumb')).toContainText('CCKH Coding Club');
+});
+
+// M10 · BR-23: a typo in an account is fixed in place, and an account added by mistake is deleted.
+test('Admin corrects a student’s details, and deletes an account nobody has used', async ({ page, browser }) => {
+  const { username, password } = await addPerson(page, 'Student', 'Kunthea Prum');
+  const row = page.getByRole('row', { name: /Kunthea Prum/ });
+  await row.getByRole('button', { name: 'Edit Kunthea Prum' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Edit Kunthea Prum' });
+  await expect(dialog.getByLabel('Username')).toHaveValue(username);
+  await expectAccessible(page);
+  await dialog.getByLabel('Full name').fill('Kunthea Prom');
+  await dialog.getByLabel('Username').fill('kunthea.prom');
+  await dialog.getByLabel('Guardian phone').fill('012 555 777');
+  await dialog.getByRole('button', { name: 'Save details' }).click();
+  await expect(dialog).toBeHidden();
+  const fixed = page.getByRole('row', { name: /Kunthea Prom/ });
+  await expect(fixed).toContainText('kunthea.prom');
+  await expect(fixed).toContainText('012 555 777');
+
+  // The new username signs in with the same password.
+  const { page: kid, ctx } = await signInFresh(browser, 'kunthea.prom', password, '198.18.0.31');
+  await expect(kid).toHaveURL(/\/student$/);
+  await ctx.close();
+
+  await addPerson(page, 'Teacher', 'Wrong Person');
+  const wrong = page.getByRole('row', { name: /Wrong Person/ });
+  await page.goto('/admin/people?role=teacher');
+  await wrong.getByRole('button', { name: 'Edit Wrong Person' }).click();
+  await page.getByRole('button', { name: 'Delete account' }).click();
+  await page.getByRole('button', { name: 'Yes, delete Wrong Person' }).click();
+  await expect(page.getByRole('status')).toHaveText('Account deleted.');
+  await expect(wrong).toHaveCount(0);
 });

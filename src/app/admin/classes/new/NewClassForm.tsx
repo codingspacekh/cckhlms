@@ -3,6 +3,7 @@ import { useActionState, useMemo, useState } from 'react';
 import { createClassAction } from '@/modules/academics/class-actions';
 import { addMinutes, DAY_NAME, formatDate, generateSessions, weekdayOf, type Day } from '@/modules/academics/schedule';
 import { DateField, TimeField } from '@/components/ui/DateTimeFields';
+import { Select } from '@/components/ui/Select';
 
 type Option = { id: string; label: string };
 type TermOption = { id: string; name: string; startDate: string; endDate: string };
@@ -43,7 +44,7 @@ export function NewClassForm({
         <div className="grid g2">
           <label className="f">
             Course
-            <select name="courseId" required defaultValue="">
+            <Select name="courseId" required defaultValue="">
               <option value="" disabled>
                 Choose a course
               </option>
@@ -52,11 +53,11 @@ export function NewClassForm({
                   {c.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           <label className="f">
             Term
-            <select name="termId" required defaultValue="">
+            <Select name="termId" required defaultValue="">
               <option value="" disabled>
                 Choose a term
               </option>
@@ -65,7 +66,7 @@ export function NewClassForm({
                   {t.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
         </div>
         <div className="grid g2">
@@ -97,19 +98,19 @@ export function NewClassForm({
           <DateField label="First session" name="firstDate" value={firstDate} onChange={setFirstDate} required />
           <label className="f">
             Weeks
-            <select name="weeks" value={weeks} onChange={(e) => setWeeks(Number(e.target.value))}>
+            <Select name="weeks" value={weeks} onChange={(e) => setWeeks(Number(e.target.value))}>
               {[10, 11, 12].map((w) => (
                 <option key={w} value={w}>
                   {w}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
         </div>
         <div className="grid g2">
           <label className="f">
             Lead teacher
-            <select name="leadTeacherId" required defaultValue="">
+            <Select name="leadTeacherId" required defaultValue="">
               <option value="" disabled>
                 Choose a teacher
               </option>
@@ -118,7 +119,7 @@ export function NewClassForm({
                   {t.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           <label className="f">
             Room

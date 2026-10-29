@@ -7,6 +7,7 @@ import { createTermAction, deleteTermAction, setTermStatusAction, updateTermActi
 import { formatDay } from '@/modules/academics/schedule';
 import type { TermStatus } from '@/modules/academics/terms';
 import type { FormResult } from '@/server/action-result';
+import { Select } from '@/components/ui/Select';
 
 type Row = { id: string; year: number; number: number; name: string; startDate: string; endDate: string; status: string };
 type Status = { ok: boolean; text: string } | null;
@@ -32,13 +33,13 @@ function TermFields({ term }: { term?: Row }) {
         </label>
         <label className="f">
           Term
-          <select name="number" defaultValue={String(term?.number ?? 1)}>
+          <Select name="number" defaultValue={String(term?.number ?? 1)}>
             {[1, 2, 3, 4].map((n) => (
               <option key={n} value={n}>
                 Term {n}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
       </div>
       <div className="grid g2">

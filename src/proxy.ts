@@ -4,7 +4,7 @@ import { PREVIEW_ORIGIN } from '@/server/preview-origin';
 
 const HTTPS = (process.env.BETTER_AUTH_URL ?? '').startsWith('https://');
 
-// Development only: `next dev` prints http://localhost:3000, but sign-in accepts only BETTER_AUTH_URL's origin
+// Development only: `next dev` prints http://localhost:3300, but sign-in accepts only BETTER_AUTH_URL's origin
 // (lms.localhost), so send localhost there instead of letting sign-in fail. Only pages the browser opens
 // (Sec-Fetch-Mode: navigate): after a Server Action redirects, Next fetches the new page from localhost itself,
 // and sent to another host that fetch would drop the cookie and render the page signed out.

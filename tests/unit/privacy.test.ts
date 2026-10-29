@@ -26,6 +26,7 @@ describe('guardian contact (NFR-07)', () => {
     'src/modules/privacy/erase.ts',
     'src/app/admin/people/PeopleManager.tsx',
     'src/app/admin/people/import/ImportStudents.tsx',
+    'src/modules/audit/rules.ts', // names the field for "Changed: guardian phone" (M10); the value is never logged
   ];
 
   it('is read only by admin code', () => {

@@ -3,6 +3,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { NoteEditor } from '@/components/teaching/note-editor/NoteEditor';
+import { pickOption } from './select-helpers';
 
 // jsdom has no layout; ProseMirror measures ranges when it scrolls to the cursor.
 beforeAll(() => {
@@ -39,11 +40,11 @@ describe('NoteEditor', () => {
   it('changes the text style from the toolbar', async () => {
     const { saved, onChange } = await setup();
     const style = screen.getByRole('combobox', { name: 'Text style' });
-    fireEvent.change(style, { target: { value: 'h2' } });
+    pickOption(style, 'h2');
     await waitFor(() => expect(saved()).toBe('## Hello'));
-    fireEvent.change(style, { target: { value: 'h3' } });
+    pickOption(style, 'h3');
     await waitFor(() => expect(saved()).toBe('### Hello'));
-    fireEvent.change(style, { target: { value: 'p' } });
+    pickOption(style, 'p');
     await waitFor(() => expect(saved()).toBe('Hello'));
     expect(onChange).toHaveBeenLastCalledWith('Hello');
   });
@@ -72,8 +73,8 @@ describe('NoteEditor', () => {
     fireEvent.click(tool('Code block'));
     await waitFor(() => expect(saved()).toBe('```python\nprint(1)\n```'));
     const language = await within(doc.parentElement!).findByRole('combobox', { name: 'Language' });
-    expect((language as HTMLSelectElement).value).toBe('python');
-    fireEvent.change(language, { target: { value: 'java' } });
+    expect((language as HTMLButtonElement).value).toBe('python');
+    pickOption(language, 'java');
     await waitFor(() => expect(saved()).toBe('```java\nprint(1)\n```'));
   });
 

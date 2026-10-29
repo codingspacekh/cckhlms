@@ -1,6 +1,7 @@
 // FR-ADM-04: course and syllabus forms; wide tables stay keyboard-scrollable.
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { optionsOf } from './select-helpers';
 
 const createCourseAction = vi.fn();
 const updateCourseAction = vi.fn();
@@ -54,7 +55,7 @@ describe('CourseForm', () => {
       />,
     );
     expect((screen.getByLabelText('Pass mark') as HTMLInputElement).value).toBe('50');
-    expect(screen.getByRole('option', { name: 'PY2 · Python Level 2' })).toBeTruthy();
+    expect(optionsOf(screen.getByLabelText(/Next level/)).map((o) => o.label)).toContain('PY2 · Python Level 2');
     fireEvent.click(screen.getByRole('button', { name: 'Save course' }));
     expect((await screen.findByRole('alert')).textContent).toBe('That would make a loop of next levels.');
     expect((updateCourseAction.mock.calls[0]![1] as FormData).get('courseId')).toBe('c1');

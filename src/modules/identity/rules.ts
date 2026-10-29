@@ -71,6 +71,12 @@ export const accountInputSchema = z.object({
 });
 export type AccountInput = z.input<typeof accountInputSchema>;
 
+// Correcting an account (M10): the same fields, except the role, and the username can't be left blank.
+export const accountEditSchema = accountInputSchema.omit({ role: true }).extend({
+  username: z.preprocess((v) => (v == null ? '' : String(v).trim().toLowerCase()), usernameSchema),
+});
+export type AccountEdit = z.input<typeof accountEditSchema>;
+
 export function isValidTimeZone(tz: string): boolean {
   if (!tz) return false;
   try {
