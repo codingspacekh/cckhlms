@@ -10,6 +10,7 @@ import { MAX_NOTE_PICTURE_BYTES } from '@/modules/teaching/attachment-rules';
 import { previewMarkdownAction, saveLessonAction } from '@/modules/teaching/lesson-actions';
 import type { LessonState } from '@/modules/teaching/rules';
 import type { FormResult } from '@/server/action-result';
+import { DateField, TimeField } from '@/components/ui/DateTimeFields';
 
 type Props = {
   classId: string;
@@ -239,14 +240,8 @@ export function LessonForm({ classId, sessionId, syllabus, lesson, schedule, tim
               <summary>Schedule for later</summary>
               <div className="stack">
                 <div className="grid g2">
-                  <label className="f">
-                    Publish on
-                    <input type="date" name="publishDate" form={formId} defaultValue={schedule.date} />
-                  </label>
-                  <label className="f">
-                    At
-                    <input type="time" name="publishTime" form={formId} defaultValue={schedule.time} />
-                  </label>
+                  <DateField label="Publish on" name="publishDate" form={formId} defaultValue={schedule.date} />
+                  <TimeField label="At" name="publishTime" form={formId} defaultValue={schedule.time} />
                 </div>
                 <p className="xs muted">Club time ({timeZone}). Students see the lesson from then on.</p>
                 {state !== 'scheduled' && <div>{intent('schedule', 'Schedule')}</div>}

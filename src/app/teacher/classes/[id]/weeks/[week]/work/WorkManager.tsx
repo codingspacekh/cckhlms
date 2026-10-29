@@ -16,6 +16,7 @@ import {
   type WorkLanguage,
 } from '@/modules/assessments/rules';
 import type { FormResult } from '@/server/action-result';
+import { DateField, TimeField } from '@/components/ui/DateTimeFields';
 
 export type WorkRow = {
   id: string;
@@ -223,14 +224,8 @@ function WorkForm({
       </label>
       {offered === 'fixed' && (
         <div className="grid g2">
-          <label className="f">
-            Due day
-            <input name="dueDate" type="date" defaultValue={row?.dueDate} />
-          </label>
-          <label className="f">
-            Due time
-            <input name="dueTime" type="time" defaultValue={row?.dueTime ?? '18:00'} />
-          </label>
+          <DateField label="Due day" name="dueDate" defaultValue={row?.dueDate} />
+          <TimeField label="Due time" name="dueTime" defaultValue={row?.dueTime ?? '18:00'} />
         </div>
       )}
       <div className="row">

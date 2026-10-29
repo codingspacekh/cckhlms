@@ -109,6 +109,8 @@ const ICONS = {
   ),
   moon: <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" />,
   arrow: <path d="M5 12h14M13 6l6 6-6 6" />,
+  'chevron-left': <path d="m15 5-7 7 7 7" />,
+  'chevron-right': <path d="m9 5 7 7-7 7" />,
   pin: (
     <>
       <path d="M12 21s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z" />

@@ -3,6 +3,7 @@ import { useActionState, useRef, useState, useTransition, type FormEvent } from 
 import { RosterTable } from '@/components/academics/RosterTable';
 import { enrolAction, transferAction, withdrawAction } from '@/modules/academics/enrolment-actions';
 import type { RosterRow } from '@/modules/academics/enrolments';
+import { DateField } from '@/components/ui/DateTimeFields';
 
 type Props = {
   classId: string;
@@ -90,10 +91,7 @@ export function RosterManager({ classId, roster, candidates, otherClasses, today
                   ))}
                 </select>
               </label>
-              <label className="f">
-                Joins on
-                <input name="enrolledOn" type="date" defaultValue={today} />
-              </label>
+              <DateField label="Joins on" name="enrolledOn" defaultValue={today} />
               <p className="xs muted">Work and sessions before this date don&apos;t count for the student (BR-17).</p>
               {enrolled && !enrolled.ok && (
                 <p className="note bad" role="alert">
@@ -146,10 +144,7 @@ export function RosterManager({ classId, roster, candidates, otherClasses, today
                 </select>
               </label>
             )}
-            <label className="f">
-              {mode === 'withdraw' ? 'Last day in the class' : 'Moves on'}
-              <input name="on" type="date" defaultValue={today} required />
-            </label>
+            <DateField label={mode === 'withdraw' ? 'Last day in the class' : 'Moves on'} name="on" defaultValue={today} required />
             <p className="xs muted">
               {mode === 'withdraw'
                 ? 'The student stays in this class’s history.'

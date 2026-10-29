@@ -5,6 +5,7 @@ import { TableScroll } from '@/components/ui/TableScroll';
 import { addMakeUpAction, cancelSessionAction, moveSessionAction } from '@/modules/academics/class-actions';
 import type { SessionRow } from '@/modules/academics/classes';
 import { addMinutes, formatDate } from '@/modules/academics/schedule';
+import { DateField, TimeField } from '@/components/ui/DateTimeFields';
 
 type Props = {
   classId: string;
@@ -108,15 +109,9 @@ export function SessionsManager({ classId, weeks, defaultStart, defaultMinutes, 
         <form className="card stack narrow-form" action={makeUpAction} aria-label="Add a make-up session">
           <h2>Add a make-up session</h2>
           <input type="hidden" name="classId" value={classId} />
-          <div className="grid g3">
-            <label className="f">
-              Date
-              <input name="date" type="date" required />
-            </label>
-            <label className="f">
-              Start time
-              <input name="startTime" type="time" defaultValue={defaultStart} required />
-            </label>
+          <div className="grid g3 date-first">
+            <DateField label="Date" name="date" required />
+            <TimeField label="Start time" name="startTime" defaultValue={defaultStart} required />
             <label className="f">
               Length
               <select name="minutes" defaultValue={defaultMinutes}>
@@ -163,14 +158,8 @@ export function SessionsManager({ classId, weeks, defaultStart, defaultMinutes, 
               </>
             ) : (
               <div className="grid g2">
-                <label className="f">
-                  New date
-                  <input name="date" type="date" defaultValue={target.date} required autoFocus />
-                </label>
-                <label className="f">
-                  Start time
-                  <input name="startTime" type="time" defaultValue={target.startTime} required />
-                </label>
+                <DateField label="New date" name="date" defaultValue={target.date} required autoFocus />
+                <TimeField label="Start time" name="startTime" defaultValue={target.startTime} required />
               </div>
             )}
             {error && (

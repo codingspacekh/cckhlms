@@ -109,7 +109,7 @@ describe('WorkManager', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Edit Countdown' }));
     const dialog = screen.getByRole('dialog', { name: 'Edit Countdown' });
     expect((within(dialog).getByLabelText('Title') as HTMLInputElement).value).toBe('Countdown');
-    expect((within(dialog).getByLabelText('Due day') as HTMLInputElement).value).toBe('2027-01-20');
+    expect((within(dialog).getByLabelText('Due day') as HTMLInputElement).value).toBe('Wed 20 Jan 2027');
     expect((within(dialog).getByLabelText('Accept late work') as HTMLInputElement).checked).toBe(false);
     expect(within(dialog).queryByLabelText('Late penalty %')).toBeNull();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
