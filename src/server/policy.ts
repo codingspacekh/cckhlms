@@ -53,6 +53,10 @@ export const ACTIONS = {
   'qa.post': whileOpen(either(teachesClass, studiesInClass)),
   'qa.moderate': whileOpen(teachesClass),
   'report.write': whileOpen(teachesClass),
+  // The weekly report sheet (M14b, BR-27): its class's teachers and Admin read it, students never; Admin reads every
+  // class's on Weekly reports (FR-ADM-17).
+  'report.read': either(hasRole('admin'), teachesClass),
+  'reports.overview': hasRole('admin'),
   'assessment.write': whileOpen(teachesClass),
   'assessment.read': either(hasRole('admin'), teachesClass, studiesInClass),
   'work.save': whileOpen(studiesInClass),

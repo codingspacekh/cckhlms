@@ -30,6 +30,10 @@ const MATRIX: Record<Action, Record<Role, Rule>> = {
   'qa.post': { admin: false, teacher: 'own', student: 'own' },
   'qa.moderate': { admin: false, teacher: 'own', student: false },
   'report.write': { admin: false, teacher: 'own', student: false },
+  // M14b: the weekly report sheet is read by the class's teachers and Admin, never students (BR-27); Admin sees
+  // every class's on Weekly reports (FR-ADM-17).
+  'report.read': { admin: true, teacher: 'own', student: false },
+  'reports.overview': { admin: true, teacher: false, student: false },
   'assessment.write': { admin: false, teacher: 'own', student: false },
   'assessment.read': { admin: true, teacher: 'own', student: 'own' },
   'work.save': { admin: false, teacher: false, student: 'own' },

@@ -489,6 +489,33 @@ export const classReportTopic = pgTable(
   (t) => [primaryKey({ columns: [t.reportId, t.topicId] })],
 );
 
+// The weekly report sheet's rows (M14b, BR-27): one per student the teacher wrote something for. Attendance isn't
+// here: the sheet's attendance cell is the attendance row itself. The needs-support flag is the week's, separate
+// from the term report's (FR-TCH-15).
+export const classReportStudent = pgTable(
+  'class_report_student',
+  {
+    reportId: text('report_id')
+      .notNull()
+      .references(() => classReport.id, { onDelete: 'cascade' }),
+    enrolmentId: text('enrolment_id')
+      .notNull()
+      .references(() => enrolment.id, { onDelete: 'cascade' }),
+    participation: text('participation'),
+    comment: text('comment').notNull().default(''),
+    needsSupport: boolean('needs_support').notNull().default(false),
+    note: text('note').notNull().default(''),
+    updatedBy: text('updated_by').references(() => user.id, { onDelete: 'set null' }),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.reportId, t.enrolmentId] }),
+    index('class_report_student_enrolment_idx').on(t.enrolmentId),
+    check('class_report_student_participation', sql`${t.participation} is null or ${t.participation} in ('active', 'not_active')`),
+    check('class_report_student_lengths', sql`char_length(${t.comment}) <= 500 and char_length(${t.note}) <= 500`),
+  ],
+);
+
 // Classwork, homework and exams set in a week of a class (FR-TCH-07/08). An exam with several parts (theory,
 // practical) is one row per part: BR-12 adds up exam scores and maxes. When it's due is worked out from the
 // sessions (due_mode), except for a day and time the teacher chose (due_at), so BR-16 needs no job.

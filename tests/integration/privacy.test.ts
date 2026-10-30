@@ -23,6 +23,7 @@ import { createProject } from '@/modules/playground/playground';
 import { eraseStudent } from '@/modules/privacy/erase';
 import { exportStudentData } from '@/modules/privacy/export';
 import { publishTermReports, saveTermReport } from '@/modules/reporting/term-reports';
+import { saveSheetCell } from '@/modules/teaching/report-sheet';
 import { saveLesson } from '@/modules/teaching/lessons';
 import { askQuestion, replyToQuestion, reportPost } from '@/modules/teaching/qa';
 import { weeksOf } from '@/modules/teaching/weeks';
@@ -112,6 +113,13 @@ beforeAll(async () => {
   await markAttendance(sophea, await sessionOf(classId, 1), enrolmentOf[bopha.userId]!, 'present');
   await markAttendance(sophea, await sessionOf(classId, 1), enrolmentOf[chenda.userId]!, 'late');
   await pool.query(`update attendance set note = 'Came with her brother' where enrolment_id = $1`, [enrolmentOf[bopha.userId]]);
+  // M14b: the weekly report sheet's row about her.
+  for (const cell of [
+    { field: 'comment', value: 'Bopha helped her neighbour.' },
+    { field: 'needsSupport', value: 'yes' },
+    { field: 'note', value: 'Bopha can’t see the board.' },
+  ] as const)
+    await saveSheetCell(sophea, await sessionOf(classId, 1), enrolmentOf[bopha.userId]!, cell);
   const work = async (kind: 'homework' | 'classwork', title: string) =>
     (
       await saveAssessment(sophea, await sessionOf(classId, 1), {
@@ -175,6 +183,16 @@ describe('the export', () => {
     ]);
     expect(data.attendance).toEqual([
       { className: 'Python Level 1 · Sat 09:00', date: first, status: 'present', note: 'Came with her brother' },
+    ]);
+    expect(data.weeklyReports).toEqual([
+      {
+        className: 'Python Level 1 · Sat 09:00',
+        date: first,
+        participation: null,
+        comment: 'Bopha helped her neighbour.',
+        needsSupport: true,
+        note: 'Bopha can’t see the board.',
+      },
     ]);
     expect(data.work).toEqual([
       expect.objectContaining({
@@ -266,6 +284,9 @@ describe('deleting a student’s personal data', () => {
       status: 'present',
       note: null,
     });
+    expect(
+      await one(`select comment, note, needs_support from class_report_student where enrolment_id = $1`, [enrolmentOf[bopha.userId]]),
+    ).toEqual({ comment: '', note: '', needs_support: true });
     for (const table of ['question', 'reply'])
       expect((await pool.query(`select body_md, visibility from ${table} where author_id = $1`, [bopha.userId])).rows, table).toEqual([
         { body_md: '', visibility: 'hidden' },

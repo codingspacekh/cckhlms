@@ -60,6 +60,8 @@ describe('AdminDashboardView', () => {
     expect(items[0]!.textContent).toBe('Chenda Ouk needs supportPython Level 1 · Sat 09:00: Extra help with loopsOpen report');
     expect(within(list).getByRole('link', { name: 'Open report for Chenda Ouk' }).getAttribute('href')).toBe('/admin/students/s2');
     expect(items[1]!.textContent).toBe('Python Level 1 · Sat 09:00Sophea Chan · weeks 2, 32 weekly reports missing');
+    // M14b: it opens the latest missing week on Weekly reports.
+    expect(within(items[1]!).getByRole('link').getAttribute('href')).toBe('/admin/weekly-reports/c1/3');
     expect(items[2]!.textContent).toBe('Kosal MeasPython Level 1 · Sat 09:00Attendance 50%');
   });
 

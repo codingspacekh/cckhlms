@@ -32,6 +32,7 @@ describe('startup', () => {
       'certificate',
       'class',
       'class_report',
+      'class_report_student',
       'class_report_topic',
       'class_session',
       'class_teacher',

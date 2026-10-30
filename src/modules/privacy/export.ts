@@ -8,6 +8,8 @@ import {
   attendance,
   auditLog,
   certificate,
+  classReport,
+  classReportStudent,
   classSession,
   course,
   enrolment,
@@ -55,7 +57,7 @@ export async function exportStudentData(actor: Actor | null, studentId: string, 
   const now = opts.now ?? new Date();
   const ofLesson = { className: klass.name, lessonTitle: lesson.title };
 
-  const [enrolments, attended, handedIn, drafts, excused, reports, certificates, questions, replies, reported, projects, signIns] =
+  const [enrolments, attended, weekly, handedIn, drafts, excused, reports, certificates, questions, replies, reported, projects, signIns] =
     await Promise.all([
       db
         .select({
@@ -75,6 +77,23 @@ export async function exportStudentData(actor: Actor | null, studentId: string, 
         .from(attendance)
         .innerJoin(enrolment, eq(enrolment.id, attendance.enrolmentId))
         .innerJoin(classSession, eq(classSession.id, attendance.sessionId))
+        .innerJoin(klass, eq(klass.id, enrolment.classId))
+        .where(eq(enrolment.studentId, studentId))
+        .orderBy(asc(classSession.date), asc(klass.name)),
+      // The weekly report sheet's rows about them (M14b).
+      db
+        .select({
+          className: klass.name,
+          date: classSession.date,
+          participation: classReportStudent.participation,
+          comment: classReportStudent.comment,
+          needsSupport: classReportStudent.needsSupport,
+          note: classReportStudent.note,
+        })
+        .from(classReportStudent)
+        .innerJoin(enrolment, eq(enrolment.id, classReportStudent.enrolmentId))
+        .innerJoin(classReport, eq(classReport.id, classReportStudent.reportId))
+        .innerJoin(classSession, eq(classSession.id, classReport.sessionId))
         .innerJoin(klass, eq(klass.id, enrolment.classId))
         .where(eq(enrolment.studentId, studentId))
         .orderBy(asc(classSession.date), asc(klass.name)),
@@ -198,6 +217,7 @@ export async function exportStudentData(actor: Actor | null, studentId: string, 
     },
     enrolments,
     attendance: attended,
+    weeklyReports: weekly,
     work: handedIn,
     drafts,
     excused,
