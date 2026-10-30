@@ -131,6 +131,11 @@ describe('the details', () => {
       { label: 'Changed', value: 'Room, time, teachers' },
       { label: 'Name', value: 'Python 1 · Morning' },
     ]);
+    // M14a: a class that went online (the link itself is not in the log).
+    expect(detailLines('class.update', { name: 'Python 2', changed: ['mode', 'room', 'meetingUrl'], warnings: [] }, names)[0]).toEqual({
+      label: 'Changed',
+      value: 'Where it meets, room, Zoom link',
+    });
   });
 
   it('shows what a published report was and became', () => {

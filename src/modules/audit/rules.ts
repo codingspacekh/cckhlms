@@ -145,7 +145,9 @@ const CHANGED: Record<string, string> = {
   weeks: 'number of weeks',
   startTime: 'time',
   minutes: 'length',
+  mode: 'where it meets',
   room: 'room',
+  meetingUrl: 'Zoom link',
   capacity: 'capacity',
   teachers: 'teachers',
 };

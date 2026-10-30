@@ -5,6 +5,7 @@ import { alias } from 'drizzle-orm/pg-core';
 import { db } from '@/db/client';
 import { assessment, attendance, classTeacher, enrolment, lesson, question, reply, submission, user } from '@/db/schema';
 import { myClasses, type MyClass } from '@/modules/academics/enrolments';
+import { whereLabel, type ClassMode } from '@/modules/academics/meeting';
 import { todayIn } from '@/modules/academics/schedule';
 import { getClubSettings } from '@/modules/club/service';
 import { weeksOf } from '@/modules/teaching/weeks';
@@ -17,7 +18,9 @@ type Opts = { now?: Date };
 export type TeacherFocus = {
   classId: string;
   className: string;
+  mode: ClassMode;
   room: string | null;
+  meetingUrl: string | null;
   students: number;
   minutes: number;
   session: { date: string; startTime: string; week: number | null };
@@ -41,6 +44,7 @@ export type WeekendSession = {
   className: string;
   date: string;
   startTime: string;
+  // The room, or Online.
   room: string | null;
   week: number | null;
 };
@@ -68,7 +72,7 @@ export async function teacherHome(actor: Actor | null, opts: Opts = {}) {
       sessionsOf
         .get(c.id)!
         .filter((s) => !s.cancelled && (s.date === sat || s.date === sun))
-        .map((s) => ({ classId: c.id, className: c.name, date: s.date, startTime: s.startTime, room: c.room, week: s.week })),
+        .map((s) => ({ classId: c.id, className: c.name, date: s.date, startTime: s.startTime, room: whereLabel(c), week: s.week })),
     )
     .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
 
@@ -151,7 +155,9 @@ async function focusOn(c: MyClass, sessions: Awaited<ReturnType<typeof weeksOf>>
   return {
     classId: c.id,
     className: c.name,
+    mode: c.mode,
     room: c.room,
+    meetingUrl: c.meetingUrl,
     students: c.students,
     minutes: c.minutes,
     session: { date: s.date, startTime: s.startTime, week: s.week },

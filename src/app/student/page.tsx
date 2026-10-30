@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import mark from '@/components/shell/champion-coders-mark.png';
+import { JoinZoom, Where } from '@/components/academics/Where';
 import { TermPuzzle } from '@/components/home/TermPuzzle';
 import { Icon } from '@/components/ui/Icon';
 import { addMinutes, toClubTime, formatDate } from '@/modules/academics/schedule';
@@ -39,7 +40,7 @@ export default async function StudentHome() {
                 {teacher && (
                   <>
                     {' '}
-                    See you{next.room ? ` in ${next.room}` : ''} with Teacher {teacher}.
+                    See you{next.mode === 'online' ? ' online' : next.room ? ` in ${next.room}` : ''} with Teacher {teacher}.
                   </>
                 )}
               </p>
@@ -52,27 +53,39 @@ export default async function StudentHome() {
                   <Icon name="clock" />
                   {s.startTime}–{addMinutes(s.startTime, next.minutes)}
                 </li>
-                {next.room && (
+                {next.mode === 'online' ? (
                   <li>
-                    <Icon name="pin" />
-                    {next.room}
+                    <Where mode="online" room={null} label="Online on Zoom" />
                   </li>
+                ) : (
+                  next.room && (
+                    <li>
+                      <Icon name="pin" />
+                      {next.room}
+                    </li>
+                  )
                 )}
                 {s.week && <li>Week {s.week}</li>}
               </ul>
-              {weekPage && (
+              {(weekPage || next.meetingUrl) && (
                 <div className="row">
-                  <Link className="btn primary lg" href={weekPage}>
-                    Open Week {s.week} lesson
-                    <Icon name="arrow" />
-                  </Link>
-                  {teacher && (
-                    <Link className="btn lg" href={`${weekPage}#qa-title`}>
-                      Ask Teacher {teacher}
-                    </Link>
+                  {next.meetingUrl && <JoinZoom href={next.meetingUrl} size="lg" />}
+                  {weekPage && (
+                    <>
+                      <Link className={`btn lg${next.meetingUrl ? '' : ' primary'}`} href={weekPage}>
+                        Open Week {s.week} lesson
+                        <Icon name="arrow" />
+                      </Link>
+                      {teacher && (
+                        <Link className="btn lg" href={`${weekPage}#qa-title`}>
+                          Ask Teacher {teacher}
+                        </Link>
+                      )}
+                    </>
                   )}
                 </div>
               )}
+              {next.meetingUrl && <p className="small muted">The same link every week. It opens the Zoom app, or Zoom in your browser.</p>}
             </>
           ) : (
             <p className="lead">

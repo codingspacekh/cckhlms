@@ -162,6 +162,13 @@
       "when": 1792836326161,
       "tag": "0022_note_pictures",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1793374004184,
+      "tag": "0023_online_classes",
+      "breakpoints": true
     }
   ]
 }

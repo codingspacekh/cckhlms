@@ -536,3 +536,43 @@ export async function m6JourneyClass(): Promise<{
   }
   return { classId, ...out };
 }
+
+// For the online-classes spec (M14a): a Sunday class in a room with its own teacher and one student, Kosal Meas,
+// who can sign in (stateFile('kosal')). The spec makes it online through the Edit class dialog.
+export async function onlineClass(): Promise<{ classId: string; className: string }> {
+  const main = await teachingClass();
+  const { db } = await import('../../src/db/client');
+  const { user, klass } = await import('../../src/db/schema');
+  const { eq } = await import('drizzle-orm');
+  const { createCourse } = await import('../../src/modules/academics/courses');
+  const { createClass } = await import('../../src/modules/academics/classes');
+  const { enrolStudent } = await import('../../src/modules/academics/enrolments');
+  const { createAccount } = await import('../../src/modules/identity/service');
+
+  const className = 'Python Online · Sun 17:00';
+  const existing = await db.select({ id: klass.id }).from(klass).where(eq(klass.name, className));
+  if (existing[0]) return { classId: existing[0].id, className };
+  const adminId = (await db.select({ id: user.id }).from(user).where(eq(user.username, USERS.admin.username)))[0]!.id;
+  const admin = { userId: adminId, username: 'admin', name: 'Admin', role: 'admin', sessionId: 'e2e' };
+  const [k] = await db.select({ termId: klass.termId, firstDate: klass.firstDate }).from(klass).where(eq(klass.id, main.classId));
+  const sunday = new Date(new Date(`${k!.firstDate}T00:00:00Z`).getTime() + 86_400_000).toISOString().slice(0, 10);
+  const teacher = await createAccount(admin, { role: 'teacher', name: 'Rotha Chea' });
+  const course = await createCourse(admin, { code: 'PYZ', name: 'Python Online', defaultLanguage: 'python' });
+  const r = await createClass(admin, {
+    courseId: course.id,
+    termId: k!.termId,
+    day: 'sun',
+    startTime: '17:00',
+    minutes: 90,
+    firstDate: sunday,
+    weeks: 12,
+    room: 'Room Z',
+    leadTeacherId: teacher.userId,
+    confirmClashes: true,
+  });
+  if (r.status !== 'created') throw new Error('online class not created');
+  const kosal = await createAccount(admin, { role: 'student', name: 'Kosal Meas' });
+  await saveSignedInState('kosal', kosal.username, kosal.password, 42);
+  await enrolStudent(admin, r.classId, kosal.userId, { enrolledOn: sunday, confirmClashes: true });
+  return { classId: r.classId, className };
+}

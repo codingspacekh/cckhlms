@@ -807,6 +807,7 @@ div.f {
 }
 input[type='text'],
 input[type='search'],
+input[type='url'],
 input[type='password'] {
   background: var(--surface);
   border: 2px solid var(--line-2);
@@ -3621,6 +3622,34 @@ table.gradebook .sticky-col {
 }
 .btn.outline:hover {
   background: var(--hero-2);
+}
+/* Join on Zoom (FR-STU-13, M14): Zoom's own blue, so it reads as "the Zoom button" in both themes. */
+.btn.zoom {
+  background: #0b5cff;
+  border-color: #0b5cff;
+  color: #ffffff;
+  font-weight: 700;
+}
+.btn.zoom:hover {
+  background: #0948cc;
+  border-color: #0948cc;
+}
+/* An online class where a room would be: a small Zoom-blue mark and the word. */
+.mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.mode .z {
+  width: 17px;
+  height: 17px;
+  border-radius: 5px;
+  background: #0b5cff;
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: inline-grid;
+  place-items: center;
 }
 .before {
   display: flex;

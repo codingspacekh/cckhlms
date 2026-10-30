@@ -223,7 +223,10 @@ export const klass = pgTable(
     minutes: smallint('minutes').notNull(),
     firstDate: date('first_date').notNull(),
     weeks: smallint('weeks').notNull(),
+    // In a room, or online with one Zoom link for the whole term (BR-28, M14): never both.
+    mode: text('mode').notNull().default('room'),
     room: text('room'),
+    meetingUrl: text('meeting_url'),
     capacity: smallint('capacity'),
     status: text('status').notNull().default('active'),
     // Set when the promotion wizard moved its students on (FR-ADM-13); a class is promoted once.
@@ -237,6 +240,10 @@ export const klass = pgTable(
     check('class_minutes_90_or_120', sql`${t.minutes} in (90, 120)`),
     check('class_weeks_10_to_12', sql`${t.weeks} between 10 and 12`),
     check('class_status_known', sql`${t.status} in ('active', 'archived')`),
+    check(
+      'class_place',
+      sql`(${t.mode} = 'room' and ${t.meetingUrl} is null) or (${t.mode} = 'online' and ${t.room} is null and ${t.meetingUrl} is not null)`,
+    ),
   ],
 );
 

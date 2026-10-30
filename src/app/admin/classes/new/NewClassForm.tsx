@@ -2,6 +2,7 @@
 import { useActionState, useMemo, useState } from 'react';
 import { createClassAction } from '@/modules/academics/class-actions';
 import { addMinutes, DAY_NAME, formatDate, generateSessions, weekdayOf, type Day } from '@/modules/academics/schedule';
+import { ClassPlace } from '@/components/academics/ClassPlace';
 import { DateField, TimeField } from '@/components/ui/DateTimeFields';
 import { Select } from '@/components/ui/Select';
 
@@ -121,11 +122,8 @@ export function NewClassForm({
               ))}
             </Select>
           </label>
-          <label className="f">
-            Room
-            <input name="room" type="text" maxLength={40} placeholder="Room A" />
-          </label>
         </div>
+        <ClassPlace />
         {sessions
           .filter((s) => s.cancelled)
           .map((s) => (
