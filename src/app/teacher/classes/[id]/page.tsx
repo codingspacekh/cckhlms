@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { JoinZoom } from '@/components/academics/Where';
 import { WeeksTable } from '@/components/teaching/WeeksTable';
 import { listRoster } from '@/modules/academics/enrolments';
 import { scheduleLabel } from '@/modules/academics/schedule';
@@ -25,8 +26,8 @@ export default async function ClassWeeksPage({ params }: { params: Promise<{ id:
           <span>{c.termName}</span>
         </div>
         <div>
-          <span className="k">Room</span>
-          <span>{c.room ?? '—'}</span>
+          <span className="k">Where</span>
+          <span>{c.mode === 'online' && c.meetingUrl ? <JoinZoom href={c.meetingUrl} size="sm" /> : (c.room ?? '—')}</span>
         </div>
         <div>
           <span className="k">Students</span>

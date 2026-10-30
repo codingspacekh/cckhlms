@@ -2,6 +2,7 @@
 import { useActionState, useMemo, useState } from 'react';
 import { createClassAction } from '@/modules/academics/class-actions';
 import { addMinutes, DAY_NAME, formatDate, generateSessions, weekdayOf, type Day } from '@/modules/academics/schedule';
+import { ClassPlace } from '@/components/academics/ClassPlace';
 import { DateField, TimeField } from '@/components/ui/DateTimeFields';
 import { Select } from '@/components/ui/Select';
 
@@ -107,25 +108,20 @@ export function NewClassForm({
             </Select>
           </label>
         </div>
-        <div className="grid g2">
-          <label className="f">
-            Lead teacher
-            <Select name="leadTeacherId" required defaultValue="">
-              <option value="" disabled>
-                Choose a teacher
+        <label className="f">
+          Lead teacher
+          <Select name="leadTeacherId" required defaultValue="">
+            <option value="" disabled>
+              Choose a teacher
+            </option>
+            {teachers.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
               </option>
-              {teachers.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </Select>
-          </label>
-          <label className="f">
-            Room
-            <input name="room" type="text" maxLength={40} placeholder="Room A" />
-          </label>
-        </div>
+            ))}
+          </Select>
+        </label>
+        <ClassPlace />
         {sessions
           .filter((s) => s.cancelled)
           .map((s) => (

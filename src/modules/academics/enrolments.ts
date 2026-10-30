@@ -9,6 +9,7 @@ import type { Actor } from '@/server/actor';
 import { audit } from '@/server/audit';
 import { assertCan, ValidationError } from '@/server/errors';
 import { classTeacherIds } from './access';
+import type { ClassMode } from './meeting';
 import { formatDate, nextSession, numberWeeks, overlaps, scheduleLabel, todayIn, type Day } from './schedule';
 
 export type EnrolResult = { status: 'enrolled'; enrolmentId: string } | { status: 'needs-confirmation'; warnings: string[] };
@@ -205,7 +206,10 @@ export type MyClass = {
   startTime: string;
   minutes: number;
   weeks: number;
+  mode: ClassMode;
   room: string | null;
+  // Only ever the actor's own classes, so only their students and teachers get the link (BR-28).
+  meetingUrl: string | null;
   teachers: string[];
   students: number;
   nextSession: { date: string; startTime: string; week: number | null } | null;
@@ -249,7 +253,9 @@ export async function myClasses(actor: Actor | null, opts: { now?: Date } = {}):
       startTime: klass.startTime,
       minutes: klass.minutes,
       weeks: klass.weeks,
+      mode: klass.mode,
       room: klass.room,
+      meetingUrl: klass.meetingUrl,
     })
     .from(klass)
     .innerJoin(term, eq(term.id, klass.termId))
@@ -278,6 +284,7 @@ export async function myClasses(actor: Actor | null, opts: { now?: Date } = {}):
       return {
         ...c,
         day: c.day as Day,
+        mode: c.mode as ClassMode,
         teachers: teachers
           .filter((t) => t.classId === c.id)
           .sort((a, b) => (a.role === 'lead' ? -1 : b.role === 'lead' ? 1 : 0))

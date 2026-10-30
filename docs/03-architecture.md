@@ -202,7 +202,7 @@ erDiagram
 | **TERM** | id, year, number (1–4), name (e.g. "Term 2 2027"), start_date, end_date, status (planned/active/closed) |
 | **COURSE** | id, code, name, level, description, next_course_id, default_language (python/java/web), pass_mark (default **60**), grading_weights (default `{exam: 60, classwork: 30, homework: 10}`) |
 | **SYLLABUS_TOPIC** | id, course_id, order, title, description |
-| **CLASS** | id, course_id, term_id, name, **day_of_week (sat/sun)**, **start_time**, **session_minutes (90 default / 120)**, **first_session_date**, **num_weeks (10–12)**, room, capacity, status (active/archived), promoted_from_class_id |
+| **CLASS** | id, course_id, term_id, name, **day_of_week (sat/sun)**, **start_time**, **session_minutes (90 default / 120)**, **first_session_date**, **num_weeks (10–12)**, **mode (room/online)**, room, **meeting_url** (online only, BR-28; M14), capacity, status (active/archived), promoted_from_class_id |
 | **CLASS_TEACHER** | class_id, user_id, role (lead/assistant) |
 | **ENROLMENT** | id, class_id, student_id, status (active/withdrawn/completed), **enrolled_on** (date — BR-17), ended_on, transferred_from_enrolment_id |
 | **SESSION** | id, class_id, week_no, date, start_time, minutes, status (scheduled/held/cancelled), replaces_session_id (for make-ups), note |

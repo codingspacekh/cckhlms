@@ -8,6 +8,7 @@ import type { Actor } from '@/server/actor';
 import { audit } from '@/server/audit';
 import { assertCan, ValidationError } from '@/server/errors';
 import { classAccess, classTeacherIds } from './access';
+import { CLASS_MODES, placeOf, type ClassMode } from './meeting';
 import {
   addDays,
   DAY_NAME,
@@ -33,10 +34,16 @@ export const classInputSchema = z.object({
   minutes: z.coerce.number().refine((m) => m === 90 || m === 120, 'Sessions are 90 or 120 minutes.'),
   firstDate: isoDate,
   weeks: z.coerce.number().int().min(10, 'Classes run 10 to 12 weeks.').max(12, 'Classes run 10 to 12 weeks.'),
+  mode: z.preprocess(
+    (v) => (v === '' || v == null ? undefined : v),
+    z.enum(CLASS_MODES, { message: 'Choose in a room or online.' }).default('room'),
+  ),
   room: z.preprocess(
     (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
     z.string().trim().max(40, 'That room name is too long.').optional(),
   ),
+  // Checked by placeOf, and only when the class is online (BR-28).
+  meetingUrl: z.preprocess((v) => (typeof v === 'string' && v.trim() === '' ? undefined : v), z.string().optional()),
   capacity: z.preprocess((v) => (v === '' || v == null ? undefined : v), z.coerce.number().int().min(1).max(60).optional()),
   leadTeacherId: z.string().min(1, 'Choose a lead teacher.'),
   assistantTeacherIds: list.default([]),
@@ -154,6 +161,7 @@ export async function createClass(actor: Actor | null, raw: ClassInput): Promise
   const parsed = classInputSchema.safeParse(raw);
   if (!parsed.success) throw ValidationError.fromZod(parsed.error);
   const c = parsed.data;
+  const place = placeOf(c);
 
   await checkTermAndDate(c);
   const courseName = await nameOfCourse(c.courseId);
@@ -164,7 +172,7 @@ export async function createClass(actor: Actor | null, raw: ClassInput): Promise
     day: c.day,
     startTime: c.startTime,
     minutes: c.minutes,
-    room: c.room,
+    room: place.room ?? undefined,
     teacherIds,
   });
   if (warnings.length && !c.confirmClashes) return { status: 'needs-confirmation', warnings };
@@ -182,7 +190,7 @@ export async function createClass(actor: Actor | null, raw: ClassInput): Promise
       minutes: c.minutes,
       firstDate: c.firstDate,
       weeks: c.weeks,
-      room: c.room ?? null,
+      ...place,
       capacity: c.capacity ?? null,
     });
     await tx
@@ -256,9 +264,9 @@ export const classEditSchema = classInputSchema.omit({ cancelledDates: true }).e
 export type ClassEdit = Partial<Record<keyof z.input<typeof classEditSchema>, unknown>>;
 export type UpdateClassResult = { status: 'saved' | 'needs-confirmation'; warnings: string[] };
 
-// Change a class after it is created (M10). Its name, room, capacity, teachers, time and length can change at any
-// time; a new time or length applies to the sessions still to come that had the old one (a session moved to its own
-// time keeps it). Its course, term, day, first date and number of weeks can change only before it starts, and its
+// Change a class after it is created (M10). Its name, where it meets, capacity, teachers, time and length can change
+// at any time; a new time or length applies to the sessions still to come that had the old one (a session moved to its
+// own time keeps it). Its course, term, day, first date and number of weeks can change only before it starts, and its
 // sessions are then made again (cancelled dates stay cancelled).
 export async function updateClass(actor: Actor | null, id: string, raw: ClassEdit, opts: { now?: Date } = {}): Promise<UpdateClassResult> {
   assertCan(actor, 'classes.manage');
@@ -275,7 +283,7 @@ export async function updateClass(actor: Actor | null, id: string, raw: ClassEdi
     oldTeachers.every((t) =>
       t.role === 'lead' ? t.userId === c.leadTeacherId : teacherIds.includes(t.userId) && t.userId !== c.leadTeacherId,
     );
-  const room = c.room ?? null;
+  const place = placeOf(c);
   const capacity = c.capacity ?? null;
   const differs = {
     course: c.courseId !== old.courseId,
@@ -285,7 +293,9 @@ export async function updateClass(actor: Actor | null, id: string, raw: ClassEdi
     weeks: c.weeks !== old.weeks,
     startTime: c.startTime !== old.startTime,
     minutes: c.minutes !== old.minutes,
-    room: room !== old.room,
+    mode: place.mode !== old.mode,
+    room: place.room !== old.room,
+    meetingUrl: place.meetingUrl !== old.meetingUrl,
     capacity: capacity !== old.capacity,
     teachers: !sameTeachers,
   };
@@ -307,7 +317,7 @@ export async function updateClass(actor: Actor | null, id: string, raw: ClassEdi
 
   let warnings: string[] = [];
   if (differs.term || differs.day || differs.startTime || differs.minutes || differs.room || differs.teachers) {
-    warnings = await findClashes({ ...c, teacherIds, excludeClassId: id });
+    warnings = await findClashes({ ...c, room: place.room ?? undefined, teacherIds, excludeClassId: id });
     if (warnings.length && !c.confirmClashes) return { status: 'needs-confirmation', warnings };
   }
 
@@ -324,7 +334,7 @@ export async function updateClass(actor: Actor | null, id: string, raw: ClassEdi
         minutes: c.minutes,
         firstDate: c.firstDate,
         weeks: c.weeks,
-        room,
+        ...place,
         capacity,
       })
       .where(eq(klass.id, id));
@@ -403,6 +413,7 @@ export type ClassRow = {
   startTime: string;
   minutes: number;
   weeks: number;
+  mode: ClassMode;
   room: string | null;
   leadTeacher: string | null;
   sessions: number;
@@ -421,6 +432,7 @@ export async function listClasses(actor: Actor | null, filter: { termId?: string
       startTime: klass.startTime,
       minutes: klass.minutes,
       weeks: klass.weeks,
+      mode: klass.mode,
       room: klass.room,
       leadTeacher: sql<
         string | null
@@ -432,7 +444,7 @@ export async function listClasses(actor: Actor | null, filter: { termId?: string
     .innerJoin(term, eq(term.id, klass.termId))
     .where(filter.termId ? eq(klass.termId, filter.termId) : undefined)
     .orderBy(asc(klass.day), asc(klass.startTime), asc(klass.name));
-  return rows.map((r) => ({ ...r, day: r.day as Day }));
+  return rows.map((r) => ({ ...r, day: r.day as Day, mode: r.mode as ClassMode }));
 }
 
 export type SessionRow = {
@@ -457,7 +469,9 @@ export type ClassDetail = {
   minutes: number;
   weeks: number;
   firstDate: string;
+  mode: ClassMode;
   room: string | null;
+  meetingUrl: string | null;
   capacity: number | null;
   status: string;
   promotedAt: Date | null;
@@ -499,7 +513,9 @@ export async function getClass(actor: Actor | null, id: string): Promise<ClassDe
     minutes: c.k.minutes,
     weeks: c.k.weeks,
     firstDate: c.k.firstDate,
+    mode: c.k.mode as ClassMode,
     room: c.k.room,
+    meetingUrl: c.k.meetingUrl,
     capacity: c.k.capacity,
     status: c.k.status,
     promotedAt: c.k.promotedAt,

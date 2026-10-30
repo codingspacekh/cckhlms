@@ -39,7 +39,7 @@ test('Admin creates a weekend class, seeing its weekly sessions before saving', 
   await form.getByLabel('First session').fill('2028-01-08');
   await choose(form.getByLabel('Weeks'), '10');
   await choose(form.getByLabel('Lead teacher'), { label: 'Sophea Chan' });
-  await form.getByLabel('Room').fill('Room B');
+  await form.getByLabel('Room', { exact: true }).fill('Room B');
 
   const preview = page.getByRole('list', { name: 'Weekly sessions' });
   await expect(preview.getByRole('listitem')).toHaveCount(10);
@@ -85,9 +85,9 @@ test('Admin changes the class room and time; the name and sessions follow', asyn
   await page.getByRole('link', { name: 'Java Level 1 · Sat 14:00' }).click();
   await page.getByRole('button', { name: 'Edit class' }).click();
   const dialog = page.getByRole('dialog', { name: 'Edit class' });
-  await expect(dialog.getByLabel('Room')).toHaveValue('Room B');
+  await expect(dialog.getByLabel('Room', { exact: true })).toHaveValue('Room B');
   await expectAccessible(page);
-  await dialog.getByLabel('Room').fill('Lab C');
+  await dialog.getByLabel('Room', { exact: true }).fill('Lab C');
   await dialog.getByLabel('Start time').fill('15:00');
   await dialog.getByRole('button', { name: 'Save class' }).click();
   await expect(dialog).toBeHidden();

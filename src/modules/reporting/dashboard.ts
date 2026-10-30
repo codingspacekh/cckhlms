@@ -4,6 +4,7 @@
 import { and, asc, desc, eq, gte, inArray, lte, ne } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { classTeacher, klass, studentReport, term, user } from '@/db/schema';
+import { whereLabel } from '@/modules/academics/meeting';
 import { addMinutes, termWeek, todayIn } from '@/modules/academics/schedule';
 import { getClubSettings } from '@/modules/club/service';
 import { reportedSessions } from '@/modules/teaching/reports';
@@ -19,7 +20,7 @@ type Opts = { now?: Date };
 // Classes running now, with their lead teacher.
 export async function runningClasses() {
   const rows = await db
-    .select({ id: klass.id, name: klass.name, room: klass.room })
+    .select({ id: klass.id, name: klass.name, mode: klass.mode, room: klass.room })
     .from(klass)
     .innerJoin(term, eq(term.id, klass.termId))
     .where(and(eq(klass.status, 'active'), ne(term.status, 'closed')))
@@ -106,7 +107,7 @@ export async function adminDashboard(actor: Actor | null, opts: Opts = {}) {
             date: s.date,
             startTime: s.startTime,
             endTime: addMinutes(s.startTime, s.minutes),
-            room: c.room,
+            room: whereLabel(c),
             week: s.week,
           })),
       )

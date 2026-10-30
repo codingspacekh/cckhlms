@@ -67,7 +67,9 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
                   minutes: c.minutes,
                   firstDate: c.firstDate,
                   weeks: c.weeks,
+                  mode: c.mode,
                   room: c.room,
+                  meetingUrl: c.meetingUrl,
                   capacity: c.capacity,
                   leadTeacherId: lead?.userId ?? '',
                   assistantTeacherIds: assistants.map((a) => a.userId),
@@ -108,8 +110,16 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
           </span>
         </div>
         <div>
-          <span className="k">Room</span>
-          <span>{c.room ?? '—'}</span>
+          <span className="k">Where</span>
+          <span>
+            {c.mode === 'online' && c.meetingUrl ? (
+              <a href={c.meetingUrl} target="_blank" rel="noopener noreferrer">
+                Online · Zoom link<span className="sr-only"> (opens in a new tab)</span>
+              </a>
+            ) : (
+              (c.room ?? '—')
+            )}
+          </span>
         </div>
         <div>
           <span className="k">Lead teacher</span>

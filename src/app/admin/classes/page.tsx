@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { Where } from '@/components/academics/Where';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { TableScroll } from '@/components/ui/TableScroll';
 import { listClasses } from '@/modules/academics/classes';
@@ -31,7 +32,7 @@ export default async function ClassesPage() {
                 <th scope="col">Term</th>
                 <th scope="col">Schedule</th>
                 <th scope="col">Lead teacher</th>
-                <th scope="col">Room</th>
+                <th scope="col">Where</th>
                 <th scope="col">Sessions</th>
               </tr>
             </thead>
@@ -54,7 +55,9 @@ export default async function ClassesPage() {
                   <td>{c.termName}</td>
                   <td>{scheduleLabel({ day: c.day, startTime: c.startTime, minutes: c.minutes, weeks: c.weeks })}</td>
                   <td>{c.leadTeacher ?? '—'}</td>
-                  <td>{c.room ?? '—'}</td>
+                  <td>
+                    <Where mode={c.mode} room={c.room} />
+                  </td>
                   <td className="tnum">{c.sessions}</td>
                 </tr>
               ))}

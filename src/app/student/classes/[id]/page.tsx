@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { JoinZoom } from '@/components/academics/Where';
 import { Pill } from '@/components/ui/Pill';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { WorkList } from '@/components/assessments/WorkList';
+import { myClasses } from '@/modules/academics/enrolments';
 import { formatDate } from '@/modules/academics/schedule';
 import { formatDue } from '@/modules/assessments/rules';
 import { studentClassWork } from '@/modules/assessments/service';
@@ -18,15 +20,22 @@ export const metadata: Metadata = { title: 'Lessons' };
 export default async function StudentClassPage({ params }: { params: Promise<{ id: string }> }) {
   const actor = await requireActor('student.area');
   const { id } = await params;
-  const [{ className, lessons }, work, { timeZone }] = await Promise.all([
+  const [{ className, lessons }, work, { timeZone }, classes] = await Promise.all([
     pageData(classLessons(actor, id)),
     pageData(studentClassWork(actor, id)),
     getClubSettings(),
+    myClasses(actor),
   ]);
   const mine = await myStanding(actor, id, work);
+  // Only a class the student is in now has its link (BR-28).
+  const meetingUrl = classes.find((c) => c.id === id)?.meetingUrl;
   return (
     <>
-      <PageHeader eyebrow={<Link href="/student">My week</Link>} title={className} />
+      <PageHeader
+        eyebrow={<Link href="/student">My week</Link>}
+        title={className}
+        actions={meetingUrl ? <JoinZoom href={meetingUrl} /> : undefined}
+      />
       <section className="card stack" aria-labelledby="lessons-title">
         <h2 id="lessons-title">Lessons</h2>
         {lessons.length === 0 ? (

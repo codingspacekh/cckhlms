@@ -36,7 +36,7 @@ test.describe('admin', () => {
     await choose(f.getByLabel('Term'), { label: 'Term 2 · 2028' });
     await f.getByLabel('First session').fill('2028-04-15');
     await choose(f.getByLabel('Lead teacher'), { label: 'Sophea Chan' });
-    await f.getByLabel('Room').fill('Room C');
+    await f.getByLabel('Room', { exact: true }).fill('Room C');
     await f.getByRole('button', { name: 'Create class' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Python Level 2 · Sat 09:00' })).toBeVisible();
   });

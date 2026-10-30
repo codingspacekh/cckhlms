@@ -1,7 +1,9 @@
 'use client';
 import { useActionState, useRef, useState, useTransition } from 'react';
 import { DateField, TimeField } from '@/components/ui/DateTimeFields';
+import { ClassPlace } from '@/components/academics/ClassPlace';
 import { Icon } from '@/components/ui/Icon';
+import type { ClassMode } from '@/modules/academics/meeting';
 import { deleteClassAction, updateClassAction, type CreateClassFormResult } from '@/modules/academics/class-actions';
 import { DAY_NAME, formatDate, type Day } from '@/modules/academics/schedule';
 import { Select } from '@/components/ui/Select';
@@ -17,7 +19,9 @@ type ClassValues = {
   minutes: number;
   firstDate: string;
   weeks: number;
+  mode: ClassMode;
   room: string | null;
+  meetingUrl: string | null;
   capacity: number | null;
   leadTeacherId: string;
   assistantTeacherIds: string[];
@@ -25,7 +29,7 @@ type ClassValues = {
 type Props = { klass: ClassValues; fixed: boolean; courses: Option[]; terms: Option[]; teachers: { id: string; name: string }[] };
 
 // "Edit class" on the class page (M10): the form opens in a dialog. Once the class has started (`fixed`), its course,
-// term, day and dates are shown as text and sent unchanged; its time, room and teachers can still change.
+// term, day and dates are shown as text and sent unchanged; its time, where it meets and teachers can still change.
 export function EditClass(props: Props) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [formKey, setFormKey] = useState(0); // a fresh form each time
@@ -93,10 +97,18 @@ function EditClassForm({
     <form className="stack" action={formAction} aria-label="Edit class">
       <h2 id="edit-class-title">Edit class</h2>
       <input type="hidden" name="classId" value={k.id} />
-      <label className="f">
-        Name
-        <input name="name" type="text" defaultValue={k.name} required maxLength={100} />
-      </label>
+      <div className="grid g2">
+        <label className="f">
+          Name
+          <input name="name" type="text" defaultValue={k.name} required maxLength={100} />
+        </label>
+        <label className="f">
+          <span>
+            Capacity <span className="xs muted">(optional)</span>
+          </span>
+          <input name="capacity" type="number" min={1} max={60} defaultValue={k.capacity ?? ''} />
+        </label>
+      </div>
 
       {fixed ? (
         <>
@@ -140,7 +152,7 @@ function EditClassForm({
               </Select>
             </label>
           </div>
-          <div className="grid g3 date-mid">
+          <div className="grid g3 day-date">
             <fieldset className="fs f">
               <legend>Day</legend>
               <div className="seg">
@@ -183,16 +195,7 @@ function EditClassForm({
         </fieldset>
       </div>
       {fixed && <p className="small muted">A new time or length applies to the sessions still to come.</p>}
-      <div className="grid g2">
-        <label className="f">
-          Room
-          <input name="room" type="text" defaultValue={k.room ?? ''} maxLength={40} />
-        </label>
-        <label className="f">
-          Capacity <span className="xs muted">(optional)</span>
-          <input name="capacity" type="number" min={1} max={60} defaultValue={k.capacity ?? ''} />
-        </label>
-      </div>
+      <ClassPlace mode={k.mode} room={k.room} meetingUrl={k.meetingUrl} />
       <label className="f">
         Lead teacher
         <Select name="leadTeacherId" value={lead} onChange={(e) => setLead(e.target.value)}>

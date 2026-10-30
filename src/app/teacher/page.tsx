@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { sessionWhen } from '@/components/academics/nextSessionText';
+import { JoinZoom } from '@/components/academics/Where';
 import { Icon } from '@/components/ui/Icon';
 import { pastClasses } from '@/modules/academics/enrolments';
+import { whereLabel } from '@/modules/academics/meeting';
 import { addMinutes, formatDate, toClubTime } from '@/modules/academics/schedule';
 import { getClubSettings } from '@/modules/club/service';
 import { classWhen, firstName, greeting } from '@/modules/reporting/home-rules';
@@ -54,7 +56,8 @@ export default async function TeacherToday() {
               <h2 id="today-title">{short(f.className)}</h2>
               <p className="next-facts">
                 {formatDate(f.session.date)} · {f.session.startTime}–{addMinutes(f.session.startTime, f.minutes)}
-                {f.room ? ` · ${f.room}` : ''} · {f.students} {f.students === 1 ? 'student' : 'students'}
+                {f.mode === 'online' ? ' · Online' : f.room ? ` · ${f.room}` : ''} · {f.students}{' '}
+                {f.students === 1 ? 'student' : 'students'}
               </p>
             </div>
             {f.session.week && (
@@ -67,15 +70,20 @@ export default async function TeacherToday() {
                 <Link href={`${base}/weeks/${f.session.week}`}>{f.lesson ? 'Open lesson' : 'Write the lesson'}</Link>
               </div>
             )}
-            {f.session.week && (
+            {(f.session.week || f.meetingUrl) && (
               <div className="row">
-                <Link className="btn lg light" href={`${base}/weeks/${f.session.week}/attendance`}>
-                  <Icon name="check" />
-                  Take attendance
-                </Link>
-                <Link className="btn lg outline" href={`${base}/weeks/${f.session.week}/work`}>
-                  Classwork & homework
-                </Link>
+                {f.meetingUrl && <JoinZoom href={f.meetingUrl} size="lg" />}
+                {f.session.week && (
+                  <>
+                    <Link className="btn lg light" href={`${base}/weeks/${f.session.week}/attendance`}>
+                      <Icon name="check" />
+                      Take attendance
+                    </Link>
+                    <Link className="btn lg outline" href={`${base}/weeks/${f.session.week}/work`}>
+                      Classwork & homework
+                    </Link>
+                  </>
+                )}
               </div>
             )}
           </section>
@@ -183,7 +191,7 @@ export default async function TeacherToday() {
                         : 'No more sessions this term'}
                     </span>
                     <span className="sub">
-                      {c.room ? `${c.room} · ` : ''}
+                      {whereLabel(c) ? `${whereLabel(c)} · ` : ''}
                       {c.students} student{c.students === 1 ? '' : 's'}
                     </span>
                   </span>
