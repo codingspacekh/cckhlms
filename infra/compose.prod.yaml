@@ -37,6 +37,8 @@ services:
       PREVIEW_ORIGIN: https://${PREVIEW_HOST:-preview.cckh.dev}
       BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-}
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      ADMIN_RESET_USERNAME: ${ADMIN_RESET_USERNAME:-} # lost admin password, runbook §3.2
+      ADMIN_RESET_PASSWORD: ${ADMIN_RESET_PASSWORD:-}
       WEB_WORKERS: '2' # one server process per vCPU (M7 load test)
       RUNNER_URL: unix:/run/runner/runner.sock
     volumes: [uploads:/app/uploads, runner-socket:/run/runner]

@@ -122,6 +122,22 @@ export async function resetPassword(actor: Actor | null, userId: string) {
   return { username: target.username ?? '', name: target.name, password };
 }
 
+// A lost admin password (runbook §3.2): run at start-up from the server's .env, since nobody can sign in to reset it.
+// Does nothing once the password is already the new one, so the app can restart with the settings still there.
+export async function resetAdminPasswordFromServer(r: { username: string; password: string }): Promise<string> {
+  if (r.password.length < 12) return 'The new admin password must be at least 12 characters.';
+  const [target] = await db.select().from(user).where(eq(user.username, r.username)).limit(1);
+  if (!target) return `No account is called ${r.username}.`;
+  if (!target.role?.split(',').includes('admin')) return `Only an admin's password can be reset this way, and ${r.username} isn't one.`;
+  const ctx = await auth.$context;
+  const login = (await ctx.internalAdapter.findAccounts(target.id)).find((a) => a.providerId === 'credential');
+  if (login?.password && (await ctx.password.verify({ hash: login.password, password: r.password }))) return 'unchanged';
+  await ctx.internalAdapter.updatePassword(target.id, await ctx.password.hash(r.password));
+  await ctx.internalAdapter.deleteUserSessions(target.id);
+  await audit({ actorId: null, action: 'account.password_reset', entity: 'user', entityId: target.id, detail: { via: 'server' } });
+  return 'reset';
+}
+
 export async function setActive(actor: Actor | null, userId: string, active: boolean) {
   assertCan(actor, 'accounts.manage');
   const target = await findLiveUser(userId);

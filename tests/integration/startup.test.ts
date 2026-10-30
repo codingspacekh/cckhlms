@@ -4,6 +4,8 @@ import { join } from 'node:path';
 import { Pool } from 'pg';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { pool as appPool } from '@/db/client';
+import { auth } from '@/server/auth';
+import { seedUser } from '@/server/seed';
 import { startup, startupOrExit } from '@/server/startup';
 import { emptyDatabase, TEST_URL } from './db';
 
@@ -96,6 +98,87 @@ describe('startup', () => {
 
   it('refuses a short first-admin password', async () => {
     await expect(startup({ bootstrapAdmin: { username: 'admin', password: 'short' } })).rejects.toThrow(/at least 12/);
+  });
+});
+
+// A lost admin password (FR-AUTH-04, runbook §3.2): there is no "forgot password", so the owner puts
+// ADMIN_RESET_USERNAME and ADMIN_RESET_PASSWORD in the server's .env and restarts the app.
+describe('admin password reset at start-up', () => {
+  const passwordWorks = async (username: string, password: string) => {
+    const ctx = await auth.$context;
+    const { rows } = await pool.query(
+      `select a.password from account a join "user" u on u.id = a.user_id where u.username = $1 and a.provider_id = 'credential'`,
+      [username],
+    );
+    return ctx.password.verify({ hash: rows[0].password, password });
+  };
+  const resets = async () =>
+    (await pool.query(`select actor_id, entity_id, detail from audit_log where action = 'account.password_reset'`)).rows;
+  const sessionCount = async (username: string) =>
+    (await pool.query(`select count(*)::int as n from session s join "user" u on u.id = s.user_id where u.username = $1`, [username]))
+      .rows[0].n;
+  const withSession = async (username: string) => {
+    const ctx = await auth.$context;
+    const { rows } = await pool.query(`select id from "user" where username = $1`, [username]);
+    await ctx.internalAdapter.createSession(rows[0].id);
+    return rows[0].id as string;
+  };
+
+  beforeEach(async () => {
+    await startup({ bootstrapAdmin: { username: 'admin', password: 'forgotten-password-1' } });
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  it('gives the admin the new password, signs them out everywhere and logs it', async () => {
+    const id = await withSession('admin');
+    await startup({ bootstrapAdmin: null, adminReset: { username: 'admin', password: 'new-admin-password-1' } });
+    expect(await passwordWorks('admin', 'new-admin-password-1')).toBe(true);
+    expect(await passwordWorks('admin', 'forgotten-password-1')).toBe(false);
+    expect(await sessionCount('admin')).toBe(0);
+    expect(await resets()).toEqual([{ actor_id: null, entity_id: id, detail: { via: 'server' } }]);
+  });
+
+  it('changes nothing on later starts while the settings are still there', async () => {
+    const reset = { username: 'admin', password: 'new-admin-password-1' };
+    await startup({ bootstrapAdmin: null, adminReset: reset });
+    await withSession('admin'); // signed in with the new password
+    await startup({ bootstrapAdmin: null, adminReset: reset });
+    expect(await sessionCount('admin')).toBe(1);
+    expect(await resets()).toHaveLength(1);
+  });
+
+  it('is safe when several server processes start at the same time', async () => {
+    const reset = { username: 'admin', password: 'new-admin-password-1' };
+    await Promise.all([1, 2, 3].map(() => startup({ bootstrapAdmin: null, adminReset: reset })));
+    expect(await passwordWorks('admin', 'new-admin-password-1')).toBe(true);
+    expect(await resets()).toHaveLength(1);
+  });
+
+  it.each([
+    ['a teacher', 'teach', 'Only an admin'],
+    ['an unknown username', 'nobody', 'No account'],
+  ])('leaves %s alone and still starts', async (_, username, message) => {
+    await seedUser({ username: 'teach', name: 'Teacher', password: 'teacher-password-1', role: 'teacher' });
+    await expect(startup({ bootstrapAdmin: null, adminReset: { username, password: 'new-password-123' } })).resolves.toBeUndefined();
+    expect(await passwordWorks('teach', 'teacher-password-1')).toBe(true);
+    expect(await resets()).toEqual([]);
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining(message));
+  });
+
+  it('refuses a short password and still starts', async () => {
+    await expect(startup({ bootstrapAdmin: null, adminReset: { username: 'admin', password: 'short' } })).resolves.toBeUndefined();
+    expect(await passwordWorks('admin', 'forgotten-password-1')).toBe(true);
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('at least 12'));
+  });
+
+  it('reads ADMIN_RESET_USERNAME and ADMIN_RESET_PASSWORD from the server environment', async () => {
+    vi.stubEnv('BOOTSTRAP_ADMIN_USERNAME', '');
+    vi.stubEnv('ADMIN_RESET_USERNAME', 'admin');
+    vi.stubEnv('ADMIN_RESET_PASSWORD', 'new-admin-password-1');
+    await startup();
+    vi.unstubAllEnvs();
+    expect(await passwordWorks('admin', 'new-admin-password-1')).toBe(true);
   });
 });
 
