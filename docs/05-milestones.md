@@ -51,7 +51,7 @@ flowchart LR
 | **M11** ✅ | Run code | Run Python and Java from the editor and the Playground, with an input box, on our own locked-down runner on the same server | FR-CODE-09, 10 · BR-25 · ADR-0004 | 4 days |
 | **M12** ✅ | Q&A editor | The word-processor-style editor, with code blocks, in questions and replies | FR-STU-03, 04 · FR-TCH-03 · BR-26 | 2 days |
 | **M13** ✅ | Change my password | Admins and teachers change their own password on a My account page | FR-AUTH-06 | 1 day |
-| **M14** | Weekly report sheet, online classes, support lines | The weekly report as a sheet with one row per student; online classes with a Zoom link; Admin's Weekly reports page; support lines for students who need help | FR-TCH-14 · FR-ADM-05, 17, 18 · FR-STU-13 · BR-27…29 | 7 days |
+| **M14** ✅ | Weekly report sheet, online classes, support lines | The weekly report as a sheet with one row per student; online classes with a Zoom link; Admin's Weekly reports page; support lines for students who need help | FR-TCH-14 · FR-ADM-05, 17, 18 · FR-STU-13 · BR-27…29 | 7 days |
 | — | **R2: Club-wide launch** | Every class of the next term runs on `lms.cckh.dev` | | |
 
 \* *Effort = focused working days for one developer, tests included. Total ≈ **45 focused days**. At 2–3 focused days a week alongside teaching, that is about **4–5 months**: R1 could pilot in **Term 1 · 2027** (from Sat 9 Jan 2027) and R2 launch in **Term 2 · 2027**. These are planning ranges (±30%), not promises. AI-assisted pace on codingspacekh was faster, but the server work here is new.*
@@ -688,7 +688,7 @@ The next milestone does not start until all four are true.
 > - *Also on 2026-10-30, before M13:* a lost password for the only admin had no way back; `ADMIN_RESET_*` in the server's `.env` (runbook §3.2, #65) now resets it at start-up.
 > - **Exit criterion:** met. The owner changed their password on `lms.cckh.dev` and signed off M13 on 2026-10-30.
 
-### M14 — Weekly report sheet, online classes, support lines (7 days)
+### M14 — Weekly report sheet, online classes, support lines (7 days) — ✅ DONE 2026-10-31 (owner signed off; PRs #68–#70)
 **Why:** the owner, 2026-10-30: the weekly report should work like spreadsheet cells, one row per student (attendance pulled from the attendance taken, participation, the teacher's comment, and a note telling Admin whether the student needs support); the club runs classes **in a room and online**, and an online class needs its Zoom link (the same all term) where the room goes, for students to click; Admin reads every class's weekly reports, then puts the students who need help into a **support line**: an extra online session on a day agreed with the guardian, which the students and their teachers must see. Prototype approved 2026-10-30 (https://claude.ai/artifact/NL8Jxg9F2yqgYCyQPYM7bE, screens 1–8). The owner chose: one session per support line, on any day of the week; in the app only (Admin already talks to guardians).
 
 Built in three steps, one PR each, each merged only after the owner says so.
@@ -706,6 +706,16 @@ Built in three steps, one PR each, each merged only after the owner says so.
 - **Tests first:** unit: the support line rules (not in the past, length, at least one student, link) and the policy row (Admin only); component: the form's student list (add, remove, the teachers who will be told); integration: a support line is shown to its students and their class teachers only, a teacher sees only their own students' names, a student sees no other names, it disappears after it ends, a change or delete reaches everyone, each is audited; Playwright + axe: Admin picks two flagged students from Weekly reports and makes a support line, the student sees it on My week and the teacher on Today.
 
 **Exit criteria:** on `lms.cckh.dev`, an online class's student joins from Join on Zoom; a teacher writes a week's sheet and Admin reads it on Weekly reports; Admin makes a support line that its students and their teacher see; old weekly reports still open; the owner signs off M14.
+
+> **Result** (PRs #68–#70, 2026-10-30/31, live as ee28866).
+> - **M14a online classes** (#68): `class.mode` and `class.meeting_url`, with a `class_place` check so a class has a room or a link, never both. The link check (`src/modules/academics/meeting.ts`) is shared with support lines. Join on Zoom shows on My week, the student's class page, Today and the teacher's class page. The link comes through `myClasses`, so it only reaches the class's own students and teachers, plus Admin. Room clashes compare rooms only. The audit log names the fields that changed, not the link.
+> - **M14b weekly report sheet** (#69): `class_report_student`, one row per student. The attendance cell goes through the attendance service, so the sheet and the Attendance tab are the same record. The first cell saved makes the `class_report` row, so "written" and "missing" still work. Admin's **Weekly reports** uses the term's weeks, with a read-only sheet per class. New policy rows `report.read` and `reports.overview`. Cell saves aren't audited, the same as attendance marks. The student data export includes their rows, and deleting a student's personal data clears the comment and note (NFR-07).
+> - **M14c support lines** (#70): `support_line` and `support_line_student`. The students ticked on Weekly reports arrive in the form. The cards on My week and Today, and the `support_line` notifications, are worked out when read (ADR-08). Cancelling keeps the row (`cancelled_at`), so the people in it are told. Create, change and cancel are audited without names. The export lists a student's support lines.
+> - *Changed from the plan:* "delete" a support line became **cancel**, so its students and teachers get a notification. Topics and the general comment are still saved with a button, below the sheet.
+> - *Found while building:* the a11y sweep caught Today scrolling sideways on a phone once a support line existed; the teacher card's table now scrolls in its card. The tick boxes on Weekly reports are a plain GET form carrying only enrolment ids, like the audit log's filters.
+> - *Also in this milestone, on request:* pages use the full screen width (the 1360px cap is gone), and the Edit class dialog is 680px wide, so Day and First session no longer overlap.
+> - *Deploy:* #69 and #70 merged on a Saturday, so the weekend guard held them back; the owner asked for them live the same day, so they went out by a forced deploy at 00:57 on Sat 31 Oct, outside class hours.
+> - **Exit criterion:** met. The owner tried online classes, the sheet, Weekly reports and a support line on `lms.cckh.dev` and signed off M14 on 2026-10-31.
 
 ### R2 — Club-wide launch
 - All classes of the next term (e.g. Term 2 · 2027) are set up and run on `lms.cckh.dev`. Teachers get a short walkthrough, and students get login slips.
