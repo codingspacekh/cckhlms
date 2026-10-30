@@ -46,13 +46,11 @@ describe('ReportSheet', () => {
   it('has one row per student, and no participation for absent or excused students', () => {
     sheet();
     const table = screen.getByRole('table', { name: 'Weekly report, one row per student' });
-    expect(within(table).getAllByRole('rowheader').map((h) => h.textContent)).toEqual([
-      '1Bopha Lim',
-      '2Chenda Ouk',
-      '3Kosal Meas',
-      '4Nita Kong',
-      'This week',
-    ]);
+    expect(
+      within(table)
+        .getAllByRole('rowheader')
+        .map((h) => h.textContent),
+    ).toEqual(['1Bopha Lim', '2Chenda Ouk', '3Kosal Meas', '4Nita Kong', 'This week']);
     expect(cell('Attendance, Kosal Meas').textContent).toContain('Absent');
     expect(screen.queryByLabelText('Participation, Kosal Meas')).toBeNull();
     expect(screen.queryByLabelText('Participation, Nita Kong')).toBeNull();
@@ -150,7 +148,11 @@ describe('ReportSheet', () => {
 
 describe('ReportSheetView', () => {
   it('shows the sheet to read, with flagged rows marked and empty cells as dashes', () => {
-    render(<ReportSheetView rows={[ROWS[0]!, r('Malis Heng', { participation: 'not_active', needsSupport: true, note: 'Falls behind.' }), ROWS[2]!]} />);
+    render(
+      <ReportSheetView
+        rows={[ROWS[0]!, r('Malis Heng', { participation: 'not_active', needsSupport: true, note: 'Falls behind.' }), ROWS[2]!]}
+      />,
+    );
     const table = screen.getByRole('table', { name: 'Weekly report, read only' });
     const rows = within(table).getAllByRole('row').slice(1);
     expect(rows.map((x) => [...x.children].map((c) => c.textContent))).toEqual([

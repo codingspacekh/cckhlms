@@ -12,7 +12,13 @@ const row = (o: Partial<Parameters<typeof sheetTotals>[0][number]> = {}) => ({
 
 describe('who was in class (BR-27)', () => {
   it('is a student marked present or late', () => {
-    expect([isHere('present'), isHere('late'), isHere('absent'), isHere('excused'), isHere(null)]).toEqual([true, true, false, false, false]);
+    expect([isHere('present'), isHere('late'), isHere('absent'), isHere('excused'), isHere(null)]).toEqual([
+      true,
+      true,
+      false,
+      false,
+      false,
+    ]);
   });
 });
 

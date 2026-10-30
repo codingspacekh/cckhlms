@@ -49,7 +49,13 @@ beforeAll(async () => {
     if (r.status !== 'created') throw new Error(`${name} not created`);
     return r.classId;
   };
-  py = await make('PY1', 'Python Level 1', { day: 'sat', startTime: '09:00', firstDate: '2027-01-09', room: 'Room A', leadTeacherId: sophea.userId });
+  py = await make('PY1', 'Python Level 1', {
+    day: 'sat',
+    startTime: '09:00',
+    firstDate: '2027-01-09',
+    room: 'Room A',
+    leadTeacherId: sophea.userId,
+  });
   web = await make('WEB', 'Web Basics', {
     day: 'sun',
     startTime: '10:00',
@@ -58,7 +64,13 @@ beforeAll(async () => {
     meetingUrl: 'https://zoom.us/j/1234567',
     leadTeacherId: dara.userId,
   });
-  java = await make('JV1', 'Java Level 1', { day: 'sat', startTime: '13:00', firstDate: '2027-01-09', room: 'Lab', leadTeacherId: dara.userId });
+  java = await make('JV1', 'Java Level 1', {
+    day: 'sat',
+    startTime: '13:00',
+    firstDate: '2027-01-09',
+    room: 'Lab',
+    leadTeacherId: dara.userId,
+  });
   for (const [classId, names] of [
     [py, ['Bopha Lim', 'Chenda Ouk', 'Kosal Meas']],
     [web, ['Malis Heng', 'Nita Kong']],
@@ -200,9 +212,7 @@ describe('Admin’s Weekly reports (FR-ADM-17)', () => {
 
   it('lists every class that met that week: where, attendance, active, needs support, written or missing', async () => {
     const o = await weeklyReportsOverview(admin, { termId, week: 2 }, NOW);
-    expect(
-      o.rows.map((r) => [r.className, r.teacher, r.where, r.attendance, r.active, r.needSupport, r.state, r.classWeek]),
-    ).toEqual([
+    expect(o.rows.map((r) => [r.className, r.teacher, r.where, r.attendance, r.active, r.needSupport, r.state, r.classWeek])).toEqual([
       ['Java Level 1 · Sat 13:00', 'Dara Kim', 'Lab', null, null, 0, 'missing', 2],
       ['Python Level 1 · Sat 09:00', 'Sophea Chan', 'Room A', { here: 2, of: 3 }, { active: 1, here: 2 }, 1, 'written', 2],
       ['Web Basics · Sun 10:00', 'Dara Kim', 'Online', { here: 2, of: 2 }, { active: 0, here: 2 }, 1, 'written', 2],
