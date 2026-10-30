@@ -15,6 +15,7 @@ import { WeekPicker } from './WeekPicker';
 export const metadata: Metadata = { title: 'Weekly reports' };
 
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
+const SUPPORT_LINES = '/admin/support-lines';
 
 // Admin's Weekly reports (FR-ADM-17; M14b): every class's report for a week of a term, and who needs support.
 export default async function WeeklyReportsPage({
@@ -117,34 +118,44 @@ export default async function WeeklyReportsPage({
           </section>
 
           <section className="card flush" aria-labelledby="support-title">
-            <div className="chead">
-              <div>
-                <h2 id="support-title">Needs support this week</h2>
-                <p className="small muted">Flagged by teachers on week {o.week.week}’s reports</p>
+            {/* A plain GET, like the audit log's filters: it only opens the support line form with these students' enrolment
+                ids, which say nothing about them. */}
+            <form method="get" action={SUPPORT_LINES}>
+              <div className="chead">
+                <div>
+                  <h2 id="support-title">Needs support this week</h2>
+                  <p className="small muted">Flagged by teachers on week {o.week.week}’s reports</p>
+                </div>
+                {o.support.length > 0 && (
+                  <button type="submit" className="btn primary">
+                    Add ticked students to a support line
+                  </button>
+                )}
               </div>
-            </div>
-            {o.support.length === 0 ? (
-              <p className="muted pad">Nobody was flagged this week.</p>
-            ) : (
-              <ul className="plain support-list">
-                {o.support.map((s) => (
-                  <li key={s.enrolmentId}>
-                    <span className="who">
-                      <strong>{s.name}</strong>
-                      <span className="sub">
-                        {s.className.split(' · ')[0]}
-                        {s.attendance ? ` · ${ATTENDANCE_LABEL[s.attendance]}` : ''}
-                        {s.participation ? ` · ${PARTICIPATION_LABEL[s.participation].toLowerCase()}` : ''}
+              {o.support.length === 0 ? (
+                <p className="muted pad">Nobody was flagged this week.</p>
+              ) : (
+                <ul className="plain support-list">
+                  {o.support.map((s) => (
+                    <li key={s.enrolmentId}>
+                      <input type="checkbox" name="students" value={s.enrolmentId} defaultChecked aria-label={s.name} />
+                      <span className="who">
+                        <strong>{s.name}</strong>
+                        <span className="sub">
+                          {s.className.split(' · ')[0]}
+                          {s.attendance ? ` · ${ATTENDANCE_LABEL[s.attendance]}` : ''}
+                          {s.participation ? ` · ${PARTICIPATION_LABEL[s.participation].toLowerCase()}` : ''}
+                        </span>
                       </span>
-                    </span>
-                    <span>{s.note || <span className="muted">No note.</span>}</span>
-                    <Link className="btn sm" href={`/admin/weekly-reports/${s.classId}/${s.classWeek}`}>
-                      Open report<span className="sr-only"> for {s.name}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
+                      <span>{s.note || <span className="muted">No note.</span>}</span>
+                      <Link className="btn sm" href={`/admin/weekly-reports/${s.classId}/${s.classWeek}`}>
+                        Open report<span className="sr-only"> for {s.name}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </form>
           </section>
         </>
       )}

@@ -4146,3 +4146,48 @@ table.gradebook .sticky-col {
 .prewrap {
   white-space: pre-wrap;
 }
+.support-list li:has(> input[type='checkbox']) {
+  grid-template-columns: 20px minmax(160px, 220px) 1fr auto;
+}
+.support-list input[type='checkbox'],
+.pick input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  margin-top: 3px;
+  accent-color: var(--accent);
+}
+
+/* Support lines (M14c). */
+.pick th,
+.pick td {
+  vertical-align: top;
+}
+.pick td.why {
+  white-space: normal;
+  color: var(--ink-2);
+  min-width: 220px;
+}
+.add-student {
+  max-width: 420px;
+}
+/* An invitation on My week or Today: a support line. */
+.invite {
+  border-left: 6px solid var(--accent);
+}
+.invite .tag {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent-2);
+}
+.invite .when {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--heading);
+  margin: 0;
+}
+td.text-cell {
+  white-space: normal;
+  min-width: 160px;
+}

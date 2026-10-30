@@ -20,7 +20,8 @@ export type NotificationKind =
   | 'reply' // someone replied to the student's question
   | 'question' // a student asked a question in the teacher's class
   | 'report' // a post in the teacher's class was reported
-  | 'to_mark'; // hand-ins waiting to be marked
+  | 'to_mark' // hand-ins waiting to be marked
+  | 'support_line'; // a support line the student (or a teacher's student) is in: made, changed or cancelled (M14c)
 export type Notification = {
   id: string; // stable: the same thing gives the same id each time
   kind: NotificationKind;

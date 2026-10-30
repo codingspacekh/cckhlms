@@ -516,6 +516,45 @@ export const classReportStudent = pgTable(
   ],
 );
 
+// Support lines (M14c, FR-ADM-18, BR-29): one extra online session Admin sets up for students who need help, on any
+// day. Its students and their class teachers see it until it ends. Cancelling keeps the row (cancelled_at), so the
+// people in it are told.
+export const supportLine = pgTable(
+  'support_line',
+  {
+    id: text('id').primaryKey(),
+    date: date('date').notNull(),
+    startTime: text('start_time').notNull(),
+    minutes: smallint('minutes').notNull(),
+    meetingUrl: text('meeting_url').notNull(),
+    message: text('message').notNull().default(''),
+    createdBy: text('created_by').references(() => user.id, { onDelete: 'set null' }),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+    cancelledAt: ts('cancelled_at'),
+  },
+  (t) => [
+    index('support_line_date_idx').on(t.date),
+    check('support_line_start_time_format', sql`${t.startTime} ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'`),
+    check('support_line_minutes', sql`${t.minutes} in (30, 45, 60, 90)`),
+    check('support_line_lengths', sql`char_length(${t.meetingUrl}) <= 500 and char_length(${t.message}) <= 500`),
+  ],
+);
+
+// Its students, by enrolment: the class says which teachers are told.
+export const supportLineStudent = pgTable(
+  'support_line_student',
+  {
+    supportLineId: text('support_line_id')
+      .notNull()
+      .references(() => supportLine.id, { onDelete: 'cascade' }),
+    enrolmentId: text('enrolment_id')
+      .notNull()
+      .references(() => enrolment.id, { onDelete: 'cascade' }),
+  },
+  (t) => [primaryKey({ columns: [t.supportLineId, t.enrolmentId] }), index('support_line_student_enrolment_idx').on(t.enrolmentId)],
+);
+
 // Classwork, homework and exams set in a week of a class (FR-TCH-07/08). An exam with several parts (theory,
 // practical) is one row per part: BR-12 adds up exam scores and maxes. When it's due is worked out from the
 // sessions (due_mode), except for a day and time the teacher chose (due_at), so BR-16 needs no job.

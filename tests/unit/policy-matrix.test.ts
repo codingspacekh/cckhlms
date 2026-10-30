@@ -34,6 +34,8 @@ const MATRIX: Record<Action, Record<Role, Rule>> = {
   // every class's on Weekly reports (FR-ADM-17).
   'report.read': { admin: true, teacher: 'own', student: false },
   'reports.overview': { admin: true, teacher: false, student: false },
+  // M14c: Admin makes support lines (FR-ADM-18); students and teachers only see the ones they are in.
+  'supportlines.manage': { admin: true, teacher: false, student: false },
   'assessment.write': { admin: false, teacher: 'own', student: false },
   'assessment.read': { admin: true, teacher: 'own', student: 'own' },
   'work.save': { admin: false, teacher: false, student: 'own' },

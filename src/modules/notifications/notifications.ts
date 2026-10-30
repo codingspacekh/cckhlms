@@ -20,6 +20,7 @@ import {
 } from '@/db/schema';
 import { KIND_LABEL, formatDue, resolveDue, type Kind, type WorkLanguage } from '@/modules/assessments/rules';
 import { getClubSettings } from '@/modules/club/service';
+import { supportLineNotifications } from '@/modules/support/support-lines';
 import { weeksOf } from '@/modules/teaching/weeks';
 import type { Actor } from '@/server/actor';
 import { assertCan } from '@/server/errors';
@@ -319,11 +320,12 @@ async function seenAt(userId: string, area: Area): Promise<Date | null> {
 export async function notificationsFor(actor: Actor | null, area: Area, opts: Opts = {}) {
   assertArea(actor, area);
   const now = opts.now ?? new Date();
-  const [raw, seen] = await Promise.all([
+  const [feed, support, seen] = await Promise.all([
     area === 'student' ? studentFeed(actor.userId, now) : teacherFeed(actor.userId, now),
+    supportLineNotifications(actor.userId, area, windowStart(now)),
     seenAt(actor.userId, area),
   ]);
-  const items = sortFeed(raw, now).map((n) => ({ ...n, unread: !seen || n.at > seen }));
+  const items = sortFeed([...feed, ...support], now).map((n) => ({ ...n, unread: !seen || n.at > seen }));
   return { items, seenAt: seen };
 }
 

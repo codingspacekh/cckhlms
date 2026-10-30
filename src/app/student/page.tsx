@@ -3,12 +3,14 @@ import Link from 'next/link';
 import mark from '@/components/shell/champion-coders-mark.png';
 import { JoinZoom, Where } from '@/components/academics/Where';
 import { TermPuzzle } from '@/components/home/TermPuzzle';
+import { StudentSupportCard } from '@/components/support/SupportLineCards';
 import { Icon } from '@/components/ui/Icon';
 import { addMinutes, toClubTime, formatDate } from '@/modules/academics/schedule';
 import { KIND_LABEL } from '@/modules/assessments/rules';
 import { getClubSettings } from '@/modules/club/service';
 import { classWhen, firstName } from '@/modules/reporting/home-rules';
 import { studentHome, type HomeTodo } from '@/modules/reporting/student-home';
+import { mySupportLines } from '@/modules/support/support-lines';
 import { requireActor } from '@/server/guard';
 
 export const metadata: Metadata = { title: 'My week' };
@@ -23,7 +25,7 @@ const TODO_NOTE: Record<HomeTodo['state'], (t: HomeTodo) => string> = {
 // puzzle, what's left to do, recent marks, their latest project and the latest word from a teacher.
 export default async function StudentHome() {
   const actor = await requireActor('student.area');
-  const [home, { timeZone }] = await Promise.all([studentHome(actor), getClubSettings()]);
+  const [home, { timeZone }, support] = await Promise.all([studentHome(actor), getClubSettings(), mySupportLines(actor)]);
   const next = home.classes.find((c) => c.nextSession);
   const s = next?.nextSession;
   const teacher = next?.teachers[0] ? firstName(next.teachers[0]) : null;
@@ -101,6 +103,9 @@ export default async function StudentHome() {
       </section>
 
       <div className="home-grid">
+        {support.map((l) => (
+          <StudentSupportCard key={l.id} line={l} today={home.today} />
+        ))}
         {home.classes.map((c) => (
           <section key={c.id} className="card stack wide" aria-labelledby={`puzzle-${c.id}`}>
             <div className="spread">

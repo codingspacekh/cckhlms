@@ -28,6 +28,7 @@ const ICON: Record<NotificationKind, IconName> = {
   question: 'info',
   report: 'alert',
   to_mark: 'check',
+  support_line: 'calendar',
 };
 
 // FR-SYS-01: opening the list marks the area read up to the newest notification shown. The "New" marks are kept
