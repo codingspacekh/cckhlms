@@ -14,7 +14,15 @@ import { submitWork } from '@/modules/assessments/submissions';
 import { auditEntries } from '@/modules/audit/audit-log';
 import { actionsIn, PAGE_SIZE, parseAuditFilters, SENSITIVE_GROUPS, type AuditFilters } from '@/modules/audit/rules';
 import { issueCertificate, reissueCertificate, revokeCertificate } from '@/modules/certificates/certificates';
-import { createAccount, deleteAccount, resetPassword, setActive, signOutEverywhere, updateAccount } from '@/modules/identity/service';
+import {
+  changeOwnPassword,
+  createAccount,
+  deleteAccount,
+  resetPassword,
+  setActive,
+  signOutEverywhere,
+  updateAccount,
+} from '@/modules/identity/service';
 import { eraseStudent } from '@/modules/privacy/erase';
 import { exportStudentData } from '@/modules/privacy/export';
 import { promote } from '@/modules/promotion/promotion';
@@ -64,6 +72,7 @@ beforeAll(async () => {
   await setActive(admin, kosal.userId, false);
   await setActive(admin, kosal.userId, true);
   await signOutEverywhere(admin, kosal.userId);
+  await changeOwnPassword(admin, { current: 'admin-password-123', next: 'admin-password-456', again: 'admin-password-456' });
 
   // A class, its work and marks.
   const t1 = await createTerm(admin, { year: 2027, number: 1, startDate: '2027-01-09', endDate: '2027-04-04' });

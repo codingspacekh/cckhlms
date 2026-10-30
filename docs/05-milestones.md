@@ -50,6 +50,7 @@ flowchart LR
 | **M10** ✅ | Fix mistakes | Edit, undo and delete-if-unused for terms, courses, classes and people (reopen a closed term, change a class after it is created) | FR-ADM-01…05 · BR-23, 24 | 3 days |
 | **M11** ✅ | Run code | Run Python and Java from the editor and the Playground, with an input box, on our own locked-down runner on the same server | FR-CODE-09, 10 · BR-25 · ADR-0004 | 4 days |
 | **M12** ✅ | Q&A editor | The word-processor-style editor, with code blocks, in questions and replies | FR-STU-03, 04 · FR-TCH-03 · BR-26 | 2 days |
+| **M13** | Change my password | Admins and teachers change their own password on a My account page | FR-AUTH-06 | 1 day |
 | — | **R2: Club-wide launch** | Every class of the next term runs on `lms.cckh.dev` | | |
 
 \* *Effort = focused working days for one developer, tests included. Total ≈ **45 focused days**. At 2–3 focused days a week alongside teaching, that is about **4–5 months**: R1 could pilot in **Term 1 · 2027** (from Sat 9 Jan 2027) and R2 launch in **Term 2 · 2027**. These are planning ranges (±30%), not promises. AI-assisted pace on codingspacekh was faster, but the server work here is new.*
@@ -669,6 +670,17 @@ The next milestone does not start until all four are true.
 > **Result** (PR #62, 2026-10-30). `NoteEditor` takes `variant="post"`: the toolbar a question needs (bold, italic, code, link, lists, Code block, undo/redo), no text style, picture, tip box or + and `/` menu, its own field name and label, and it empties when its form is reset. Questions and replies are shown with `renderPost` (the note's code blocks with colours and Copy; pictures stay links). Each question has **Write a reply**, which opens one editor under it, and the editor loads only when the page needs it. A post may be 8,000 characters (it was 4,000, without its code).
 > - *Changed from the plan:* the post editor keeps the lesson note's document model. Leaving out tip boxes or pictures made Markdown with one of them crash the editor; what a post may show is `renderPost`'s job, which its XSS corpus checks.
 > - **Exit criterion:** met. The owner asked and answered questions with code and signed off M12 on 2026-10-30.
+
+### M13 — Change my password (1 day)
+**Why:** the owner forgot the only admin's password on 2026-10-30 (fixed with runbook §3.2, #65) and asked for a way for admins to set their own. Admins could already *reset* anyone's password on People, but that gives a random one; FR-AUTH-06 ("change my own password") was never built. Prototype approved 2026-10-30; the owner chose **admins and teachers only**: students keep their login-slip passwords, and a teacher or admin resets them.
+
+**Goal:** an admin or teacher, signed in, chooses a new password they can remember.
+
+**Build:** the name at the bottom of the sidebar links admins and teachers to **My account** (`/admin/account`, `/teacher/account`): their name, username and role, and **Change password** (current password, the new one twice, at least 12 characters). A change keeps this session and signs out every other one, and is in the audit log. Wrong current passwords count like wrong sign-ins (5 a minute per username, FR-AUTH-11). Better Auth's own `/change-password` stays switched off.
+
+**Tests first:** unit: the policy row (admin and teacher yes, student no); component: the form sends the three fields, shows a mistake next to its field, confirms a change; the sidebar links admins and teachers to My account, and not students; integration: a change works for sign-in, keeps this session, ends the others and is audited; a wrong current password, a short, unchanged or mismatched new one change nothing; the 6th wrong current password in a minute is refused; a student is refused; Playwright + axe: a teacher changes their password and signs in with the new one.
+
+**Exit criteria:** an admin and a teacher change their password on `lms.cckh.dev`; students see no change; the owner signs off M13.
 
 ### R2 — Club-wide launch
 - All classes of the next term (e.g. Term 2 · 2027) are set up and run on `lms.cckh.dev`. Teachers get a short walkthrough, and students get login slips.

@@ -17,7 +17,7 @@
 | FR-AUTH-03 | Admin sets the password when creating an account (or the system generates a readable one). Admin can choose to require a password change at first login (off by default for students). | M |
 | FR-AUTH-04 | Admin can reset a user's password and deactivate/reactivate accounts (no hard delete of an account with history, BR-23). There is no self-service "forgot password"; students ask the Admin or teacher. | M |
 | FR-AUTH-05 | Role-based access: Admin, Teacher, Student. One user may hold several roles. | M |
-| FR-AUTH-06 | Users can change their own password and edit their display name/avatar. | S |
+| FR-AUTH-06 | Users can change their own password and edit their display name/avatar. **Owner, 2026-10-30 (M13):** admins and teachers change their own password; students don't (a teacher or Admin resets theirs). Names and avatars are still changed by Admin. | S |
 | FR-AUTH-07 | Passwords are stored hashed, so the system cannot show them again. A new or reset password is shown to Admin **once**. | M |
 | FR-AUTH-08 | Bulk import of students from CSV. | S |
 | FR-AUTH-09 | Print **login slips** (name, username, password) for newly created or reset accounts in a class. | S |
