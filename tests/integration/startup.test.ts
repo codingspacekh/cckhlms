@@ -54,6 +54,8 @@ describe('startup', () => {
       'student_profile',
       'student_report',
       'submission',
+      'support_line',
+      'support_line_student',
       'syllabus_topic',
       'teacher_profile',
       'term',

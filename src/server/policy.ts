@@ -57,6 +57,8 @@ export const ACTIONS = {
   // class's on Weekly reports (FR-ADM-17).
   'report.read': either(hasRole('admin'), teachesClass),
   'reports.overview': hasRole('admin'),
+  // Support lines (M14c, FR-ADM-18): Admin makes them; students and teachers only see the ones they are in.
+  'supportlines.manage': hasRole('admin'),
   'assessment.write': whileOpen(teachesClass),
   'assessment.read': either(hasRole('admin'), teachesClass, studiesInClass),
   'work.save': whileOpen(studiesInClass),

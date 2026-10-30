@@ -23,6 +23,7 @@ import { createProject } from '@/modules/playground/playground';
 import { eraseStudent } from '@/modules/privacy/erase';
 import { exportStudentData } from '@/modules/privacy/export';
 import { publishTermReports, saveTermReport } from '@/modules/reporting/term-reports';
+import { saveSupportLine } from '@/modules/support/support-lines';
 import { saveSheetCell } from '@/modules/teaching/report-sheet';
 import { saveLesson } from '@/modules/teaching/lessons';
 import { askQuestion, replyToQuestion, reportPost } from '@/modules/teaching/qa';
@@ -102,6 +103,15 @@ beforeAll(async () => {
   }
   const later = await enrolStudent(admin, laterClassId, bopha.userId, { enrolledOn: first });
   if (later.status !== 'enrolled') throw new Error('not enrolled');
+  // M14c: a support line she is in.
+  await saveSupportLine(admin, null, {
+    enrolmentIds: [later.enrolmentId],
+    date: addDays(today, 7),
+    startTime: '18:00',
+    minutes: 60,
+    meetingUrl: 'https://zoom.us/j/1234567',
+    message: 'Bring your laptop.',
+  });
 
   // Week 1: a lesson with Q&A, attendance, homework handed in and marked, and classwork Bopha was excused from.
   await saveLesson(sophea, await sessionOf(classId, 1), { title: 'Variables', contentMd: 'Notes', topicIds: [], intent: 'publish' });
@@ -192,6 +202,16 @@ describe('the export', () => {
         comment: 'Bopha helped her neighbour.',
         needsSupport: true,
         note: 'Bopha can’t see the board.',
+      },
+    ]);
+    expect(data.supportLines).toEqual([
+      {
+        className: 'Python Level 1 · Sat 13:00',
+        date: addDays(today, 7),
+        startTime: '18:00',
+        minutes: 60,
+        message: 'Bring your laptop.',
+        cancelled: false,
       },
     ]);
     expect(data.work).toEqual([

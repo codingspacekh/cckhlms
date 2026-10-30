@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { sessionWhen } from '@/components/academics/nextSessionText';
 import { JoinZoom } from '@/components/academics/Where';
+import { TeacherSupportCard } from '@/components/support/SupportLineCards';
 import { Icon } from '@/components/ui/Icon';
 import { pastClasses } from '@/modules/academics/enrolments';
 import { whereLabel } from '@/modules/academics/meeting';
@@ -9,6 +10,7 @@ import { addMinutes, formatDate, toClubTime } from '@/modules/academics/schedule
 import { getClubSettings } from '@/modules/club/service';
 import { classWhen, firstName, greeting } from '@/modules/reporting/home-rules';
 import { teacherHome } from '@/modules/reporting/teacher-home';
+import { teacherSupportLines } from '@/modules/support/support-lines';
 import { requireActor } from '@/server/guard';
 
 export const metadata: Metadata = { title: 'Today' };
@@ -29,7 +31,12 @@ const DAY = (date: string) => formatDate(date).slice(0, 3).toUpperCase();
 // hand-ins to mark, and their classes this weekend.
 export default async function TeacherToday() {
   const actor = await requireActor('teacher.area');
-  const [home, past, { timeZone }] = await Promise.all([teacherHome(actor), pastClasses(actor), getClubSettings()]);
+  const [home, past, { timeZone }, support] = await Promise.all([
+    teacherHome(actor),
+    pastClasses(actor),
+    getClubSettings(),
+    teacherSupportLines(actor),
+  ]);
   const f = home.focus;
   const hour = Number(toClubTime(new Date(), timeZone).time.slice(0, 2));
   const tone = new Map(home.classes.map((c, i) => [c.id, TONES[i % TONES.length]]));
@@ -43,6 +50,9 @@ export default async function TeacherToday() {
       {home.classes.length === 0 && <p className="card muted">Your classes will appear here once the club admin assigns you to one.</p>}
 
       <div className="home-grid">
+        {support.map((l) => (
+          <TeacherSupportCard key={l.id} line={l} today={home.today} />
+        ))}
         {f && (
           <section className="next-up wide" aria-labelledby="today-title">
             <div className="spread">

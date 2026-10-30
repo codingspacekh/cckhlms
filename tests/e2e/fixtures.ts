@@ -578,8 +578,8 @@ export async function onlineClass(): Promise<{ classId: string; className: strin
 }
 
 // For the weekly report sheet spec (M14b): Sophea's Saturday 15:00 class in the main class's term, started the same
-// day (so weeks 1–3 have been held), with three students of its own.
-export async function sheetClass(): Promise<{ classId: string; className: string; termName: string; students: string[] }> {
+// day (so weeks 1–3 have been held), with three students of its own. Leakena Som can sign in (stateFile('leakena')).
+export async function sheetClass(): Promise<{ classId: string; className: string; termId: string; termName: string; students: string[] }> {
   const main = await teachingClass();
   const { db } = await import('../../src/db/client');
   const { user, klass, term } = await import('../../src/db/schema');
@@ -597,7 +597,7 @@ export async function sheetClass(): Promise<{ classId: string; className: string
     .innerJoin(term, eq(term.id, klass.termId))
     .where(eq(klass.id, main.classId));
   const existing = await db.select({ id: klass.id }).from(klass).where(eq(klass.name, className));
-  if (existing[0]) return { classId: existing[0].id, className, termName: k!.termName, students };
+  if (existing[0]) return { classId: existing[0].id, className, termId: k!.termId, termName: k!.termName, students };
   const idOf = async (username: string) => (await db.select({ id: user.id }).from(user).where(eq(user.username, username)))[0]!.id;
   const admin = { userId: await idOf(USERS.admin.username), username: 'admin', name: 'Admin', role: 'admin', sessionId: 'e2e' };
   const course = await createCourse(admin, { code: 'PYW', name: 'Python Sheet', defaultLanguage: 'python' });
@@ -616,7 +616,35 @@ export async function sheetClass(): Promise<{ classId: string; className: string
   if (r.status !== 'created') throw new Error('sheet class not created');
   for (const name of students) {
     const a = await createAccount(admin, { role: 'student', name });
+    if (name === 'Leakena Som') await saveSignedInState('leakena', a.username, a.password, 43);
     await enrolStudent(admin, r.classId, a.userId, { enrolledOn: k!.firstDate, confirmClashes: true });
   }
-  return { classId: r.classId, className, termName: k!.termName, students };
+  return { classId: r.classId, className, termId: k!.termId, termName: k!.termName, students };
+}
+
+// For the support lines spec (M14c): Sophea flags Leakena Som and Rotanak Ry on week 3 of the sheet class.
+export async function flaggedStudents(): Promise<{ termId: string; week: number; names: string[] }> {
+  const c = await sheetClass();
+  const { db } = await import('../../src/db/client');
+  const { user, enrolment } = await import('../../src/db/schema');
+  const { and, eq } = await import('drizzle-orm');
+  const { saveSheetCell } = await import('../../src/modules/teaching/report-sheet');
+  const { weeksOf } = await import('../../src/modules/teaching/weeks');
+  const sophea = (await db.select({ id: user.id }).from(user).where(eq(user.username, USERS.teacher.username)))[0]!.id;
+  const teacher = { userId: sophea, username: USERS.teacher.username, name: USERS.teacher.name, role: 'teacher', sessionId: 'e2e' };
+  const week3 = (await weeksOf(c.classId)).find((w) => w.week === 3)!.id;
+  const names = ['Leakena Som', 'Rotanak Ry'];
+  for (const [name, note] of [
+    [names[0]!, 'Can’t finish the exercises at home.'],
+    [names[1]!, 'Missed the loops lesson.'],
+  ] as const) {
+    const [row] = await db
+      .select({ id: enrolment.id })
+      .from(enrolment)
+      .innerJoin(user, eq(user.id, enrolment.studentId))
+      .where(and(eq(enrolment.classId, c.classId), eq(user.name, name)));
+    await saveSheetCell(teacher, week3, row!.id, { field: 'needsSupport', value: 'yes' });
+    await saveSheetCell(teacher, week3, row!.id, { field: 'note', value: note });
+  }
+  return { termId: c.termId, week: 3, names };
 }
