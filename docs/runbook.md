@@ -132,6 +132,23 @@ On the server, `cd /opt/cckhlms && export APP_TAG=$(cat .deployed-tag)` first; "
 | Backup key (age) | `age-keygen` a new pair → new public key in `BACKUP_AGE_RECIPIENT` → restart → **Backup now**. Keep the **old private key** too, until the last backup made with it is gone (about 2 months). | — |
 | A person's password | People → the person → **Reset password**, print a new slip. | That person is signed out. |
 
+### 3.2 Lost admin password
+
+There is no "forgot password" (FR-AUTH-04). If another admin can sign in, they reset it on People (§3.1). Keep a second admin account in the password manager so that is always possible. If no admin can sign in:
+
+1. Make a new password in the password manager (at least 12 characters).
+2. On the server: `cd /opt/cckhlms && export APP_TAG=$(cat .deployed-tag)`, then `nano .env`, add two lines and save:
+   ```
+   ADMIN_RESET_USERNAME=admin
+   ADMIN_RESET_PASSWORD=the-new-password
+   ```
+3. Restart the app: `docker compose -f compose.prod.yaml up -d app`.
+4. Check: `docker compose -f compose.prod.yaml logs app | grep -i "admin password"` says **Admin password reset for admin**. "skipped" gives the reason (not an admin, no such account, password too short) and changes nothing; the site stays up either way.
+5. Sign in with the new password.
+6. Remove the two lines from `.env` and run step 3's command again, so the password leaves the disk and the app's environment.
+
+The reset signs that admin out everywhere and is in the audit log as "Reset a password" with no person behind it. Leaving the lines in by mistake changes nothing on later restarts, but remove them anyway. Only an admin's password can be reset this way; everyone else's is reset on People.
+
 ---
 
 ## 4. Restore drill (once per term) and disaster recovery
