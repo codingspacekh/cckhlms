@@ -14,6 +14,7 @@ import {
   playgroundProject,
   question,
   reply,
+  session,
   studentProfile,
   studentReport,
   submission,
@@ -24,6 +25,7 @@ import type { Actor } from '@/server/actor';
 import { audit } from '@/server/audit';
 import { auth } from '@/server/auth';
 import { assertCan, ValidationError } from '@/server/errors';
+import { recordSignIn, signInRefusal } from '@/server/sign-in-limit';
 import { accountEditSchema, accountInputSchema, generatePassword, suggestUsername, type AccountEdit, type AccountInput } from './rules';
 
 export type Role = 'student' | 'teacher' | 'admin';
@@ -120,6 +122,27 @@ export async function resetPassword(actor: Actor | null, userId: string) {
   await ctx.internalAdapter.deleteUserSessions(userId);
   await audit({ actorId: actor.userId, action: 'account.password_reset', entity: 'user', entityId: userId });
   return { username: target.username ?? '', name: target.name, password };
+}
+
+// FR-AUTH-06 (M13): an admin or teacher chooses their own password. Wrong current passwords count like wrong sign-ins
+// (FR-AUTH-11), so this can't be used to guess. The session it's done from stays; every other one ends.
+export async function changeOwnPassword(actor: Actor | null, input: { current: string; next: string; again: string }) {
+  assertCan(actor, 'password.change_own');
+  const { current, next, again } = input;
+  if (!current) throw new ValidationError('Type your current password.', 'current');
+  if (next.length < 12) throw new ValidationError('The new password needs at least 12 characters.', 'next');
+  if (next.length > 128) throw new ValidationError('The new password can be at most 128 characters.', 'next');
+  if (next === current) throw new ValidationError('Choose a password different from the current one.', 'next');
+  if (again !== next) throw new ValidationError('The two new passwords don’t match.', 'again');
+  if (await signInRefusal(actor.username, null)) throw new ValidationError('Too many wrong tries. Wait a minute and try again.', 'current');
+  const ctx = await auth.$context;
+  const login = (await ctx.internalAdapter.findAccounts(actor.userId)).find((a) => a.providerId === 'credential');
+  const right = !!login?.password && (await ctx.password.verify({ hash: login.password, password: current }));
+  await recordSignIn(actor.username, null, right);
+  if (!right) throw new ValidationError('That isn’t your current password.', 'current');
+  await ctx.internalAdapter.updatePassword(actor.userId, await ctx.password.hash(next));
+  await db.delete(session).where(and(eq(session.userId, actor.userId), ne(session.id, actor.sessionId)));
+  await audit({ actorId: actor.userId, action: 'account.password_change_own', entity: 'user', entityId: actor.userId });
 }
 
 // A lost admin password (runbook §3.2): run at start-up from the server's .env, since nobody can sign in to reset it.

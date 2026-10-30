@@ -33,6 +33,17 @@ const initials = (name: string) =>
 
 export function Sidebar({ role, user, classes = [] }: { role: Role; user: { name: string; roleLabel: string }; classes?: ClassLink[] }) {
   const pathname = usePathname();
+  const me = (
+    <>
+      <span className="av" aria-hidden="true">
+        {initials(user.name)}
+      </span>
+      <span className="who">
+        <span className="n">{user.name}</span>
+        <span className="r">{user.roleLabel}</span>
+      </span>
+    </>
+  );
   return (
     <aside className="side">
       <div className="brand">
@@ -90,13 +101,19 @@ export function Sidebar({ role, user, classes = [] }: { role: Role; user: { name
         )}
       </nav>
       <div className="me">
-        <div className="av" aria-hidden="true">
-          {initials(user.name)}
-        </div>
-        <div className="who">
-          <div className="n">{user.name}</div>
-          <div className="r">{user.roleLabel}</div>
-        </div>
+        {role === 'student' ? (
+          me
+        ) : (
+          // FR-AUTH-06 (M13): admins and teachers open My account (Change password) from their name.
+          <Link
+            className="me-link"
+            href={`/${role}/account`}
+            title="My account"
+            aria-current={pathname === `/${role}/account` ? 'page' : undefined}
+          >
+            {me}
+          </Link>
+        )}
         <SignOutButton />
       </div>
     </aside>

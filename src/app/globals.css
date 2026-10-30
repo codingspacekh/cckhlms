@@ -413,6 +413,27 @@ svg.i {
   min-width: 0;
   flex: 1;
 }
+.me .n,
+.me .r {
+  display: block;
+}
+/* Admins and teachers: the name links to My account (M13). */
+.me a.me-link {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: -6px 0 -6px -4px;
+  padding: 6px 4px;
+  border-radius: var(--r-sm);
+  color: inherit;
+  text-decoration: none;
+}
+.me a.me-link:hover,
+.me a.me-link[aria-current='page'] {
+  background: var(--side-2);
+}
 .me .n {
   font-weight: 700;
   font-size: 0.95rem;
@@ -811,6 +832,30 @@ input:focus {
 .note.bad {
   background: var(--bad-soft);
   color: var(--bad-text);
+}
+.note.good {
+  background: var(--good-soft);
+  color: var(--good-text);
+  font-weight: 600;
+}
+/* A mistake shown under the field it is about (M13's Change password). */
+.f input[aria-invalid='true'] {
+  border-color: var(--bad);
+}
+.field-error {
+  color: var(--bad-text);
+  font-weight: 600;
+}
+.field-help {
+  font-weight: 400;
+}
+.account-details {
+  margin: 0;
+}
+.account-details dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
 }
 .center {
   min-height: 100dvh;

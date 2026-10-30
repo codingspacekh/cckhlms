@@ -6,7 +6,7 @@ import { formText, toResult, type FormResult } from '@/server/action-result';
 import { currentActor } from '@/server/guard';
 import { checkStudentImport, importStudents, resetForSlips, type LoginSlip } from './batches';
 import type { ImportCheck } from './import-rules';
-import { createAccount, deleteAccount, resetPassword, setActive, signOutEverywhere, updateAccount } from './service';
+import { changeOwnPassword, createAccount, deleteAccount, resetPassword, setActive, signOutEverywhere, updateAccount } from './service';
 
 export type Slip = { name: string; username: string; password: string; reason: 'created' | 'reset' };
 export type ActionResult = FormResult<Slip>;
@@ -94,4 +94,16 @@ export async function importStudentsAction(
 // FR-AUTH-09: new passwords for the chosen students of a class, for their login slips.
 export async function resetForSlipsAction(classId: string, studentIds: string[]): Promise<FormResult<LoginSlip[]>> {
   return toResult(async () => ({ ok: true, data: (await resetForSlips(await currentActor(), classId, studentIds)).slips }));
+}
+
+// FR-AUTH-06 (M13): My account → Change password, for admins and teachers.
+export async function changeOwnPasswordAction(_prev: FormResult | null, form: FormData): Promise<FormResult> {
+  return toResult(async () => {
+    await changeOwnPassword(await currentActor(), {
+      current: formText(form, 'current') ?? '',
+      next: formText(form, 'next') ?? '',
+      again: formText(form, 'again') ?? '',
+    });
+    return { ok: true, message: 'Password changed. Other devices were signed out. Save the new one in your password manager.' };
+  });
 }

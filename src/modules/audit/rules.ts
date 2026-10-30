@@ -26,6 +26,7 @@ export const AUDIT_ACTIONS: Record<string, { label: string; group: AuditGroup }>
   'account.update': { label: 'Changed an account’s details', group: 'accounts' },
   'account.delete': { label: 'Deleted an unused account', group: 'accounts' },
   'account.password_reset': { label: 'Reset a password', group: 'accounts' },
+  'account.password_change_own': { label: 'Changed their own password', group: 'accounts' },
   'account.deactivate': { label: 'Switched off an account', group: 'accounts' },
   'account.reactivate': { label: 'Switched an account back on', group: 'accounts' },
   'account.sign_out_everywhere': { label: 'Signed someone out everywhere', group: 'accounts' },
