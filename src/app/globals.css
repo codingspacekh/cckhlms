@@ -585,7 +585,6 @@ main#main {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  max-width: 1360px;
   width: 100%;
 }
 @media (max-width: 900px) {
@@ -1429,6 +1428,10 @@ td.pick {
   .g3.date-first {
     grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
   }
+  /* Edit class: the Saturday/Sunday switch keeps its own width, then the date, then the weeks. */
+  .g3.day-date {
+    grid-template-columns: auto minmax(0, 1.4fr) minmax(0, 0.7fr);
+  }
 }
 @media (max-width: 640px) {
   .g3 {
@@ -1560,7 +1563,7 @@ tbody th {
   color: var(--ink);
 }
 .dialog.wide {
-  width: min(560px, calc(100vw - 32px));
+  width: min(680px, calc(100vw - 32px));
 }
 .dialog::backdrop {
   background: rgb(21 42 92 / 0.5);

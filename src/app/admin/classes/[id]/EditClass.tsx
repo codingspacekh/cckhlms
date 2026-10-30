@@ -103,7 +103,9 @@ function EditClassForm({
           <input name="name" type="text" defaultValue={k.name} required maxLength={100} />
         </label>
         <label className="f">
-          Capacity <span className="xs muted">(optional)</span>
+          <span>
+            Capacity <span className="xs muted">(optional)</span>
+          </span>
           <input name="capacity" type="number" min={1} max={60} defaultValue={k.capacity ?? ''} />
         </label>
       </div>
@@ -150,7 +152,7 @@ function EditClassForm({
               </Select>
             </label>
           </div>
-          <div className="grid g3 date-mid">
+          <div className="grid g3 day-date">
             <fieldset className="fs f">
               <legend>Day</legend>
               <div className="seg">

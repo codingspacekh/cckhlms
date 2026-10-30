@@ -108,21 +108,19 @@ export function NewClassForm({
             </Select>
           </label>
         </div>
-        <div className="grid g2">
-          <label className="f">
-            Lead teacher
-            <Select name="leadTeacherId" required defaultValue="">
-              <option value="" disabled>
-                Choose a teacher
+        <label className="f">
+          Lead teacher
+          <Select name="leadTeacherId" required defaultValue="">
+            <option value="" disabled>
+              Choose a teacher
+            </option>
+            {teachers.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
               </option>
-              {teachers.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </Select>
-          </label>
-        </div>
+            ))}
+          </Select>
+        </label>
         <ClassPlace />
         {sessions
           .filter((s) => s.cancelled)
