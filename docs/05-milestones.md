@@ -52,6 +52,7 @@ flowchart LR
 | **M12** ✅ | Q&A editor | The word-processor-style editor, with code blocks, in questions and replies | FR-STU-03, 04 · FR-TCH-03 · BR-26 | 2 days |
 | **M13** ✅ | Change my password | Admins and teachers change their own password on a My account page | FR-AUTH-06 | 1 day |
 | **M14** ✅ | Weekly report sheet, online classes, support lines | The weekly report as a sheet with one row per student; online classes with a Zoom link; Admin's Weekly reports page; support lines for students who need help | FR-TCH-14 · FR-ADM-05, 17, 18 · FR-STU-13 · BR-27…29 | 7 days |
+| **M15** | Safer promotion | Promote several Ready classes at once, see each new class's places and timetable clashes before confirming, undo a promotion until the new classes start | FR-ADM-13 · BR-30 | 4 days |
 | — | **R2: Club-wide launch** | Every class of the next term runs on `lms.cckh.dev` | | |
 
 \* *Effort = focused working days for one developer, tests included. Total ≈ **45 focused days**. At 2–3 focused days a week alongside teaching, that is about **4–5 months**: R1 could pilot in **Term 1 · 2027** (from Sat 9 Jan 2027) and R2 launch in **Term 2 · 2027**. These are planning ranges (±30%), not promises. AI-assisted pace on codingspacekh was faster, but the server work here is new.*
@@ -716,6 +717,64 @@ Built in three steps, one PR each, each merged only after the owner says so.
 > - *Also in this milestone, on request:* pages use the full screen width (the 1360px cap is gone), and the Edit class dialog is 680px wide, so Day and First session no longer overlap.
 > - *Deploy:* #69 and #70 merged on a Saturday, so the weekend guard held them back; the owner asked for them live the same day, so they went out by a forced deploy at 00:57 on Sat 31 Oct, outside class hours.
 > - **Exit criterion:** met. The owner tried online classes, the sheet, Weekly reports and a support line on `lms.cckh.dev` and signed off M14 on 2026-10-31.
+
+### M15 — Safer promotion (4 days)
+**Why:** the owner asked on 2026-10-31 how students move on to the next term. A walkthrough of the M6 wizard on a local copy worked end to end, but it found four gaps. A promotion can't be undone. The wizard doesn't say when a new class is over its capacity or when a student would be in two classes at the same time. Each class is promoted on its own. A class promoted before its term ends says "Term … has ended". Prototype approved 2026-10-31 (https://claude.ai/artifact/VpkqHV8WmfyyM4h2VaBhNm, screens 1–4), with the defaults it proposed:
+- Warnings don't block a promotion.
+- Undo is allowed until the new classes start, and only while nothing has been recorded there.
+- Undo doesn't touch results.
+- Promoting several classes at once uses each class's own defaults, and each class is promoted separately.
+
+Built in three steps, one PR each. Each is merged only after the owner says so.
+
+**M15a — Places, clashes and the promoted note (1 day)**
+- **Build:**
+  - Under each class to choose in the wizard: how full it will be ("7 of 12 places", students already in it plus those this promotion sends; nothing when the class has no capacity), and "2 over its capacity" when it goes over.
+  - A warning on a student's row when the chosen class meets on the same day at an overlapping time as another active class they are already in, in that term. For example: "Bopha Lim would also be in Java Level 3 · Sat 09:30 at the same time".
+  - Warnings never block Confirm.
+  - A promoted class's note says "Promoted on Sat 31 Oct by Club Admin: 9 moved on, 1 left the club". The ArchivedNote text stays for classes archived by closing their term.
+- **Tests first:**
+  - Unit: the places count (with and without a capacity) and the clash check (same day and overlapping times, back-to-back classes don't clash, another day doesn't).
+  - Component: the wizard shows places and clash warnings, and Confirm stays enabled.
+  - Integration: `promotionPlan` returns each option's places and each student's clashes, and the promoted note's who, when and counts come from the audit row.
+  - Playwright + axe: an over-capacity choice shows its warning, and the class is still promoted.
+
+**M15b — Undo promotion (1.5 days)**
+- **Build:** a promoted class shows **Undo promotion** (with a confirm dialog) on its page and on Promotion (BR-30). Undo:
+  - removes the enrolments the promotion made (found by `promoted_from_id`);
+  - puts the old enrolments back to active;
+  - clears `promoted_at`, so the class can be promoted again;
+  - makes the class active again, unless its term is closed (it then stays archived, as closing left it).
+  
+  All of this happens in one transaction, audited as `class.promote_undo` in the promotion group. When undo is no longer possible, the button is replaced by why, and the note says to move a student by hand with Transfer.
+- **Tests first:**
+  - Unit: the policy row (Admin only) and the undo window (before and after the first session's start, in club time).
+  - Integration:
+    - undo restores the class and its enrolments, and the class can be promoted again;
+    - it is refused after the earliest new class's first session has started;
+    - it is refused once any moved student has an attendance mark, hand-in, draft, excusal, weekly report row, term report, support line or Q&A post in the new class, or the new enrolment is no longer active;
+    - two admins undoing at once: only the first does it;
+    - a closed term's class stays archived;
+    - term reports and certificates are untouched;
+    - the action is audited.
+  - Playwright + axe: Admin promotes a class, undoes it, and the students are back in the old class.
+
+**M15c — Promote several classes (1.5 days)**
+- **Build:**
+  - The Promotion page gets a tick box on each **Ready** class (all term reports published, not yet promoted) and **Review and promote N classes**.
+  - The review page lists each class with where its students go: passed to the next-level class, the others to the repeat class. Each new class shows its places, warnings come first, and each class has **Open wizard** to change single students.
+  - A class whose defaults are missing (no next-level or repeat class in the next term) can't be ticked and says why.
+  - Confirm promotes each class in its own transaction with the same checks as the wizard. The result says which classes were promoted and which weren't, and why, so one problem doesn't stop the others.
+- **Tests first:**
+  - Component: tick boxes only on Ready classes, and the button count.
+  - Integration:
+    - several classes promoted with their defaults;
+    - the places count adds up students from every class in the review;
+    - a class promoted meanwhile by another admin is reported and the rest go through;
+    - each class has its own audit row.
+  - Playwright + axe: Admin ticks two Ready classes, reviews the warnings, promotes both, and undoes one.
+
+**Exit criteria:** on a copy of the club, never on real students first, Admin promotes several classes at once, sees capacity and clash warnings, and undoes a promotion. Then the owner signs off M15.
 
 ### R2 — Club-wide launch
 - All classes of the next term (e.g. Term 2 · 2027) are set up and run on `lms.cckh.dev`. Teachers get a short walkthrough, and students get login slips.
