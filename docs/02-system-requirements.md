@@ -32,7 +32,7 @@
 | FR-ADM-02 | Create/edit **Teacher** accounts (name, contact, bio). | M |
 | FR-ADM-03 | Create/edit **Terms** (name e.g. "Term 2 2027", start date, end date, status: planned / active / closed). Normally **4 terms per year**. A status change can be undone (BR-24). | M |
 | FR-ADM-04 | Create/edit **Courses** (name, level, description, ordered syllabus topics, next-level course, default language: Python / Java / Web, pass mark — default **60**). | M |
-| FR-ADM-05 | Create **Classes**: course, term, **weekend day** (Saturday or Sunday), start time, **session length** (90 min default, or 120), **first session date**, **number of weeks** (10–12), room, capacity. | M |
+| FR-ADM-05 | Create **Classes**: course, term, **weekend day** (Saturday or Sunday), start time, **session length** (90 min default, or 120), **first session date**, **number of weeks** (10–12), room, capacity. **Owner, 2026-10-30 (M14):** a class meets either **in a room** or **online**, with one Zoom link for the whole term instead of a room (BR-28). | M |
 | FR-ADM-06 | Assign one or more teachers to a class (lead / assistant). | M |
 | FR-ADM-07 | Enrol a student into one or more classes; remove/transfer enrolments. | M |
 | FR-ADM-08 | System warns when a student or teacher is booked into two classes whose weekend time slots overlap. | S |
@@ -44,6 +44,8 @@
 | FR-ADM-14 | Closing a term archives its classes (read-only), but data remains viewable. | S |
 | FR-ADM-15 | Export reports to PDF/CSV. | C |
 | FR-ADM-16 | Club settings: club name, logo, **time zone** (default `Asia/Phnom_Penh`). | M |
+| FR-ADM-17 | **Weekly reports** (added 2026-10-30, M14): Admin picks a term and a week and sees every class's weekly report: written or missing, attendance, how many were active, who needs support; opens one to read its sheet; a **Needs support this week** list with the teachers' notes. | S |
+| FR-ADM-18 | **Support lines** (added 2026-10-30, M14): Admin makes a support line for students who need help (picked from Needs support this week, or any student): the students and their classes, a Zoom link, a day and a start time, its length and a message. The students and their class teachers see it in the app (BR-29). | S |
 
 ### 1.3 Teacher — Lessons, Attendance, Assessments, Reports (TCH)
 
@@ -80,7 +82,7 @@
 
 | ID | Requirement | Pri |
 |---|---|---|
-| FR-TCH-14 | Write/update a **weekly class report** per session: syllabus topics covered, attendance summary (auto-filled), general comment. | M |
+| FR-TCH-14 | Write/update a **weekly class report** per session: syllabus topics covered, attendance summary (auto-filled), general comment. **Owner, 2026-10-30 (M14):** the report is a **sheet with one row per student**: attendance (the attendance record itself), participation (active / not active), a comment, needs support (Y/N) and a note for Admin; topics covered and the general comment stay below it (BR-27). | M |
 | FR-TCH-15 | Write/update a **student report** per term: performance rating, comment, "needs support" (Y/N + description). | M |
 | FR-TCH-16 | Create an **end-term exam** (an assessment of type Exam, can include code questions), mark it, and record the **final result: pass/fail**, final score, overall comment. | M |
 | FR-TCH-17 | The **overall score out of 100** is calculated automatically: **End-term exam 60% + Classwork 30% + Homework 10%** (BR-12). The system suggests Pass/Fail from the pass mark (**60**); the teacher confirms. The teacher can adjust the final score with a written reason (logged). | M |
@@ -115,6 +117,7 @@
 | FR-STU-10 | **Report** a question or reply as inappropriate. Once reported, it is hidden from students until a teacher reviews it. | S |
 | FR-STU-11 | **Term puzzle** (added 2026-10-24, M8): on "My week", one puzzle piece per weekly session of each class, filled in as the student earns it (BR-21). | S |
 | FR-STU-12 | **Readable lesson notes** (added 2026-10-24, M9): a lesson note reads like a book page: reading width, larger text and line spacing, code blocks with colours, line numbers and a **Copy** button, pictures with captions, and tip boxes. | S |
+| FR-STU-13 | **Join online** (added 2026-10-30, M14): for an online class, a **Join on Zoom** button on My week and the class page; a student invited to a support line sees it on My week, with Join on Zoom, until it ends, and gets a notification. | S |
 
 ### 1.5 Embedded Code Editor (CODE)
 
@@ -173,6 +176,9 @@ Languages: **Python 3**, **Java** (multi-file, packages), **Web (HTML/CSS/JS)**.
 | BR-24 | **Undoing a term's status** (M10): an active term can go back to planned; a closed term can be reopened (active again) when no other term is active, which un-archives the classes that closing archived (promoted classes stay archived). A term's dates can change as long as every session of its classes stays inside them. |
 | BR-25 | **Running code** (M11, ADR-0004): Python and Java only; the files obey the save limits (30 files, 200 KB) and the input is at most 10 KB; each person may start 20 runs a minute; a run stops after 10 s (5 s of CPU; Java gets 15 s more to compile), Python gets 256 MB and Java a 256 MB heap, and output is kept up to 64 KB. Runs have no network and see only their own files; nothing a run does is saved. |
 | BR-26 | **Q&A content** (M12): questions and replies are Markdown written in the compact editor: text, bold, italic, code, lists, links and code blocks; pictures and raw HTML are not shown. |
+| BR-27 | **Weekly report sheet** (M14): one row per student in the class that week; it can be written from the day of the session, as before, and each cell saves by itself. The attendance cell **is** the attendance record (changing it changes the Attendance tab, with the same rules). Participation is only for students who came (present or late). A comment and a note for Admin are at most 500 characters each. Only the class's teachers and Admin see the sheet; students never do. The weekly needs-support flag is separate from the term report's (FR-TCH-15). |
+| BR-28 | **Meeting links** (M14): a class's Zoom link and a support line's start with `https://` and are at most 500 characters. A class's link is shown only to its students and teachers and to Admin; a support line's only to its students, their class teachers and Admin. Links open in a new tab. |
+| BR-29 | **Support lines** (M14, owner 2026-10-30): one session, on any day of the week (agreed between the guardian and Admin), not in the past; a start time and a length of 30, 45, 60 or 90 minutes; at least one student, from any active class. It is shown to each student and each of their class teachers (lead and assistant), on My week / Today and as a notification, until it ends. A student sees no other student's name; a teacher sees only their own students' names and how many others there are. Admin can change or delete one before it starts. Nothing is sent outside the app. |
 
 ---
 
