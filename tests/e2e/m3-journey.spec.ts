@@ -72,13 +72,14 @@ test('the teacher writes the weekly report; coverage matches for the teacher and
     .getByRole('row', { name: /Week 2/ })
     .getByRole('link', { name: 'Missing' })
     .click();
-  const form = page.getByRole('form', { name: 'Weekly report' });
-  await expect(form.getByTestId('report-attendance')).toContainText('1 present1 late0 absent0 excused');
+  // M14b: attendance shows in the sheet above the form, one row per student.
+  await expect(page.getByTestId('sheet-totals')).toContainText('2 of 2 here');
+  const form = page.getByRole('form', { name: 'The whole session' });
   await expect(form.getByRole('checkbox', { name: 'Links and images' })).toBeChecked(); // from the lesson
   await form.getByRole('checkbox', { name: 'HTML tags' }).check();
-  await form.getByLabel('Comment on the session').fill('Good week. Borey was late but caught up.');
+  await form.getByLabel('General comment').fill('Good week. Borey was late but caught up.');
   await expectAccessible(page);
-  await form.getByRole('button', { name: 'Save weekly report' }).click();
+  await form.getByRole('button', { name: 'Save topics and comment' }).click();
   await expect(form.getByRole('status')).toHaveText('Weekly report saved.');
 
   await page.goto(`/teacher/classes/${c.classId}`);

@@ -9,6 +9,7 @@ import { db } from '@/db/client';
 import {
   account,
   attendance,
+  classReportStudent,
   auditLog,
   certificate,
   enrolment,
@@ -72,6 +73,7 @@ export async function eraseStudent(actor: Actor | null, studentId: string, confi
     await tx.update(submission).set({ files: [], feedbackMd: '' }).where(eq(submission.studentId, studentId));
     await tx.update(studentReport).set({ comment: '', supportNote: '' }).where(inArray(studentReport.enrolmentId, theirs));
     await tx.update(attendance).set({ note: null }).where(inArray(attendance.enrolmentId, theirs));
+    await tx.update(classReportStudent).set({ comment: '', note: '' }).where(inArray(classReportStudent.enrolmentId, theirs));
     await tx.update(question).set({ bodyMd: '', codeSnippet: null, visibility: 'hidden' }).where(eq(question.authorId, studentId));
     await tx.update(reply).set({ bodyMd: '', visibility: 'hidden' }).where(eq(reply.authorId, studentId));
     await tx.update(postReport).set({ reason: null }).where(eq(postReport.reporterId, studentId));

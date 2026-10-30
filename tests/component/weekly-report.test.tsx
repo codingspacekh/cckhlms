@@ -26,29 +26,37 @@ const base: WeeklyReport = {
   report: null,
   suggestedTopicIds: ['t2'],
   syllabus,
+  className: 'Python Level 1 · Sat 09:00',
+  where: 'Room A',
+  termId: 'term1',
+  termWeek: 2,
+  prevWeek: 1,
+  nextWeek: 3,
+  canWrite: true,
+  rows: [],
+  totals: { of: 0, here: 0, active: 0, needSupport: 0, comments: 0, taken: false },
 };
 const checked = (name: string) => (screen.getByRole('checkbox', { name }) as HTMLInputElement).checked;
 
 describe('ReportForm', () => {
-  it('fills in attendance and ticks the lesson’s topics before the first save', () => {
+  it('ticks the lesson’s topics before the first save', () => {
     render(<ReportForm classId="c1" report={base} />);
-    expect(screen.getByTestId('report-attendance').textContent).toMatch(/^12 present1 late2 absent0 excused/);
+    expect(screen.getByRole('form', { name: 'The whole session' })).toBeTruthy();
     expect(checked('Variables & input()')).toBe(true);
     expect(checked('Output with print()')).toBe(false);
     expect(screen.getByText('Ticked from the lesson note.')).toBeTruthy();
   });
 
-  it('shows what was saved, and says when attendance hasn’t been taken', () => {
+  it('shows what was saved', () => {
     render(
       <ReportForm
         classId="c1"
-        report={{ ...base, attendance: null, report: { comment: 'Good week', topicIds: ['t1'], updatedAt: new Date() } }}
+        report={{ ...base, report: { comment: 'Good week', topicIds: ['t1'], updatedAt: new Date(), author: 'Sophea Chan' } }}
       />,
     );
-    expect(screen.getByText('Attendance hasn’t been taken for this week yet.'.replace('’', "'"))).toBeTruthy();
     expect(checked('Output with print()')).toBe(true);
     expect(checked('Variables & input()')).toBe(false);
-    expect((screen.getByLabelText('Comment on the session') as HTMLTextAreaElement).value).toBe('Good week');
+    expect((screen.getByLabelText('General comment') as HTMLTextAreaElement).value).toBe('Good week');
     expect(screen.getByText('Saved')).toBeTruthy();
   });
 
@@ -57,8 +65,8 @@ describe('ReportForm', () => {
     saveWeeklyReportAction.mockResolvedValueOnce({ ok: true, message: 'Weekly report saved.' });
     render(<ReportForm classId="c1" report={base} />);
     fireEvent.click(screen.getByRole('checkbox', { name: 'Output with print()' }));
-    fireEvent.change(screen.getByLabelText('Comment on the session'), { target: { value: 'Most got it.' } });
-    const save = screen.getByRole('button', { name: 'Save weekly report' }) as HTMLButtonElement;
+    fireEvent.change(screen.getByLabelText('General comment'), { target: { value: 'Most got it.' } });
+    const save = screen.getByRole('button', { name: 'Save topics and comment' }) as HTMLButtonElement;
     fireEvent.click(save);
     expect((await screen.findByRole('alert')).textContent).toMatch(/4,000/);
     await waitFor(() => expect(save.disabled).toBe(false)); // the button waits for the action

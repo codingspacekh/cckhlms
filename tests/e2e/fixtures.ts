@@ -576,3 +576,47 @@ export async function onlineClass(): Promise<{ classId: string; className: strin
   await enrolStudent(admin, r.classId, kosal.userId, { enrolledOn: sunday, confirmClashes: true });
   return { classId: r.classId, className };
 }
+
+// For the weekly report sheet spec (M14b): Sophea's Saturday 15:00 class in the main class's term, started the same
+// day (so weeks 1–3 have been held), with three students of its own.
+export async function sheetClass(): Promise<{ classId: string; className: string; termName: string; students: string[] }> {
+  const main = await teachingClass();
+  const { db } = await import('../../src/db/client');
+  const { user, klass, term } = await import('../../src/db/schema');
+  const { eq } = await import('drizzle-orm');
+  const { createCourse } = await import('../../src/modules/academics/courses');
+  const { createClass } = await import('../../src/modules/academics/classes');
+  const { enrolStudent } = await import('../../src/modules/academics/enrolments');
+  const { createAccount } = await import('../../src/modules/identity/service');
+
+  const className = 'Python Sheet · Sat 15:00';
+  const students = ['Leakena Som', 'Rotanak Ry', 'Sothea Kem'];
+  const [k] = await db
+    .select({ termId: klass.termId, firstDate: klass.firstDate, termName: term.name })
+    .from(klass)
+    .innerJoin(term, eq(term.id, klass.termId))
+    .where(eq(klass.id, main.classId));
+  const existing = await db.select({ id: klass.id }).from(klass).where(eq(klass.name, className));
+  if (existing[0]) return { classId: existing[0].id, className, termName: k!.termName, students };
+  const idOf = async (username: string) => (await db.select({ id: user.id }).from(user).where(eq(user.username, username)))[0]!.id;
+  const admin = { userId: await idOf(USERS.admin.username), username: 'admin', name: 'Admin', role: 'admin', sessionId: 'e2e' };
+  const course = await createCourse(admin, { code: 'PYW', name: 'Python Sheet', defaultLanguage: 'python' });
+  const r = await createClass(admin, {
+    courseId: course.id,
+    termId: k!.termId,
+    day: 'sat',
+    startTime: '15:00',
+    minutes: 90,
+    firstDate: k!.firstDate,
+    weeks: 12,
+    room: 'Sheet room',
+    leadTeacherId: await idOf(USERS.teacher.username),
+    confirmClashes: true,
+  });
+  if (r.status !== 'created') throw new Error('sheet class not created');
+  for (const name of students) {
+    const a = await createAccount(admin, { role: 'student', name });
+    await enrolStudent(admin, r.classId, a.userId, { enrolledOn: k!.firstDate, confirmClashes: true });
+  }
+  return { classId: r.classId, className, termName: k!.termName, students };
+}

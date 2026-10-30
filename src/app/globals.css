@@ -3922,3 +3922,227 @@ table.gradebook .sticky-col {
 .attention .todo-text {
   flex: 1 1 200px;
 }
+
+/* The weekly report sheet (FR-TCH-14, BR-27; M14b): cells you type in, like a spreadsheet. Flagged rows are shaded;
+   absent and excused students' participation is hatched. */
+.sheet {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+.sheet th,
+.sheet td {
+  border: 1px solid var(--line);
+  padding: 0;
+  height: 44px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.sheet tr > *:first-child {
+  border-left: 0;
+}
+.sheet tr > *:last-child {
+  border-right: 0;
+}
+.sheet thead th {
+  background: var(--surface-2);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ink-2);
+  text-align: left;
+  padding: 6px 10px;
+}
+.sheet thead th .src {
+  display: block;
+  font-weight: 400;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+.sheet tbody th,
+.sheet tfoot th {
+  text-align: left;
+  font-weight: 600;
+  padding: 0 12px;
+  min-width: 170px;
+}
+.sheet .num {
+  display: inline-block;
+  width: 22px;
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 0.8rem;
+}
+.sheet tfoot th,
+.sheet tfoot td {
+  background: var(--surface-2);
+  padding: 8px 12px;
+}
+.sheet td:focus-within {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.sheet input.cell,
+.sheet .cell .sel {
+  width: 100%;
+  min-height: 43px;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: none;
+  font: inherit;
+  color: inherit;
+  padding: 0 34px 0 10px;
+}
+.sheet input.cell {
+  padding-right: 10px;
+}
+.sheet .sel-wrap.cell {
+  display: block;
+}
+.sheet input.cell:focus,
+.sheet .cell .sel:focus-visible,
+.sheet .cell .sel[aria-expanded='true'] {
+  outline: none;
+  box-shadow: none;
+}
+.sheet .cell .sel.placeholder {
+  color: var(--muted);
+}
+.sheet td.att,
+.sheet td.part {
+  min-width: 128px;
+}
+.sheet td.sup {
+  min-width: 100px;
+}
+.sheet td.txt {
+  min-width: 230px;
+  width: 30%;
+}
+.sheet td.note-admin {
+  min-width: 220px;
+  width: 24%;
+}
+.sheet td.att {
+  position: relative;
+}
+.sheet td.att::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: var(--line-2);
+}
+.sheet td.att .cell .sel,
+.sheet td.att .val {
+  padding-left: 26px;
+  font-weight: 600;
+}
+.sheet td.att-present::before {
+  background: var(--good);
+}
+.sheet td.att-late::before {
+  background: var(--warn);
+}
+.sheet td.att-absent::before {
+  background: var(--bad);
+}
+.sheet td.att-present {
+  color: var(--good-text);
+}
+.sheet td.att-late {
+  color: var(--warn-text);
+}
+.sheet td.att-absent {
+  color: var(--bad-text);
+}
+.sheet td.part-active {
+  color: var(--good-text);
+  font-weight: 600;
+}
+.sheet td.part-not_active {
+  color: var(--bad-text);
+  font-weight: 600;
+}
+.sheet td.na {
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding: 0 10px;
+  background: repeating-linear-gradient(135deg, var(--surface) 0 6px, var(--surface-2) 6px 12px);
+}
+.sheet td.sup-yes {
+  background: var(--warn-soft);
+  color: var(--warn-text);
+  font-weight: 700;
+}
+.sheet tr.flag td.note-admin {
+  background: var(--warn-soft);
+}
+.sheet.ro td.txt,
+.sheet.ro td.note-admin {
+  white-space: normal;
+  padding: 8px 10px;
+  line-height: 1.4;
+}
+.sheet.ro .val {
+  display: block;
+  padding: 0 10px;
+}
+.sheet-error,
+.legend {
+  margin: 0 20px 12px;
+}
+.legend {
+  margin-top: 12px;
+}
+/* "Saving…" / "All changes saved" beside the sheet. */
+.saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--good-text);
+}
+.saved::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--good);
+}
+.saved.busy {
+  color: var(--muted);
+}
+.saved.busy::before {
+  background: var(--line-2);
+}
+/* Admin's Weekly reports. */
+.picker .f {
+  min-width: 190px;
+}
+.pad {
+  padding: 0 20px 20px;
+}
+.support-list li {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) 1fr auto;
+  gap: 12px;
+  align-items: start;
+  padding: 12px 20px;
+  border-top: 1px solid var(--line);
+}
+.support-list .who {
+  display: flex;
+  flex-direction: column;
+}
+@media (max-width: 640px) {
+  .support-list li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.prewrap {
+  white-space: pre-wrap;
+}

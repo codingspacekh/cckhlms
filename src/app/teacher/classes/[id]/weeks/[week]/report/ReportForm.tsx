@@ -7,12 +7,11 @@ import type { FormResult } from '@/server/action-result';
 
 type Props = { classId: string; report: WeeklyReport };
 
-// FR-TCH-14: topics covered (ticked from the lesson until saved), attendance filled in, and a comment.
+// FR-TCH-14: below the sheet, the whole session: topics covered (ticked from the lesson until saved) and a comment.
 export function ReportForm({ classId, report }: Props) {
   const [result, setResult] = useState<FormResult | null>(null);
   const [pending, startTransition] = useTransition();
   const ticked = report.report?.topicIds ?? report.suggestedTopicIds;
-  const a = report.attendance;
 
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -23,21 +22,8 @@ export function ReportForm({ classId, report }: Props) {
   }
 
   return (
-    <form method="post" className="card stack narrow-wide" aria-label="Weekly report" onSubmit={submit}>
-      <div className="stack-sm">
-        <h2>Attendance</h2>
-        {a ? (
-          <div className="row" data-testid="report-attendance">
-            <Pill tone="good">{a.present} present</Pill>
-            <Pill tone="warn">{a.late} late</Pill>
-            <Pill tone="bad">{a.absent} absent</Pill>
-            <Pill>{a.excused} excused</Pill>
-            <span className="xs muted">from this week&apos;s attendance</span>
-          </div>
-        ) : (
-          <p className="small muted">Attendance hasn&apos;t been taken for this week yet.</p>
-        )}
-      </div>
+    <form method="post" className="card stack" aria-labelledby="session-title" onSubmit={submit}>
+      <h2 id="session-title">The whole session</h2>
       {report.syllabus.length > 0 && (
         <fieldset className="f">
           <legend>Syllabus topics covered</legend>
@@ -52,7 +38,7 @@ export function ReportForm({ classId, report }: Props) {
         </fieldset>
       )}
       <label className="f">
-        Comment on the session
+        General comment
         <textarea name="comment" rows={5} maxLength={4000} defaultValue={report.report?.comment ?? ''} />
       </label>
       {result && !result.ok && (
@@ -67,7 +53,7 @@ export function ReportForm({ classId, report }: Props) {
       )}
       <div className="row">
         <button type="submit" className="btn primary" disabled={pending}>
-          Save weekly report
+          Save topics and comment
         </button>
         {report.report && (
           <Pill tone="good" icon="check">

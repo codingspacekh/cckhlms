@@ -89,7 +89,7 @@ export function AdminDashboardView({ d, passMark = 60 }: { d: AdminDashboard; pa
                     <Icon name="book" />
                   </span>
                   <span className="todo-text">
-                    <Link href={`/admin/classes/${m.classId}`}>{m.className}</Link>
+                    <Link href={`/admin/weekly-reports/${m.classId}/${m.weeks.at(-1)}`}>{m.className}</Link>
                     <span className="sub">
                       {m.teacher} · {m.weeks.length === 1 ? 'week' : 'weeks'} {m.weeks.join(', ')}
                     </span>

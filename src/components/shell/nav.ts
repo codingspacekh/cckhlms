@@ -22,6 +22,7 @@ export const NAV: Record<Role, NavSection[]> = {
     {
       title: 'Term',
       items: [
+        { href: '/admin/weekly-reports', label: 'Weekly reports', icon: 'book' },
         { href: '/admin/promotion', label: 'Promotion', icon: 'promote' },
         { href: '/admin/certificates', label: 'Certificates', icon: 'award' },
       ],

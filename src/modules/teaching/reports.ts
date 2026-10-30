@@ -3,14 +3,29 @@
 import { asc, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/db/client';
-import { attendance, classReport, classReportTopic, classSession, klass, lesson, lessonTopic, syllabusTopic } from '@/db/schema';
+import {
+  attendance,
+  classReport,
+  classReportTopic,
+  classSession,
+  klass,
+  lesson,
+  lessonTopic,
+  syllabusTopic,
+  term,
+  user,
+} from '@/db/schema';
 import { classAccess } from '@/modules/academics/access';
-import { formatDate, todayIn } from '@/modules/academics/schedule';
+import { whereLabel } from '@/modules/academics/meeting';
+import { formatDate, termWeek, todayIn } from '@/modules/academics/schedule';
 import { countStatuses, type AttendanceStatus } from '@/modules/attendance/rules';
 import { getClubSettings } from '@/modules/club/service';
 import type { Actor } from '@/server/actor';
 import { audit } from '@/server/audit';
 import { assertCan, ValidationError } from '@/server/errors';
+import { can } from '@/server/policy';
+import { sheetRows } from './report-sheet';
+import { sheetTotals, type SheetRow, type SheetTotals } from './report-sheet-rules';
 import { weeksOf } from './weeks';
 
 type Opts = { now?: Date };
@@ -33,20 +48,53 @@ export type WeeklyReport = {
   date: string;
   open: boolean;
   attendance: ReturnType<typeof countStatuses> | null;
-  report: { comment: string; topicIds: string[]; updatedAt: Date } | null;
+  report: { comment: string; topicIds: string[]; updatedAt: Date; author: string | null } | null;
   suggestedTopicIds: string[];
   syllabus: { id: string; title: string }[];
+  // The sheet (M14b): a row per student, its totals, and whether this reader may change it.
+  className: string;
+  where: string | null;
+  termId: string;
+  termWeek: number | null;
+  prevWeek: number | null;
+  nextWeek: number | null;
+  canWrite: boolean;
+  rows: SheetRow[];
+  totals: SheetTotals;
 };
 
+// The week's report for its class's teachers to write and Admin to read (BR-27); students never see it.
 export async function weeklyReport(actor: Actor | null, classId: string, week: number, opts: Opts = {}): Promise<WeeklyReport> {
-  assertCan(actor, 'report.write', await classAccess(classId, 'read'));
-  const s = (await weeksOf(classId)).find((r) => r.week === week);
+  assertCan(actor, 'report.read', await classAccess(classId, 'read'));
+  const all = await weeksOf(classId);
+  const s = all.find((r) => r.week === week);
   if (!s) throw new ValidationError(`This class has no week ${week}.`);
+  const [c] = await db
+    .select({
+      name: klass.name,
+      mode: klass.mode,
+      room: klass.room,
+      termId: klass.termId,
+      startDate: term.startDate,
+      endDate: term.endDate,
+    })
+    .from(klass)
+    .innerJoin(term, eq(term.id, klass.termId))
+    .where(eq(klass.id, classId))
+    .limit(1);
+  const numbered = all.filter((r) => r.week !== null).map((r) => r.week!);
+  const rows = await sheetRows(classId, s.id, s.date);
   const syllabus = await syllabusOf(classId);
   const order = (ids: string[]) => syllabus.map((t) => t.id).filter((id) => ids.includes(id));
 
   const marks = await db.select({ status: attendance.status }).from(attendance).where(eq(attendance.sessionId, s.id));
-  const [r] = await db.select().from(classReport).where(eq(classReport.sessionId, s.id)).limit(1);
+  const [found] = await db
+    .select({ r: classReport, author: user.name })
+    .from(classReport)
+    .leftJoin(user, eq(user.id, classReport.authorId))
+    .where(eq(classReport.sessionId, s.id))
+    .limit(1);
+  const r = found?.r;
   const reportTopics = r
     ? (await db.select({ id: classReportTopic.topicId }).from(classReportTopic).where(eq(classReportTopic.reportId, r.id))).map((t) => t.id)
     : [];
@@ -64,9 +112,18 @@ export async function weeklyReport(actor: Actor | null, classId: string, week: n
     date: s.date,
     open: await isHeld(s.date, opts.now ?? new Date()),
     attendance: marks.length ? countStatuses(marks.map((m) => m.status as AttendanceStatus)) : null,
-    report: r ? { comment: r.comment, topicIds: order(reportTopics), updatedAt: r.updatedAt } : null,
+    report: r ? { comment: r.comment, topicIds: order(reportTopics), updatedAt: r.updatedAt, author: found.author } : null,
     suggestedTopicIds: order(lessonTopics),
     syllabus,
+    className: c!.name,
+    where: whereLabel(c!),
+    termId: c!.termId,
+    termWeek: termWeek(s.date, c!)?.week ?? null,
+    prevWeek: numbered.filter((w) => w < week).at(-1) ?? null,
+    nextWeek: numbered.find((w) => w > week) ?? null,
+    canWrite: can(actor, 'report.write', await classAccess(classId)),
+    rows,
+    totals: sheetTotals(rows),
   };
 }
 
