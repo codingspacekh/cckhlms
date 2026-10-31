@@ -140,6 +140,31 @@ A second pass before G1 covered the code added since this review (pictures, the 
 7. **The standalone build copied the whole project folder** because of a font path Next couldn't work out, so an image built on a laptop would carry `.env`, drill keys and uploads. Fixed, and checked after every CI build (`scripts/check-standalone.mjs`) and in the image (`infra/tests/app-image.sh`).
 8. Smaller: images in Markdown only from uploaded files; the note preview for teachers only; `getActor()` refuses switched-off accounts; IPv6 sign-in limits per /64; sign-in records kept a day; `/verify` with a broken code; the dev database on this computer only; backups under an R2 retention lock; deploys from `main` only; per-secret rotation steps (runbook §2, §3.1, §8).
 
+## Security audit run-1 (2026-10-31, fixed in M17)
+
+A full source audit with Cloudflare's security-audit skill (standard profile, main `a63d7e9`). It mapped 35 coverage units and checked every candidate twice, each time with a fresh verifier. All reproductions ran offline, with dummy data only. Its report is kept outside the repo (`~/security-audit-skill/cckhlms/run-1/`). Nothing critical or high was found: no cross-student or cross-class read or write, and no stored script. It found 13 issues, mostly ways one signed-in student could slow down or stop what everyone shares. They were fixed in five PRs (docs/05 M17):
+
+9. **Runner (M17a).** One program could leave its slot impossible to empty, so Run failed there until a restart (F03, medium). The runner now empties and checks the slot after every run. One person could also keep both slots busy (F10). Now each person gets one run at a time.
+10. **Shared load (M17b).**
+    - One worker running out of memory stopped the whole container (F01, medium). A dead worker is now replaced.
+    - Hand-ins had no limit (F04, medium). There are now at most 20, and an unchanged one is refused.
+    - Q&A rendered removed posts on every view (F05, medium). Only the posts a viewer can see are rendered now.
+    - One html code block could cost seconds to colour (F07). A post now colours at most 2,000 characters of code.
+    - The gradebook read every version's files. Marks are now read without them.
+11. **Sign-in limits (M17c).** Attempts sent at once got past the per-username limit (F13). A malformed request reset it (F12). An attempt is now counted before its password is checked.
+12. **Lifecycle and privacy (M17d).**
+    - Undo and reopen brought archived students back into running classes (F06).
+    - Erase left the term-report reason (F08).
+    - The exact class average gave a classmate's mark away (F09). It is now a 10-point band (BR-11).
+    - A teacher's restore of a reported post didn't hold (F11).
+13. **Backup restore (M17e).** `restore-latest` trusted the newest backup name, which the server's R2 token can plant (F02, medium). It now needs a cutoff, `RESTORE_BEFORE`, checked against R2's own upload time. The nightly backup reports names in the future. The drill restores as a non-superuser (runbook §4).
+
+**Left for the owner to check** (read-only, no audit traffic):
+- In GitHub, the environment `production` takes deployments from `main` only.
+- The Cloudflare request-body limit on `/api/auth/*`. The app reads sign-in bodies without a size cap.
+- In a real browser, whether a crafted web submission freezes the teacher's marking tab or only the preview frame. Compare it with a plain `while(true)` page.
+- Submission sizes in production.
+
 ## At G1 (operational)
 
 - ✅ Run `sh infra/security/zap-baseline.sh https://lms.cckh.dev/login live` and the three signed-in scans against production; expect 0 high. *0 high, 2026-10-29 (above).*

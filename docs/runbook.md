@@ -154,7 +154,7 @@ The reset signs that admin out everywhere and is in the audit log as "Reset a pa
 ## 4. Restore drill (once per term) and disaster recovery
 
 ### Restore drill on your laptop
-`infra/backup/restore-drill.sh` does it all: it reads the R2 settings from the server's `.env` (into memory only), downloads the newest backup, decrypts it with the private key, restores it into a scratch database on the laptop and compares the counts with the live site. Colima must be running, and your SSH key loaded (`ssh-add --apple-use-keychain ~/.ssh/id_ed25519`).
+`infra/backup/restore-drill.sh` does it all: it reads the R2 settings from the server's `.env` (into memory only), downloads the newest backup from before now (or before `RESTORE_BEFORE=YYYY-MM-DDTHHMMSSZ`, UTC, if you set it), decrypts it with the private key, restores it into a scratch database on the laptop as a non-superuser (as on the server) and compares the counts with the live site. Colima must be running, and your SSH key loaded (`ssh-add --apple-use-keychain ~/.ssh/id_ed25519`).
 ```bash
 # 1. the private age key from the password manager → ~/drill.key: one line, AGE-SECRET-KEY-1 and 58 more capitals
 chmod 600 ~/drill.key
@@ -166,7 +166,7 @@ SERVER=SERVER_IP KEY=~/drill.key sh infra/backup/restore-drill.sh
 # 4. clean up
 rm ~/drill.key
 ```
-It ends with `PASS` and two lines of counts (accounts | terms | classes | audit entries), restored and live, which should be the same; live can be a little higher if the site was used after the backup. If it fails, the step says why: an `age` error is the wrong key, an `rclone`/403 error an R2 token that can't read, a `pg_restore` error a bad dump. Record the result in §6.
+It ends with `PASS` and two lines of counts (accounts | terms | classes | audit entries), restored and live, which should be the same; live can be a little higher if the site was used after the backup. It fails if the restored counts are missing or higher than live: a backup with more in it than the live site isn't one of ours (see "Why a cutoff" below). If it fails, the step says why: an `age` error is the wrong key, an `rclone`/403 error an R2 token that can't read, a `pg_restore` error a bad dump. Record the result in §6.
 
 A key that `age-keygen -y` can't read may have lost its `AGE-SECRET-KEY-` start when it was copied (it happened at G1): put it back, and fix the password manager entry too.
 
@@ -175,17 +175,21 @@ Rehearsed on 2026-10-22 in a fresh Ubuntu 24.04 VM (2 vCPU, 4 GB): **12½ minute
 1. Create a new server (§2.2 steps 3–4).
 2. Copy the saved `.env` back to `/opt/cckhlms/.env` (§2.6); add the deploy key (§2.7.2); update `DEPLOY_HOST` and `DEPLOY_KNOWN_HOSTS` in GitHub.
 3. Run **Deploy** by hand (force). The app starts with an empty database.
-4. Put the age private key from the password manager on the server (`ssh deploy@SERVER_IP 'umask 077; cat > key.txt' < key.txt`), then restore the latest backup, **database and lesson files**:
+4. Put the age private key from the password manager on the server (`ssh deploy@SERVER_IP 'umask 077; cat > key.txt' < key.txt`), then restore the latest backup from before the cutoff, **database and lesson files**. The cutoff (UTC) is **now** if the server simply died, or **a time before anything could have happened to it** if it may have been taken over (see "Why a cutoff" below):
    ```bash
    cd /opt/cckhlms && export APP_TAG=$(cat .deployed-tag)
+   RESTORE_BEFORE=$(date -u +%Y-%m-%dT%H%M%SZ)   # or e.g. 2027-03-06T000000Z
    docker compose -f compose.prod.yaml run --rm -v ~/key.txt:/keys/key.txt:ro -e AGE_IDENTITY_FILE=/keys/key.txt \
-     -v uploads:/restore-uploads backup restore-latest
+     -e RESTORE_BEFORE=$RESTORE_BEFORE -v uploads:/restore-uploads backup restore-latest
    docker compose -f compose.prod.yaml restart app
    shred -u ~/key.txt
    ```
    It prints `restored db-….dump.age` and `restored uploads-….tar.age`.
 5. Check: sign in as Admin, open a class and a lesson with a file, and compare the number of people with the last known figure.
 6. DNS doesn't change: the Tunnel follows the new server. Delete the old server in Hetzner if it still exists.
+
+### Why a cutoff (security audit 2026-10-31, M17e)
+The R2 lock stops anyone deleting or overwriting backups, but the server's R2 token can still **add** files, and the server holds the public key, so a file someone adds after taking over the server decrypts like a real backup. A backup counts for `restore-latest` only if both its name and the time R2 received it (which the uploader can't set) are before `RESTORE_BEFORE`. The uploads archive comes only from the same run as the database dump. The nightly backup fails, and healthchecks emails, if it finds a backup **named in the future** (§5). To restore one particular backup instead: `… backup restore db-2027-03-06T190000Z.dump.age`.
 
 ---
 
@@ -198,6 +202,7 @@ Rehearsed on 2026-10-22 in a fresh Ubuntu 24.04 VM (2 vCPU, 4 GB): **12½ minute
 | `logs runner` says `slot N could not be emptied` | a program left its slot in a state the runner couldn't clean (never seen) | The runner stopped itself so it restarts with clean folders; `… ps runner` should show it up again within seconds. If it repeats, switch Run off (`… stop runner`) and look at the times in the log. |
 | Pages slow, or the odd 502 | the server is short of CPU or memory | `docker stats --no-stream`. The M7 load test held 3× the weekend peak with p95 < 0.5 s on this server size; if real use comes near that, move to a 4 vCPU server and set `WEB_WORKERS: '4'` in `compose.prod.yaml`. |
 | healthchecks: backup failed/missed | no successful backup in the window | `logs backup`; R2 token still valid? Run "Backup now". |
+| `logs backup` says "a backup named in the future" | a file in the bucket is named after the time of the run: not one the backup made | Treat the server as possibly taken over: rotate the R2 token (§2.5), look at the file's upload time in the Cloudflare dashboard, and when restoring use a `RESTORE_BEFORE` before it (§4). Delete the file once its lock has passed. Tonight's backup was still made. |
 | healthchecks: disk | disk > 80 % | `docker system df`; prune old images (`docker image prune -a` keeps running ones) |
 | Deploy workflow failed | new version unhealthy → rolled back | Read the job log; fix in a PR. The site stays on the previous version. |
 

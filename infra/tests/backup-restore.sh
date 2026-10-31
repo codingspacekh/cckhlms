@@ -67,11 +67,13 @@ up=$(find "$WORK/remote/cckhlms/uploads" -type f -name "uploads-*.tar.age" | hea
 [ -n "$up" ] || { echo "FAIL: no uploads archive"; exit 1; }
 grep -q 'lesson notes' "$up" && { echo "FAIL: uploads archive readable without key"; exit 1; }
 
-run -e PGHOST=bt-dst -e AGE_IDENTITY_FILE=/keys/key.txt -e UPLOADS_OWNER="$(id -u):$(id -g)" -v "$WORK/restored-uploads:/restore-uploads" "$IMG" restore-latest
+# Any time after tonight's backup will do as the cutoff here (M17e).
+CUTOFF=2200-01-01T000000Z
+run -e PGHOST=bt-dst -e AGE_IDENTITY_FILE=/keys/key.txt -e RESTORE_BEFORE=$CUTOFF -e UPLOADS_OWNER="$(id -u):$(id -g)" -v "$WORK/restored-uploads:/restore-uploads" "$IMG" restore-latest
 diff -r "$WORK/uploads" "$WORK/restored-uploads" >/dev/null || { echo "FAIL: restored lesson files differ"; diff -r "$WORK/uploads" "$WORK/restored-uploads" | head; exit 1; }
 # Into a real volume, even one root owns: the files go to the app's user (UPLOADS_OWNER), whoever owned them when
 # they were backed up, so the app can add new files next to them (M7 DR rehearsal).
-run -e PGHOST=bt-dst -e AGE_IDENTITY_FILE=/keys/key.txt -e UPLOADS_OWNER=100:101 -v bt-uploads:/restore-uploads "$IMG" restore-latest >/dev/null
+run -e PGHOST=bt-dst -e AGE_IDENTITY_FILE=/keys/key.txt -e RESTORE_BEFORE=$CUTOFF -e UPLOADS_OWNER=100:101 -v bt-uploads:/restore-uploads "$IMG" restore-latest >/dev/null
 others=$(docker run --rm --entrypoint find -v bt-uploads:/u "$IMG" /u ! -user 100 | wc -l | tr -d ' ')
 [ "$others" = 0 ] || { echo "FAIL: $others restored lesson files or folders aren't owned by the app's user"; exit 1; }
 
@@ -82,5 +84,21 @@ src=$(docker exec bt-src psql -U lms -d lms -tA -c "$q")
 dst=$(docker exec bt-dst psql -U lms -d lms -tA -c "$q")
 [ "$src" = "$dst" ] || { echo "FAIL: restored data differs"; echo "src: $src"; echo "dst: $dst"; exit 1; }
 
-if run -e PGHOST=bt-dst -e AGE_IDENTITY_FILE=/dev/null "$IMG" restore-latest >/dev/null 2>&1; then echo "FAIL: restore worked without the key"; exit 1; fi
-echo "PASS: backup round trip as a non-superuser ($(echo "$src" | tr '\n' ' ')) and lesson files (owned by the app's user), encrypted, retention 14 daily + 8 weekly"
+# M17e (F02): someone who takes over the server holds its R2 token and the public key, so they can add backups the
+# private key decrypts. "latest" therefore means the newest backup before a cutoff the owner gives (RESTORE_BEFORE),
+# by its name and by when the remote received it; the nightly backup reports names in the future.
+if run -e PGHOST=bt-dst -e AGE_IDENTITY_FILE=/keys/key.txt "$IMG" restore-latest >"$WORK/out" 2>&1; then echo "FAIL: restore-latest ran without RESTORE_BEFORE"; exit 1; fi
+grep -q RESTORE_BEFORE "$WORK/out" || { echo "FAIL: restore-latest without a cutoff doesn't say why"; cat "$WORK/out"; exit 1; }
+plant() { printf 'planted\n' | docker run --rm -i --entrypoint age "$IMG" -r "$RECIPIENT" > "$WORK/remote/cckhlms/daily/$1"; }
+plant db-9999-12-31T235959Z.dump.age                       # named after the cutoff
+plant db-2199-01-01T000000Z.dump.age                       # named before it, but received after it
+touch -t 220101010000 "$WORK/remote/cckhlms/daily/db-2199-01-01T000000Z.dump.age" # (Go keeps times up to 2262)
+out=$(run -e PGHOST=bt-dst -e AGE_IDENTITY_FILE=/keys/key.txt -e RESTORE_BEFORE=$CUTOFF "$IMG" restore-latest 2>&1) ||
+  { echo "FAIL: restore-latest with planted backups:"; echo "$out" | tail -5; exit 1; }
+case "$out" in *"restored $newest into"*) ;; *) echo "FAIL: restore-latest didn't pick the newest real backup: $out"; exit 1 ;; esac
+if run -e PGHOST=bt-src -e AGE_RECIPIENT="$RECIPIENT" "$IMG" backup-now >"$WORK/out" 2>&1; then echo "FAIL: the nightly backup didn't fail on backups named in the future"; exit 1; fi
+grep -q 'named in the future: daily/db-9999-12-31T235959Z.dump.age' "$WORK/out" || { echo "FAIL: the planted backup isn't reported"; cat "$WORK/out"; exit 1; }
+[ "$(count "$WORK/remote/cckhlms/daily")" = 16 ] || { echo "FAIL: daily retention with plants: expected 14 real + 2 reported"; exit 1; }
+
+if run -e PGHOST=bt-dst -e AGE_IDENTITY_FILE=/dev/null -e RESTORE_BEFORE=$CUTOFF "$IMG" restore-latest >/dev/null 2>&1; then echo "FAIL: restore worked without the key"; exit 1; fi
+echo "PASS: backup round trip as a non-superuser ($(echo "$src" | tr '\n' ' ')) and lesson files (owned by the app's user), encrypted, retention 14 daily + 8 weekly, only backups before the cutoff restored, future names reported"
