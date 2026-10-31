@@ -9,6 +9,7 @@ import { enrolStudent } from '@/modules/academics/enrolments';
 import { createTerm, setTermStatus } from '@/modules/academics/terms';
 import { saveCell, saveComment } from '@/modules/assessments/gradebook';
 import { gradeSubmission, returnSubmission } from '@/modules/assessments/grading';
+import { saveDraft } from '@/modules/assessments/projects';
 import { saveAssessment } from '@/modules/assessments/service';
 import { submitWork } from '@/modules/assessments/submissions';
 import { auditEntries } from '@/modules/audit/audit-log';
@@ -120,6 +121,7 @@ beforeAll(async () => {
   const exam = (await work('End-term exam', 'exam', 'paper')).id;
   await submitWork(bopha, homework, { now: DURING });
   await returnSubmission(sophea, homework, bopha.userId, { version: 1, feedbackMd: 'Add a loop.' });
+  await saveDraft(bopha, homework, [{ path: 'main.py', content: 'for i in range(3):\n    print(i)' }]);
   await submitWork(bopha, homework, { now: DURING });
   await gradeSubmission(sophea, homework, bopha.userId, { version: 2, score: '9', feedbackMd: 'Nice.' });
   await saveCell(sophea, exam, bopha.userId, { value: '80', version: null });

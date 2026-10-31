@@ -27,7 +27,7 @@ export default async function MarkPage({
   const actor = await requireActor('teacher.area');
   const [{ id, workId, studentId }, { v }] = await Promise.all([params, searchParams]);
   const [g, { timeZone }, nonce] = await Promise.all([
-    pageData(gradingView(actor, workId, studentId)),
+    pageData(gradingView(actor, workId, studentId, { version: Number(v) || undefined })),
     getClubSettings(),
     headers().then((h) => h.get('x-nonce') ?? ''),
   ]);
@@ -120,7 +120,7 @@ export default async function MarkPage({
             ) : (
               <ProjectEditor
                 key={shown.version}
-                initial={shown.files}
+                initial={g.shown?.files ?? []}
                 nonce={nonce}
                 readOnly
                 previewOrigin={g.work.language === 'web' ? PREVIEW_ORIGIN : undefined}

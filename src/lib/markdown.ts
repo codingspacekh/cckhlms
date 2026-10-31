@@ -7,12 +7,16 @@
 // renderPost is for questions and replies (M12, BR-26): the note's code blocks, but no pictures and no tip boxes.
 import MarkdownIt from 'markdown-it';
 import type { Token } from 'markdown-it';
-import { codeLanguage, highlightLines } from './code-highlight';
+import { codeLanguage, highlightLines, plainLines } from './code-highlight';
 
 const md = new MarkdownIt('default', { html: false, linkify: true, breaks: true });
 const { escapeHtml } = md.utils;
 
-type NoteEnv = { note?: boolean; post?: boolean };
+type NoteEnv = { note?: boolean; post?: boolean; coloured?: number };
+// A question or reply colours at most this much code in all; the rest shows as plain lines (M17b, F07). Colouring
+// runs lezer's parser, and some text (e.g. '<a<a<a…' as html) costs far more than its length, on every view. Lesson
+// notes are written by teachers and keep full colouring.
+const POST_COLOUR_BUDGET = 2000;
 const inNote = (env: unknown) => (env as NoteEnv | undefined)?.note === true;
 const inPost = (env: unknown) => (env as NoteEnv | undefined)?.post === true;
 
@@ -76,7 +80,11 @@ md.renderer.rules.fence = (tokens, idx, _options, env) => {
   const cls = word ? ` class="language-${word}"` : '';
   if (!inNote(env) && !inPost(env)) return `<pre><code${cls}>${escapeHtml(t.content)}</code></pre>\n`;
   // In a note: one span per line (numbered by CSS, so copying the code doesn't copy the numbers) and coloured runs.
-  const lines = highlightLines(t.content.replace(/\n$/, ''), word)
+  const code = t.content.replace(/\n$/, '');
+  const e = env as NoteEnv;
+  const colour = !inPost(env) || (e.coloured ?? 0) + code.length <= POST_COLOUR_BUDGET;
+  if (colour && inPost(env)) e.coloured = (e.coloured ?? 0) + code.length;
+  const lines = (colour ? highlightLines(code, word) : plainLines(code))
     .map((runs) => {
       const text = runs.map((r) => (r.cls ? `<span class="${r.cls}">${escapeHtml(r.text)}</span>` : escapeHtml(r.text)));
       return `<span class="line">${text.join('')}</span>`;

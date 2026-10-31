@@ -50,5 +50,5 @@ export async function runCode(
   countRun(actor.userId, opts.now ?? Date.now());
   const runner = opts.runner === undefined ? runnerFromEnv() : opts.runner;
   if (!runner) return { status: 'unavailable', stdout: '', stderr: '', exitCode: null, ms: 0, truncated: false, mainClass: null };
-  return runner.run({ language, files: code, stdin });
+  return runner.run({ language, files: code, stdin, owner: actor.userId });
 }

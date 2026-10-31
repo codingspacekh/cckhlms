@@ -29,10 +29,15 @@ export function codeLanguage(word: string): { id: string; label: string } | null
 
 export type Run = { text: string; cls: string };
 
+// Lines with no colour: a language the app doesn't know, or code past a post's colouring budget (markdown.ts).
+export function plainLines(code: string): Run[][] {
+  return code.split('\n').map((text) => (text ? [{ text, cls: '' }] : []));
+}
+
 // One array of runs per line. A language the app doesn't know comes back as uncoloured lines.
 export function highlightLines(code: string, lang: string): Run[][] {
   const known = codeLanguage(lang);
-  if (!known) return code.split('\n').map((text) => (text ? [{ text, cls: '' }] : []));
+  if (!known) return plainLines(code);
   const lines: Run[][] = [[]];
   const { language } = LANGUAGES[known.id]!;
   highlightCode(
