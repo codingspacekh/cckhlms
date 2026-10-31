@@ -10,6 +10,7 @@ import { getClubSettings } from '@/modules/club/service';
 import { loadTermReports } from '@/modules/reporting/term-reports';
 import type { Result } from '@/modules/reporting/rules';
 import type { Actor } from '@/server/actor';
+import type { Slot } from './rules';
 import { audit } from '@/server/audit';
 import { assertCan, ValidationError } from '@/server/errors';
 
@@ -19,9 +20,16 @@ export type PromotionOption = {
   id: string;
   name: string;
   courseName: string;
+  termId: string;
   termName: string;
   schedule: string;
   teacher: string | null;
+  // For the places and clash warnings (M15a, BR-30).
+  day: Day;
+  startTime: string;
+  minutes: number;
+  capacity: number | null;
+  enrolled: number; // active students already in it
 };
 export type PromotionStudent = {
   enrolmentId: string;
@@ -30,6 +38,7 @@ export type PromotionStudent = {
   score: number | null;
   result: Result | null;
   target: string | null; // the class pre-selected for them; null = leaves the club
+  busy: Slot[]; // the later classes they are already in, for the clash warning (M15a)
 };
 export type PromotionPlan = {
   classId: string;
@@ -72,6 +81,7 @@ async function laterClasses(termStart: string) {
       minutes: klass.minutes,
       weeks: klass.weeks,
       firstDate: klass.firstDate,
+      capacity: klass.capacity,
     })
     .from(klass)
     .innerJoin(course, eq(course.id, klass.courseId))
@@ -95,6 +105,15 @@ async function laterClasses(termStart: string) {
     : [];
   const leadOf = new Map(leads.map((l) => [l.classId, l.name]));
   return rows.map((r) => ({ ...r, teacher: leadOf.get(r.id) ?? null }));
+}
+
+// Who is already in each of those classes: the places count and each student's clashes (M15a).
+async function enrolledIn(classIds: string[]) {
+  if (!classIds.length) return [];
+  return db
+    .select({ classId: enrolment.classId, studentId: enrolment.studentId })
+    .from(enrolment)
+    .where(and(inArray(enrolment.classId, classIds), eq(enrolment.status, 'active')));
 }
 
 async function activeEnrolments(classId: string) {
@@ -143,10 +162,17 @@ export async function promotionPlan(actor: Actor | null, classId: string, opts: 
     loadTermReports(classId, opts),
   ]);
   // The term right after this one is where the defaults come from.
+  const taken = await enrolledIn(later.map((o) => o.id));
   const next = later[0]?.termId;
   const pick = (courseId: string | null) => later.find((o) => o.termId === next && o.courseId === courseId)?.id ?? null;
   const defaults = { pass: pick(c.nextCourseId), fail: pick(c.k.courseId) };
   const stillIn = new Set(active.map((e) => e.id));
+  const slotOf = new Map(
+    later.map((o) => [
+      o.id,
+      { classId: o.id, termId: o.termId, name: o.name, day: o.day as Day, startTime: o.startTime, minutes: o.minutes },
+    ]),
+  );
   const students = rows
     .filter((r) => stillIn.has(r.enrolmentId))
     .map((r) => ({
@@ -156,6 +182,7 @@ export async function promotionPlan(actor: Actor | null, classId: string, opts: 
       score: r.score,
       result: r.status === 'published' ? r.result : null,
       target: r.status !== 'published' ? null : r.result === 'pass' ? defaults.pass : defaults.fail,
+      busy: taken.filter((t) => t.studentId === r.studentId).map((t) => slotOf.get(t.classId)!),
     }));
   return {
     classId,
@@ -168,9 +195,15 @@ export async function promotionPlan(actor: Actor | null, classId: string, opts: 
       id: o.id,
       name: o.name,
       courseName: o.courseName,
+      termId: o.termId,
       termName: o.termName,
       schedule: scheduleLabel({ day: o.day as Day, startTime: o.startTime, minutes: o.minutes, weeks: o.weeks }),
       teacher: o.teacher,
+      day: o.day as Day,
+      startTime: o.startTime,
+      minutes: o.minutes,
+      capacity: o.capacity,
+      enrolled: taken.filter((t) => t.classId === o.id).length,
     })),
     defaults,
     students,

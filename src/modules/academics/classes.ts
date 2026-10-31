@@ -1,9 +1,23 @@
 // Weekend classes and their sessions (FR-ADM-05/06/08, FR-TCH-05, BR-15).
-import { and, asc, eq, inArray, ne, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/db/client';
-import { assessment, attendance, classReport, classSession, classTeacher, course, enrolment, klass, lesson, term, user } from '@/db/schema';
+import {
+  assessment,
+  attendance,
+  auditLog,
+  classReport,
+  classSession,
+  classTeacher,
+  course,
+  enrolment,
+  klass,
+  lesson,
+  term,
+  user,
+} from '@/db/schema';
 import { getClubSettings } from '@/modules/club/service';
+import type { Promoted } from '@/modules/promotion/rules';
 import type { Actor } from '@/server/actor';
 import { audit } from '@/server/audit';
 import { assertCan, ValidationError } from '@/server/errors';
@@ -475,9 +489,23 @@ export type ClassDetail = {
   capacity: number | null;
   status: string;
   promotedAt: Date | null;
+  promotion: Promoted | null; // when, by whom and how many moved on (M15a), for the promoted note
   teachers: { userId: string; name: string; role: 'lead' | 'assistant' }[];
   sessions: SessionRow[];
 };
+
+// Who promoted a class and how many moved on, from the promotion's audit row (FR-SYS-02).
+async function promotedBy(classId: string, at: Date): Promise<Promoted> {
+  const [row] = await db
+    .select({ by: user.name, detail: auditLog.detail })
+    .from(auditLog)
+    .leftJoin(user, eq(user.id, auditLog.actorId))
+    .where(and(eq(auditLog.action, 'class.promote'), eq(auditLog.entity, 'class'), eq(auditLog.entityId, classId)))
+    .orderBy(desc(auditLog.at))
+    .limit(1);
+  const d = (row?.detail ?? {}) as { moved?: number; left?: number };
+  return { at, by: row?.by ?? null, moved: d.moved ?? 0, left: d.left ?? 0 };
+}
 
 export async function getClass(actor: Actor | null, id: string): Promise<ClassDetail> {
   assertCan(actor, 'class.view', { classTeacherIds: await classTeacherIds(id) });
@@ -499,6 +527,7 @@ export async function getClass(actor: Actor | null, id: string): Promise<ClassDe
     .map((t) => ({ ...t, role: t.role as 'lead' | 'assistant' }))
     .sort((a, b) => (a.role === b.role ? a.name.localeCompare(b.name) : a.role === 'lead' ? -1 : 1));
   const raw = await db.select().from(classSession).where(eq(classSession.classId, id)).orderBy(asc(classSession.date));
+  const promotion = c.k.promotedAt ? await promotedBy(id, c.k.promotedAt) : null;
   const weeks = numberWeeks(raw.map((s) => ({ id: s.id, date: s.date, cancelled: s.status === 'cancelled' })));
   return {
     id: c.k.id,
@@ -519,6 +548,7 @@ export async function getClass(actor: Actor | null, id: string): Promise<ClassDe
     capacity: c.k.capacity,
     status: c.k.status,
     promotedAt: c.k.promotedAt,
+    promotion,
     teachers,
     sessions: raw.map((s) => ({
       id: s.id,

@@ -146,6 +146,41 @@ describe('the wizard', () => {
   });
 });
 
+describe('places and clashes (M15a, BR-30)', () => {
+  let java = '';
+  beforeAll(async () => {
+    // Bopha already has Java Level 3 on Saturdays at 09:30 next term. The repeat class has room for 1, and Rithy
+    // is in it. Both stay, so "promoting" below shows that neither warning blocks a promotion.
+    const jv3 = await createCourse(admin, { code: 'JV3', name: 'Java Level 3', defaultLanguage: 'java' });
+    const t2 = (await one(`select term_id from class where id = $1`, [level2])).term_id;
+    java = await weekend(jv3.id, t2, 'sat', '09:30', '2027-04-24', vibol);
+    await enrolStudent(admin, java, bopha.userId, { enrolledOn: '2027-04-24' });
+    await enrolStudent(admin, repeat, rithy.userId, { enrolledOn: '2027-04-25' });
+    await pool.query(`update class set capacity = 1 where id = $1`, [repeat]);
+  });
+
+  it('gives each class to choose how many are in it already, its capacity and when it meets', async () => {
+    const plan = await promotionPlan(admin, fromId, { now: AFTER_TERM });
+    expect(plan.options.find((o) => o.id === repeat)).toMatchObject({
+      enrolled: 1,
+      capacity: 1,
+      day: 'sun',
+      startTime: '14:00',
+      minutes: 90,
+    });
+    expect(plan.options.find((o) => o.id === level2)).toMatchObject({ enrolled: 0, capacity: null, day: 'sat', startTime: '09:00' });
+  });
+
+  it('gives each student the later classes they are already in, so a clash can be shown', async () => {
+    const plan = await promotionPlan(admin, fromId, { now: AFTER_TERM });
+    const of = (name: string) => plan.students.find((s) => s.name === name)!.busy;
+    expect(of('Bopha Lim')).toEqual([
+      { classId: java, termId: expect.any(String), name: 'Java Level 3 · Sat 09:30', day: 'sat', startTime: '09:30', minutes: 90 },
+    ]);
+    expect(of('Chenda Ouk')).toEqual([]);
+  });
+});
+
 describe('promoting', () => {
   const moves = () => [
     { enrolmentId: enrolmentOf[bopha.userId]!, toClassId: level2 },
@@ -188,7 +223,8 @@ describe('promoting', () => {
     expect(old.promotedAt).toBeInstanceOf(Date);
     const [bophaNew] = await listRoster(admin, level2);
     expect(bophaNew).toMatchObject({ name: 'Bopha Lim', status: 'active', enrolledOn: '2027-04-24' });
-    expect((await listRoster(admin, repeat)).map((r) => r.name)).toEqual(['Chenda Ouk']);
+    // Over its capacity (2 of 1) and Bopha's clash with Java Level 3 were warnings only (BR-30).
+    expect((await listRoster(admin, repeat)).map((r) => r.name)).toEqual(['Chenda Ouk', 'Rithy Som']);
     expect(await one(`select promoted_from_id from enrolment where id = $1`, [bophaNew!.id])).toEqual({
       promoted_from_id: enrolmentOf[bopha.userId],
     });
@@ -215,6 +251,14 @@ describe('promoting', () => {
       ['Rithy Som', 'withdrawn', '2027-02-06'],
     ]);
     expect((await termReports(admin, fromId, { now: AFTER_TERM })).rows.map((r) => r.result)).toEqual(['pass', 'fail', 'pass']);
+  });
+
+  it('M15a: the class says when, by whom and how many moved on, to Admin and its teacher', async () => {
+    const { name } = await one(`select name from "user" where id = $1`, [admin.userId]);
+    const promotion = { at: expect.any(Date), by: name, moved: 2, left: 1 };
+    expect((await getClass(admin, fromId)).promotion).toEqual(promotion);
+    expect((await getClass(sophea, fromId)).promotion).toEqual(promotion);
+    expect((await getClass(admin, level2)).promotion).toBeNull();
   });
 
   it('promotes a class only once', async () => {
