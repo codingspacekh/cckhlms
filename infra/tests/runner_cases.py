@@ -1,6 +1,8 @@
 """Cases for the code runner (ADR-0004, BR-25), run by runner-image.sh inside a client container that has the runner's
 socket mounted, as the app has it in production. Each case sends one run and checks the reply."""
+import hashlib
 import http.client
+import itertools
 import json
 import os
 import socket
@@ -12,6 +14,12 @@ SOCK = os.environ.get('RUNNER_SOCK', '/sock/runner.sock')
 TCP = os.environ.get('RUNNER_TCP')  # host:port, for the token checks
 TOKEN = os.environ.get('RUNNER_TOKEN', '')
 failures = []
+people = itertools.count()
+
+
+def someone():
+    """A new person's owner value, as the app sends it: a SHA-256 of their user id (M17a, F10)."""
+    return hashlib.sha256(b'case-%d' % next(people)).hexdigest()
 
 
 class UnixConnection(http.client.HTTPConnection):
@@ -25,7 +33,7 @@ class UnixConnection(http.client.HTTPConnection):
         self.sock.connect(self.path)
 
 
-def request(method, url, body=None, token=None):
+def request(method, url, body=None, token=None, owner=None):
     if TCP:
         host, port = TCP.split(':')
         conn = http.client.HTTPConnection(host, int(port), timeout=60)
@@ -34,6 +42,8 @@ def request(method, url, body=None, token=None):
     headers = {'content-type': 'application/json'}
     if token:
         headers['authorization'] = 'Bearer ' + token
+    if owner:
+        headers['x-run-owner'] = owner
     conn.request(method, url, body=json.dumps(body) if body is not None else None, headers=headers)
     res = conn.getresponse()
     data = res.read().decode()
@@ -44,10 +54,11 @@ def request(method, url, body=None, token=None):
         return res.status, data
 
 
-def run(language, files, stdin='', token=None):
+def run(language, files, stdin='', token=None, owner=None):
     if isinstance(files, str):
         files = {('main.py' if language == 'python' else 'Main.java'): files}
-    return request('POST', '/run', {'language': language, 'files': [{'path': p, 'content': c} for p, c in files.items()], 'stdin': stdin}, token)
+    body = {'language': language, 'files': [{'path': p, 'content': c} for p, c in files.items()], 'stdin': stdin}
+    return request('POST', '/run', body, token, owner or someone())
 
 
 def check(name, ok, detail=''):
@@ -158,6 +169,36 @@ for d in sorted(os.listdir("/work")):
     check('an absolute file path is refused', status == 400, (status, r))
     status, r = run('ruby', 'puts 1')
     check('an unknown language is refused', status == 400, (status, r))
+    status, r = request('POST', '/run', {'language': 'python', 'files': [{'path': 'main.py', 'content': 'print(1)'}], 'stdin': ''})
+    check('a run without an owner is refused', status == 400, (status, r))
+    status, r = run('python', 'print(1)', owner='bopha')
+    check('an owner that is not a SHA-256 hash is refused', status == 400, (status, r))
+
+    # M17a, F03: a program can make its own folder (or its slot's folder) impossible to empty, or leave files beside
+    # it, in /tmp or in /dev/shm. The next runs on that slot still work, and see none of it. Runs take the slots in
+    # turn, so four runs after it cover both slots twice.
+    breaker = '''import os
+open("keep.txt", "w").write("x")
+open("../beside.txt", "w").write("x")
+for shared in ("/tmp", "/dev/shm"):
+    try:
+        open(shared + "/left-behind-" + str(os.getuid()), "w").write("x")
+    except OSError:
+        pass
+os.chmod(".", 0o500)
+os.chmod("..", 0o500)
+print("broke it")
+'''
+    status, r = run('python', breaker)
+    check('a program that locks its folders runs', status == 200 and r.get('stdout') == 'broke it\n', (status, r))
+    look = '''import os
+mine = str(os.getuid())
+left = [n for d in ("/tmp", "/dev/shm") if os.path.isdir(d) for n in os.listdir(d) if n.endswith("-" + mine)]
+print(sorted(os.listdir("..")), sorted(os.listdir(".")), left)
+'''
+    after = [run('python', look) for _ in range(4)]
+    check('... and every slot still runs the next programs, in a clean folder with nothing left behind',
+          all(s == 200 and r.get('stdout') == "['job'] ['main.py'] []\n" for s, r in after), after)
 
     # Two run at once; a third waits for a free slot. With RUNNER_QUEUE_WAIT=2 (set by runner-image.sh) a third that
     # waits longer than that is told the runner is busy.
@@ -175,6 +216,24 @@ for d in sorted(os.listdir("/work")):
     oks = [r for s, r in results if s == 200 and r.get('stdout') == 'done\n']
     busy = [r for s, r in results if s == 503]
     check('two runs at once; a third waiting too long is told the runner is busy', len(oks) == 2 and len(busy) == 1, results)
+
+    # M17a, F10: one run at a time per person, so one person can't hold both slots; someone else still gets one.
+    one, other, results = someone(), someone(), {}
+
+    def slow_as(name, owner):
+        results[name] = run('python', 'import time\ntime.sleep(3)\nprint("done")', owner=owner)
+
+    first = threading.Thread(target=slow_as, args=('first', one))
+    first.start()
+    time.sleep(0.5)
+    second = run('python', 'print("again")', owner=one)
+    check('a second run by the same person while the first is going is refused', second[0] == 429, second)
+    third = run('python', 'print("me too")', owner=other)
+    check('... while someone else still runs at the same time', third[0] == 200 and third[1].get('stdout') == 'me too\n', third)
+    first.join()
+    check('... and the first run finishes', results['first'][0] == 200 and results['first'][1].get('stdout') == 'done\n', results)
+    again = run('python', 'print("again")', owner=one)
+    check('... after which the same person can run again', again[0] == 200, again)
 
     sys.exit(1 if failures else 0)
 

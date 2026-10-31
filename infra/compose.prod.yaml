@@ -67,8 +67,14 @@ services:
     mem_limit: 1g
     pids_limit: 512
     cpus: 1.5
+    # Asks /health for an answer, not only whether the socket opens (M17a).
     healthcheck:
-      test: ['CMD', 'python3', '-I', '-c', "import socket; socket.socket(socket.AF_UNIX).connect('/sock/runner.sock')"]
+      test:
+        - CMD
+        - python3
+        - -I
+        - -c
+        - "import socket; s = socket.socket(socket.AF_UNIX); s.settimeout(5); s.connect('/sock/runner.sock'); s.sendall(b'GET /health HTTP/1.0\\r\\n\\r\\n'); assert b'\"ok\": true' in b''.join(iter(lambda: s.recv(4096), b''))"
       interval: 15s
       retries: 3
 

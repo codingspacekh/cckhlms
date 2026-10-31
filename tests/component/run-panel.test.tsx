@@ -77,6 +77,9 @@ describe('RunPanel', () => {
     runCodeAction.mockResolvedValueOnce(result({ status: 'busy', exitCode: null }));
     run();
     expect(await screen.findByText(/Run is busy/)).toBeTruthy();
+    runCodeAction.mockResolvedValueOnce(result({ status: 'already_running', exitCode: null }));
+    run();
+    expect(await screen.findByText(/You already have a program running/)).toBeTruthy();
     runCodeAction.mockResolvedValueOnce({ ok: false, error: "That's 20 runs a minute, the most allowed." });
     run();
     expect((await screen.findByRole('alert')).textContent).toMatch(/20 runs a minute/);
