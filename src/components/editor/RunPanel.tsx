@@ -38,6 +38,8 @@ function ending(r: RunResult): { text: string; tone: 'good-text' | 'bad-text' | 
       return { text: 'Waiting for input', tone: 'muted' };
     case 'busy':
       return { text: 'Run is busy: every place is in use. Try again in a moment.', tone: 'muted' };
+    case 'already_running':
+      return { text: 'You already have a program running. Wait for it to finish, then run again.', tone: 'muted' };
     default:
       return { text: 'Run isn’t available right now. Your work is still saved.', tone: 'muted' };
   }

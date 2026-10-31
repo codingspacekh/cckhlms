@@ -5,8 +5,14 @@ import { mean } from './statistics-rules';
 // yours and the average tell you theirs), so the class average is shown only from this many scores up.
 export const MIN_FOR_CLASS_AVERAGE = 5;
 
-export function classAverage(scores: (number | null)[]): number | null {
-  return scores.filter((s) => s !== null).length >= MIN_FOR_CLASS_AVERAGE ? mean(scores) : null;
+// And only as a 10-point band (owner's choice, M17d, F09): an exact average read before and after one mark joins
+// or leaves gives that mark away. 0–9 … 80–89, then 90–100.
+export type ClassBand = { low: number; high: number };
+export function classBand(scores: (number | null)[]): ClassBand | null {
+  const xs = scores.filter((s): s is number => s !== null);
+  if (xs.length < MIN_FOR_CLASS_AVERAGE) return null;
+  const low = Math.min(90, Math.floor(xs.reduce((a, b) => a + b, 0) / xs.length / 10) * 10); // unrounded: 69.99 is 60–69
+  return { low, high: low === 90 ? 100 : low + 9 };
 }
 
 // The most recent term before this one with a published report: the average of its final scores.

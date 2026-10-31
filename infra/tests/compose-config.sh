@@ -45,6 +45,7 @@ assert not r.get("privileged"), "the runner must not be privileged"
 assert not r.get("environment"), "the runner gets no environment: no secrets"
 assert [v["target"] for v in r.get("volumes", [])] == ["/sock"], "the only volume of the runner is its socket"
 assert r.get("pids_limit") and r.get("mem_limit") and r.get("cpus"), "the runner has process, memory and CPU limits"
+assert "/health" in " ".join(r["healthcheck"]["test"]), "the runner healthcheck asks /health for an answer (M17a)"
 assert s["app"]["environment"]["RUNNER_URL"] == "unix:/run/runner/runner.sock", "the app reaches the runner on its socket"
 assert any(v.get("source") == "runner-socket" and v.get("target") == "/run/runner" for v in s["app"]["volumes"]), "the app mounts the socket"
 # The first-run init server listens only on a socket: ready means ready on TCP, after db-app-role.sh has run.

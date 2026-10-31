@@ -13,12 +13,12 @@ import { audit } from '@/server/audit';
 import { assertCan, ValidationError } from '@/server/errors';
 import { codeWork } from './projects';
 import { checkScore, markOf, type Mark, type WorkLanguage } from './rules';
+import { submissionMeta } from './submission-columns';
 
 export type GradingVersion = {
   version: number;
   submittedAt: Date;
   late: boolean;
-  files: ProjectFile[];
   score: number | null;
   feedbackMd: string;
   gradedAt: Date | null;
@@ -37,7 +37,8 @@ export type GradingView = {
     latePenaltyPct: number;
   };
   student: { id: string; name: string; username: string };
-  versions: GradingVersion[]; // newest first
+  versions: GradingVersion[]; // newest first, without their files
+  shown: { version: number; files: ProjectFile[] } | null; // the version on screen (the latest unless asked), with its files
   mark: Mark | null;
   // The students before and after this one in the class list, to move through the class quickly.
   prev: { id: string; name: string } | null;
@@ -52,7 +53,7 @@ async function teacherOf(actor: Actor | null, assessmentId: string, purpose: 'ch
 
 const versionsOf = (assessmentId: string, studentId: string) =>
   db
-    .select()
+    .select(submissionMeta)
     .from(submission)
     .where(and(eq(submission.assessmentId, assessmentId), eq(submission.studentId, studentId)))
     .orderBy(desc(submission.version));
@@ -62,8 +63,13 @@ async function studentName(studentId: string) {
   return s?.name ?? 'This student';
 }
 
-// One student's work on one assessment, for marking.
-export async function gradingView(actor: Actor | null, assessmentId: string, studentId: string): Promise<GradingView> {
+// One student's work on one assessment, for marking: every version's mark, and the files of the one shown only.
+export async function gradingView(
+  actor: Actor | null,
+  assessmentId: string,
+  studentId: string,
+  opts: { version?: number } = {},
+): Promise<GradingView> {
   const { a } = await teacherOf(actor, assessmentId, 'read');
   const [roster, versions, [k], sessions] = await Promise.all([
     db
@@ -79,6 +85,14 @@ export async function gradingView(actor: Actor | null, assessmentId: string, stu
   const i = roster.findIndex((s) => s.id === studentId);
   if (i < 0) throw new ValidationError('That student isn’t in this class.');
   const pick = (s: (typeof roster)[number] | undefined) => (s ? { id: s.id, name: s.name } : null);
+  const on = versions.find((v) => v.version === opts.version) ?? versions[0];
+  const [shownFiles] =
+    on && !on.byTeacher
+      ? await db
+          .select({ files: submission.files })
+          .from(submission)
+          .where(and(eq(submission.assessmentId, assessmentId), eq(submission.studentId, studentId), eq(submission.version, on.version)))
+      : [];
   return {
     work: {
       id: a.id,
@@ -95,13 +109,13 @@ export async function gradingView(actor: Actor | null, assessmentId: string, stu
       version: v.version,
       submittedAt: v.submittedAt,
       late: v.late,
-      files: v.files,
       score: v.score,
       feedbackMd: v.feedbackMd,
       gradedAt: v.gradedAt,
       returnedAt: v.returnedAt,
       byTeacher: v.byTeacher,
     })),
+    shown: on ? { version: on.version, files: shownFiles?.files ?? [] } : null,
     mark: markOf(versions[0] ?? null),
     prev: pick(roster[i - 1]),
     next: pick(roster[i + 1]),

@@ -26,8 +26,8 @@ const progress: MyProgress = {
       passMark: 60,
       standing,
       tasks: [
-        { id: 'a', title: 'Lists quiz', kind: 'classwork', week: 1, mine: 90, classAverage: 65 },
-        { id: 'b', title: 'Dict quiz', kind: 'classwork', week: 2, mine: 80, classAverage: null },
+        { id: 'a', title: 'Lists quiz', kind: 'classwork', week: 1, mine: 90, classBand: { low: 60, high: 69 } },
+        { id: 'b', title: 'Dict quiz', kind: 'classwork', week: 2, mine: 80, classBand: null },
       ],
     },
   ],
@@ -64,7 +64,7 @@ describe('ProgressView', () => {
       within(chart)
         .getAllByRole('row')
         .map((r) => r.textContent),
-    ).toEqual(['PointYouClass average', 'Lists quiz90%65%', 'Dict quiz80%—']);
+    ).toEqual(['PointYouClass average', 'Lists quiz90%60–69%', 'Dict quiz80%—']);
   });
 
   it('only my own line when no task has a class average', () => {

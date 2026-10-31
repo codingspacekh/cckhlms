@@ -2,14 +2,21 @@
 // classmates have a score that no one's mark can be worked out from it, and compares this term with their own
 // last term.
 import { describe, expect, it } from 'vitest';
-import { classAverage, lastTerm, MIN_FOR_CLASS_AVERAGE } from '@/modules/reporting/progress-rules';
+import { classBand, lastTerm, MIN_FOR_CLASS_AVERAGE } from '@/modules/reporting/progress-rules';
 
 describe('the class average a student sees', () => {
   it('needs at least 5 scores, so a classmate’s mark can’t be worked out from it (BR-11)', () => {
     expect(MIN_FOR_CLASS_AVERAGE).toBe(5);
-    expect(classAverage([80, 60, 70, 90, 50])).toBe(70);
-    expect(classAverage([80, 60, 70, 90, null])).toBeNull();
-    expect(classAverage([80, 60])).toBeNull();
+    expect(classBand([80, 60, 70, 90, 50])).toEqual({ low: 70, high: 79 });
+    expect(classBand([80, 60, 70, 90, null])).toBeNull();
+    expect(classBand([80, 60])).toBeNull();
+  });
+
+  it('is a 10-point band, not the exact average, so one mark joining or leaving can’t be solved for (M17d, F09)', () => {
+    expect(classBand([60, 62, 65, 68, 70])).toEqual({ low: 60, high: 69 }); // 65
+    expect(classBand([0, 1, 2, 3, 4])).toEqual({ low: 0, high: 9 });
+    expect(classBand([95, 100, 100, 100, 100])).toEqual({ low: 90, high: 100 }); // the top band includes 100
+    expect(classBand([69.99, 69.99, 69.99, 69.99, 69.99])).toEqual({ low: 60, high: 69 });
   });
 });
 

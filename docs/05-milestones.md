@@ -54,6 +54,7 @@ flowchart LR
 | **M14** ✅ | Weekly report sheet, online classes, support lines | The weekly report as a sheet with one row per student; online classes with a Zoom link; Admin's Weekly reports page; support lines for students who need help | FR-TCH-14 · FR-ADM-05, 17, 18 · FR-STU-13 · BR-27…29 | 7 days |
 | **M15** | Safer promotion | Promote several Ready classes at once, see each new class's places and timetable clashes before confirming, undo a promotion until the new classes start | FR-ADM-13 · BR-30 | 4 days |
 | **M16** | Student password, archived accounts | Students change their own password on My account; People shows active accounts only, with an Archived list to restore or delete from | FR-AUTH-04, 06 · BR-23, 31 | 2 days |
+| **M17** | Security fixes | Fix the 13 confirmed findings of the security audit run-1 (5 medium, 8 low): runner, shared-load limits, sign-in limits, lifecycle and privacy rules, backup restore | NFR-01, 05, 06, 07 · FR-AUTH-11 · BR-11 | 4 days |
 | — | **R2: Club-wide launch** | Every class of the next term runs on `lms.cckh.dev` | | |
 
 \* *Effort = focused working days for one developer, tests included. Total ≈ **45 focused days**. At 2–3 focused days a week alongside teaching, that is about **4–5 months**: R1 could pilot in **Term 1 · 2027** (from Sat 9 Jan 2027) and R2 launch in **Term 2 · 2027**. These are planning ranges (±30%), not promises. AI-assisted pace on codingspacekh was faster, but the server work here is new.*
@@ -801,6 +802,42 @@ Built in two steps, one PR each. Each is merged only after the owner says so.
 **Also on request (2026-10-31):** the support line form's *Add a student* dropdown listed every student in every class. It becomes **Add students**: a search box (part of a name or a class, any case), a class filter with counts, and the students grouped by class in name order, each with **Add**; Enter adds the only match. Tests: component (grouping, search, class filter, Enter) and the support line e2e finds a student by typing.
 
 **Exit criteria:** on `lms.cckh.dev`, a student changes their password and signs in with it; Admin archives a student who left, they disappear from the class and from Active, and restores or deletes them from Archived; the owner signs off M16.
+
+### M17 — Security fixes (4 days)
+**Why:** the security audit run-1 (2026-10-31, Cloudflare's security-audit skill, standard profile, main `a63d7e9`) confirmed 13 findings: 5 medium, 8 low, none critical or high. Its report is outside the repo (`~/security-audit-skill/cckhlms/run-1/REPORT.md`). Every finding was reproduced in an offline sandbox with dummy data; nothing was sent to `lms.cckh.dev`. Most are ways one signed-in student can slow down or stop something everyone shares. One is in disaster recovery. The owner said "go ahead and fix" on 2026-10-31 and chose:
+- **Class average (F09):** students see a 10-point band such as "60–69", not the exact mean. Teachers and Admin still see exact numbers.
+- **Hand-ins (F04):** at most 20 versions per student per piece of work, and an unchanged hand-in is refused.
+
+Built in five steps, one PR each, each from `main`. Each is merged only after the owner says so. The audit's three needs-validation leads and four owner checks are listed under Exit criteria.
+
+**M17a — Runner (F03 medium, F10 low)**
+- **Build:**
+  - After every run, whatever happened, the runner puts the slot back to a clean state: it gives the slot's folders back to their owner, empties them, removes what the program left in `/tmp` and `/dev/shm`, and checks the folder is empty. A slot that still isn't empty is never handed on: the runner stops, and Docker restarts it with clean folders.
+  - One run at a time per person: the app sends a SHA-256 of the user's id with each run (never the id), and the runner answers a second run from the same person with "You already have a program running." The other slot stays free for the class.
+  - The runner's healthcheck asks `/health` for an answer instead of only opening the socket.
+- **Tests first:** `infra/tests/runner_cases.py`: a program that locks its folder and its slot's folder (`os.chmod('.', 0o500)`, `'..'`) and leaves files beside them, then four runs (both slots, twice) all work in a clean folder; a run without an owner, or with one that isn't a hash, is refused; a second run by the same person is refused while someone else runs, and works once the first ends. Integration: the app sends the owner hash, not the id, and a 429 becomes "already running". Component: the Run panel says "You already have a program running". `compose-config.sh`: the healthcheck asks `/health`.
+
+**M17b — Shared-load limits (F01, F04, F05 medium; F07 low; N03 lead)**
+- **Build:**
+  - `cluster.mjs` restarts a worker that dies instead of stopping the container (it still stops on SIGTERM).
+  - Hand-ins: at most 20 per student per piece of work, refused when unchanged; the version lists load files only for the version shown.
+  - Q&A: render only the posts this viewer can see; colour at most 2,000 characters of code per post, the rest as plain lines.
+  - Gradebook, My progress and the dashboard read only the mark columns of the latest version.
+- **Tests first:** integration: the 21st hand-in and an unchanged hand-in are refused; removed posts aren't rendered for students; gradebook loads no files. Unit: the colouring budget; the `<a<a<a…` html block renders in under 100 ms. `infra/tests/app-image.sh`: killing one worker leaves the site answering.
+
+**M17c — Sign-in limits (F12, F13 low)**
+- **Build:** a sign-in attempt is counted before the password is checked (one atomic insert-or-update), and only a successful sign-in clears it; a malformed request is never counted as a success. The same order in Change password.
+- **Tests first:** integration: 15 wrong passwords at once for one username get at most 5 password checks; a malformed body doesn't reset the count; a class signing in together from one address isn't blocked.
+
+**M17d — Lifecycle and privacy rules (F06, F08, F09, F11 low)**
+- **Build:** Undo promotion and Reopen term leave archived and erased students out of classes. Delete personal data also clears the term-report reason and its audit copies. Students see the class average as a 10-point band (BR-11). A post a teacher has restored can't be hidden again by student reports (they still reach the teacher).
+- **Tests first:** integration for each rule; unit for the band; component: My progress shows "60–69".
+
+**M17e — Backup restore (F02 medium)**
+- **Build:** `restore.sh latest` needs `RESTORE_BEFORE` (a time before any possible server compromise) and checks both the name and R2's own upload time against it; uploads come only from the same run as the database dump; the nightly prune reports and fails on backups named in the future; the laptop drill restores as a non-superuser and fails instead of printing PASS when counts are missing or larger than live. Runbook §4 explains the cutoff.
+- **Tests first:** `infra/tests/backup-restore.sh`: a planted far-future backup is not restored and is reported; the cutoff picks the newest backup before it.
+
+**Exit criteria:** all five PRs merged with CI green; the M17 tests above pass on `main`; deployed to `lms.cckh.dev` and a Run, a hand-in and a Q&A post work there; the owner has done the four read-only checks (GitHub environment `production` only from `main`; Cloudflare body-size limit on `/api/auth`; a preview stall check in a real browser; submission sizes in production); the owner signs off M17.
 
 ### R2 — Club-wide launch
 - All classes of the next term (e.g. Term 2 · 2027) are set up and run on `lms.cckh.dev`. Teachers get a short walkthrough, and students get login slips.

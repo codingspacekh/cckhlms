@@ -280,6 +280,24 @@ export async function promote(actor: Actor | null, classId: string, moves: Move[
   }
 
   const today = todayIn((await getClubSettings()).timeZone, opts.now);
+  // An archived or erased student finishes this class but isn't moved into another (M17d, F06).
+  const archived = new Set(
+    (
+      await db
+        .select({ id: user.id })
+        .from(user)
+        .where(
+          and(
+            inArray(
+              user.id,
+              plan.students.map((s) => s.studentId),
+            ),
+            sql`coalesce(${user.banned}, false) or ${user.erasedAt} is not null`,
+          ),
+        )
+    ).map((u) => u.id),
+  );
+  for (const s of plan.students) if (archived.has(s.studentId)) chosen.set(s.enrolmentId, null);
   const log = plan.students.map((s) => ({ studentId: s.studentId, result: s.result, to: chosen.get(s.enrolmentId) ?? null }));
   const moved = log.filter((m) => m.to !== null).length;
   await db.transaction(async (tx) => {
@@ -385,7 +403,12 @@ async function undoCheck(q: Executor, classId: string, timeZone: string, now: Da
   if (!c.promotedAt) throw new ValidationError('This class hasn’t been promoted.');
   // Only a promotion marks an enrolment completed.
   const old = await q
-    .select({ id: enrolment.id, studentId: enrolment.studentId, name: user.name })
+    .select({
+      id: enrolment.id,
+      studentId: enrolment.studentId,
+      name: user.name,
+      archived: sql<boolean>`coalesce(${user.banned}, false) or ${user.erasedAt} is not null`,
+    })
     .from(enrolment)
     .innerJoin(user, eq(user.id, enrolment.studentId))
     .where(and(eq(enrolment.classId, classId), eq(enrolment.status, 'completed')));
@@ -408,7 +431,8 @@ async function undoCheck(q: Executor, classId: string, timeZone: string, now: Da
     : [];
   const done = (state: UndoState) => ({
     state,
-    oldIds: old.map((o) => o.id),
+    oldIds: old.filter((o) => !o.archived).map((o) => o.id),
+    archivedIds: old.filter((o) => o.archived).map((o) => o.id), // archived or erased since: they don't come back (M17d)
     madeIds: made.map((m) => m.id),
     studentIds: old.map((o) => o.studentId),
   });
@@ -452,10 +476,10 @@ async function undoCheck(q: Executor, classId: string, timeZone: string, now: Da
   return done({
     can: true,
     until,
-    back: old.length,
+    back: old.filter((o) => !o.archived).length,
     removed: [...counts].map(([className, count]) => ({ className, count })).sort((a, b) => a.className.localeCompare(b.className)),
     leaving: old
-      .filter((o) => !movedOn.has(o.name))
+      .filter((o) => !movedOn.has(o.name) && !o.archived)
       .map((o) => o.name)
       .sort(),
   });
@@ -475,10 +499,17 @@ export async function undoPromotion(actor: Actor | null, classId: string, opts: 
   return db.transaction(async (tx) => {
     // Two admins undoing at once: the second finds the class no longer promoted.
     await tx.select({ id: klass.id }).from(klass).where(eq(klass.id, classId)).for('update');
-    const { state, oldIds, madeIds, studentIds } = await undoCheck(tx, classId, timeZone, opts.now ?? new Date());
+    const { state, oldIds, archivedIds, madeIds, studentIds } = await undoCheck(tx, classId, timeZone, opts.now ?? new Date());
     if (!state.can) throw new ValidationError(state.reason);
     if (madeIds.length) await tx.delete(enrolment).where(inArray(enrolment.id, madeIds));
     if (oldIds.length) await tx.update(enrolment).set({ status: 'active', endedOn: null }).where(inArray(enrolment.id, oldIds));
+    if (archivedIds.length) {
+      const today = todayIn(timeZone, opts.now);
+      await tx
+        .update(enrolment)
+        .set({ status: 'withdrawn', endedOn: sql`least(${enrolment.endedOn}, greatest(${today}::date, ${enrolment.enrolledOn}))` })
+        .where(inArray(enrolment.id, archivedIds));
+    }
     const [t] = await tx
       .select({ status: term.status })
       .from(klass)

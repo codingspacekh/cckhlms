@@ -96,7 +96,7 @@ describe('marking (FR-TCH-11)', () => {
     expect(view.student.name).toBe('Bopha Lim');
     expect(view.work).toMatchObject({ title: 'Countdown', maxScore: 10, latePenaltyPct: 10, language: 'python' });
     expect(view.versions.map((v) => v.version)).toEqual([2, 1]);
-    expect(view.versions[0]!.files[0]!.content).toContain('range(3, 0, -1)');
+    expect(view.shown!.files[0]!.content).toContain('range(3, 0, -1)');
     expect(view.mark).toBe('to_mark');
 
     await gradeSubmission(sophea, id, bopha.userId, { version: 2, score: '8.5', feedbackMd: 'Nice loop. Try **while** next time.' });
@@ -127,6 +127,7 @@ describe('marking (FR-TCH-11)', () => {
   it('BR-04: only the latest version is marked; a newer one handed in meanwhile is not overwritten', async () => {
     const id = await work();
     await submitWork(bopha, id, { now: BEFORE });
+    await saveDraft(bopha, id, [{ path: 'main.py', content: 'print(2)' }]);
     await submitWork(bopha, id, { now: BEFORE }); // version 2 arrives while the teacher looks at version 1
     const e = await gradeSubmission(sophea, id, bopha.userId, { version: 1, score: '5', feedbackMd: '' }).catch((x) => x);
     expect(e).toBeInstanceOf(ValidationError);
@@ -171,6 +172,7 @@ describe('returning for a redo (FR-TCH-12)', () => {
     expect(mine.versions[0]).toMatchObject({ score: null, feedbackHtml: '<p>The loop stops at 1. Count down to 0.</p>\n' });
     expect(mine.next).toEqual({ ok: true, late: false }); // even though the due time has passed and late isn't allowed
 
+    await saveDraft(bopha, id, [{ path: 'main.py', content: 'for i in range(3, -1, -1):\n    print(i)' }]);
     expect(await submitWork(bopha, id, { now: AFTER })).toEqual({ version: 2, late: false });
     const view = await gradingView(sophea, id, bopha.userId);
     expect(view.mark).toBe('to_mark');

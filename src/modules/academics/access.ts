@@ -1,8 +1,8 @@
 // Who a class belongs to, for the policy's "own class" rules: its teachers (and its lead), the students
 // enrolled in it now, and whether it is archived.
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, or } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { classTeacher, enrolment, klass } from '@/db/schema';
+import { classTeacher, enrolment, klass, user } from '@/db/schema';
 import type { PolicyContext } from '@/server/policy';
 
 // An archived class can be looked at but not changed (FR-ADM-14). Code that only shows the class asks for
@@ -33,3 +33,12 @@ export async function classTeacherIds(classId: string): Promise<string[]> {
 // The students a class's pages list: those in it now and those who finished it (promotion marks them completed,
 // FR-ADM-13), so a promoted class still shows its marks and reports (BR-07). Students who withdrew are left out.
 export const enrolledOrCompleted = inArray(enrolment.status, ['active', 'completed']);
+
+// Archived or erased accounts (M16b, NFR-07). They have no live enrolment: archiving and erasing end the ones they
+// have, and whatever brings a class back to life (undoing a promotion, reopening a term) or moves students on
+// (promotion) leaves them out (M17d, F06).
+export const archivedAccounts = () =>
+  db
+    .select({ id: user.id })
+    .from(user)
+    .where(or(eq(user.banned, true), isNotNull(user.erasedAt)));
