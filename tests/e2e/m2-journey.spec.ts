@@ -119,7 +119,7 @@ test.describe('teacher', () => {
     await page.goto('/teacher');
     const card = page.getByRole('article', { name: 'Python Level 2 · Sat 09:00' });
     await expect(card).toContainText('1 student');
-    await expect(card).toContainText('Next: Sat 15 Apr 2028 · 09:00–10:30 · Week 1');
+    await expect(card.getByRole('definition').first()).toHaveText('Sat 15 Apr 2028 · 09:00–10:30Week 1');
     await card.getByRole('link', { name: 'Open class' }).click();
     // the class's sections are in the sidebar
     const sections = page.getByRole('group', { name: 'Python Level 2 · Sat 09:00 sections' });

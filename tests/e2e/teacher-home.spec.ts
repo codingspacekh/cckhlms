@@ -24,7 +24,7 @@ test('greets the teacher and leads with the next class', async ({ page }) => {
 test('lists the teacher’s classes with the next session, and opens one', async ({ page }) => {
   await page.goto('/teacher');
   const card = page.getByRole('region', { name: 'My classes' }).getByRole('article', { name: c.className });
-  await expect(card).toContainText(/Next: .* · Week \d+/);
+  await expect(card).toContainText(/Next session.+ · \d\d:\d\d–\d\d:\d\dWeek \d+/);
   await card.getByRole('link', { name: 'Open class' }).click();
   await expect(page.getByRole('group', { name: `${c.className} sections` }).getByRole('link', { name: 'Weeks' })).toHaveAttribute(
     'aria-current',

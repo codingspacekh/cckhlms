@@ -169,7 +169,7 @@ export default async function TeacherToday() {
         {home.classes.length > 0 && (
           <section className="card stack full" aria-labelledby="classes-title">
             <h2 id="classes-title">My classes</h2>
-            <div className="class-list">
+            <div className="class-list rows">
               {home.classes.map((c) => (
                 <article key={c.id} className="class-item" aria-labelledby={`class-${c.id}`}>
                   <span className={`date-tile ${tone.get(c.id)}`} aria-hidden="true">
@@ -182,18 +182,28 @@ export default async function TeacherToday() {
                       <Icon name="check" />
                     )}
                   </span>
-                  <span className="who">
-                    <h3 id={`class-${c.id}`}>{c.name}</h3>
-                    <span className="sub">
-                      {c.nextSession
-                        ? `Next: ${sessionWhen(c.nextSession, c.minutes)}${c.nextSession.week ? ` · Week ${c.nextSession.week}` : ''}`
-                        : 'No more sessions this term'}
-                    </span>
-                    <span className="sub">
-                      {whereLabel(c) ? `${whereLabel(c)} · ` : ''}
-                      {c.students} student{c.students === 1 ? '' : 's'}
-                    </span>
-                  </span>
+                  <h3 id={`class-${c.id}`} className="who">
+                    {c.name}
+                  </h3>
+                  <dl className="class-facts">
+                    <div>
+                      <dt>Next session</dt>
+                      <dd className="tnum">
+                        {c.nextSession ? sessionWhen(c.nextSession, c.minutes) : 'No more sessions this term'}
+                        {c.nextSession?.week && <span className="sub">Week {c.nextSession.week}</span>}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Where</dt>
+                      <dd>{whereLabel(c) || '—'}</dd>
+                    </div>
+                    <div>
+                      <dt>Students</dt>
+                      <dd className="tnum">
+                        {c.students} student{c.students === 1 ? '' : 's'}
+                      </dd>
+                    </div>
+                  </dl>
                   <Link className="btn sm" href={`/teacher/classes/${c.id}`}>
                     Open class
                   </Link>

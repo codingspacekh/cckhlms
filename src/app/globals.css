@@ -4486,9 +4486,6 @@ button.link {
 
 /* A teacher's support lines on Today (owner, 2026-11-01): one compact card, a row per line: when | their students |
    Join on Zoom. The accent edge marks it as an invitation, like the student's card. */
-.home-grid > .full {
-  grid-column: 1 / -1;
-}
 .support-card {
   border-left: 6px solid var(--accent);
 }
@@ -4521,5 +4518,80 @@ button.link {
   }
   .sl-row .btn {
     justify-self: start;
+  }
+}
+
+/* My classes on a teacher's Today (owner, 2026-11-01): a full-width row per class, its facts in columns
+   (date | class | next session | where | students | Open class) instead of cramped cards; on a phone the facts go
+   under the name. */
+.class-list.rows {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+.class-list.rows .class-item {
+  display: grid;
+  grid-template-columns: 60px minmax(150px, 1fr) minmax(0, 3fr) auto;
+  gap: 20px;
+  padding: 12px 18px 12px 12px;
+}
+.class-list.rows .class-item h3 {
+  margin: 0;
+}
+.class-facts {
+  display: grid;
+  grid-template-columns: minmax(max-content, 1.6fr) minmax(0, 1fr) minmax(max-content, 0.7fr);
+  gap: 16px;
+  margin: 0;
+}
+.class-facts dt {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.class-facts dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+  color: var(--ink);
+}
+.class-facts dd .sub {
+  display: block;
+  font-weight: 400;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+@media (max-width: 900px) {
+  .class-list.rows .class-item {
+    grid-template-columns: 60px minmax(0, 1fr) auto;
+    grid-template-areas: 'tile name open' 'facts facts facts';
+    row-gap: 12px;
+  }
+  .class-list.rows .date-tile {
+    grid-area: tile;
+  }
+  .class-list.rows .class-item h3 {
+    grid-area: name;
+  }
+  .class-list.rows .class-item .btn {
+    grid-area: open;
+  }
+  .class-facts {
+    grid-area: facts;
+  }
+}
+@media (max-width: 480px) {
+  .class-list.rows .class-item {
+    grid-template-columns: 60px minmax(0, 1fr);
+    grid-template-areas: 'tile name' 'facts facts' 'open open';
+  }
+  .class-list.rows .class-item .btn {
+    justify-self: start;
+  }
+  .class-facts {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .class-facts > :first-child {
+    grid-column: 1 / -1;
   }
 }
