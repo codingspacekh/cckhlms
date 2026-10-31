@@ -68,6 +68,8 @@ describe('deleting a student’s personal data', () => {
   it('takes names out of the audit details, and keeps the rest', () => {
     expect(scrubAuditDetail({ role: 'student', username: 'bopha.l', via: 'csv' })).toEqual({ role: 'student', via: 'csv' });
     expect(scrubAuditDetail({ name: 'Bopha Lim', score: 7 })).toEqual({ score: 7 });
+    // M17d, F08: a teacher's written reasons about the student go too.
+    expect(scrubAuditDetail({ result: 'pass', reason: 'Bopha was ill', changeReason: 'Family trouble' })).toEqual({ result: 'pass' });
     expect(scrubAuditDetail(null)).toBeNull();
     expect(scrubAuditDetail(['a'])).toEqual(['a']);
   });

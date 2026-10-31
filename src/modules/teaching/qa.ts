@@ -252,11 +252,19 @@ export async function reportPost(actor: Actor | null, ref: PostRef, reason: stri
     .max(200, 'Keep the reason under 200 characters.')
     .safeParse(reason ?? '');
   if (!why.success) throw ValidationError.fromZod(why.error);
+  // A teacher's restore holds (M17d, F11): the student whose report was overruled can't report it again, and
+  // anyone else's report goes to the teacher without hiding the post again.
+  const restored = await db
+    .select({ by: postReport.reporterId })
+    .from(postReport)
+    .where(and(eq(postReport.postType, ref.type), eq(postReport.postId, ref.id), eq(postReport.outcome, 'restored')));
+  if (restored.some((r) => r.by === actor.userId)) throw new ValidationError('Your teacher has already looked at this post and kept it.');
   await db.transaction(async (tx) => {
     await tx
       .insert(postReport)
       .values({ id: crypto.randomUUID(), postType: ref.type, postId: ref.id, reporterId: actor.userId, reason: why.data || null })
       .onConflictDoNothing();
+    if (restored.length) return;
     await (ref.type === 'question'
       ? tx.update(question).set({ visibility: 'under_review' }).where(eq(question.id, ref.id))
       : tx.update(reply).set({ visibility: 'under_review' }).where(eq(reply.id, ref.id)));

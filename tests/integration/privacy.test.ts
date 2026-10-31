@@ -156,7 +156,9 @@ beforeAll(async () => {
   await saveDraft(bopha, classwork, [{ path: 'main.py', content: 'print("draft by Bopha")\n' }]);
 
   // The end of the class: term reports published, Bopha's certificate issued, and the class finished.
-  await saveTermReport(sophea, enrolmentOf[bopha.userId]!, report('Bopha is curious.', 'Bopha needs glasses.'), { now: AFTER_CLASS });
+  // Bopha's final score departs from the calculation, so the teacher's reason about her is kept (M17d, F08).
+  const bophaReport = { ...report('Bopha is curious.', 'Bopha needs glasses.'), finalScore: '95', reason: 'Bopha was ill for two weeks.' };
+  await saveTermReport(sophea, enrolmentOf[bopha.userId]!, bophaReport, { now: AFTER_CLASS });
   await saveTermReport(sophea, enrolmentOf[chenda.userId]!, report('Chenda works hard.', ''), { now: AFTER_CLASS });
   await publishTermReports(sophea, classId, { now: AFTER_CLASS });
   certificateCode = (await issueCertificate(admin, enrolmentOf[bopha.userId]!)).code;
@@ -231,7 +233,13 @@ describe('the export', () => {
     ]);
     expect(data.excused.map((x) => x.title)).toEqual(['Loops']);
     expect(data.termReports).toEqual([
-      expect.objectContaining({ comment: 'Bopha is curious.', supportNote: 'Bopha needs glasses.', result: 'pass', published: true }),
+      expect.objectContaining({
+        comment: 'Bopha is curious.',
+        supportNote: 'Bopha needs glasses.',
+        reason: 'Bopha was ill for two weeks.',
+        result: 'pass',
+        published: true,
+      }),
     ]);
     expect(data.certificates).toEqual([expect.objectContaining({ code: certificateCode, revokedAt: null })]);
     expect(data.questions).toEqual([expect.objectContaining({ body: 'Bopha asks: why does my loop stop?', code: 'print("Bopha")' })]);
@@ -298,8 +306,10 @@ describe('deleting a student’s personal data', () => {
       score: 7,
     });
     expect(
-      await one(`select comment, support_note, result, rating from student_report where enrolment_id = $1`, [enrolmentOf[bopha.userId]]),
-    ).toEqual({ comment: '', support_note: '', result: 'pass', rating: 'good' });
+      await one(`select comment, support_note, reason, result, rating from student_report where enrolment_id = $1`, [
+        enrolmentOf[bopha.userId],
+      ]),
+    ).toEqual({ comment: '', support_note: '', reason: null, result: 'pass', rating: 'good' });
     expect(await one(`select status, note from attendance where enrolment_id = $1`, [enrolmentOf[bopha.userId]])).toEqual({
       status: 'present',
       note: null,
@@ -335,7 +345,13 @@ describe('deleting a student’s personal data', () => {
     // The certificate is revoked, and the check page shows no name.
     expect(await verifyCertificate(certificateCode)).toMatchObject({ status: 'revoked', studentName: 'Deleted student' });
 
-    // The audit log keeps what happened, without her name or where she signed in from.
+    // The audit log keeps what happened, without her name, where she signed in from, or a teacher's reasons about her
+    // term report (kept under her enrolment, M17d, F08).
+    const reasons = await pool.query(`select action, detail from audit_log where entity_id = $1 and action like 'termreport.%'`, [
+      enrolmentOf[bopha.userId],
+    ]);
+    expect(reasons.rows.length).toBeGreaterThan(0);
+    for (const r of reasons.rows) expect(r.detail).not.toHaveProperty('reason');
     expect(await one(`select ip from audit_log where action = 'auth.sign_in' and actor_id = $1`, [bopha.userId])).toEqual({ ip: null });
     expect(await one(`select detail from audit_log where action = 'account.create' and entity_id = $1`, [bopha.userId])).toEqual({
       detail: { role: 'student' },

@@ -8,7 +8,7 @@ import { createClass, getClass } from '@/modules/academics/classes';
 import { createCourse } from '@/modules/academics/courses';
 import { enrolStudent, listRoster } from '@/modules/academics/enrolments';
 import { createTerm, setTermStatus } from '@/modules/academics/terms';
-import { createAccount } from '@/modules/identity/service';
+import { createAccount, setActive } from '@/modules/identity/service';
 import { promote, promotionList, promotionUndo, undoPromotion } from '@/modules/promotion/promotion';
 import { publishTermReports, saveTermReport, termReports } from '@/modules/reporting/term-reports';
 import type { Actor } from '@/server/actor';
@@ -255,5 +255,40 @@ describe('undoing', () => {
     await undoPromotion(admin, fromId, { now: AFTER_TERM });
     expect(await getClass(admin, fromId)).toMatchObject({ status: 'archived', promotedAt: null });
     expect((await listRoster(admin, fromId)).every((r) => r.status === 'active')).toBe(true);
+  });
+});
+
+// M17d, F06: an archived or erased student has no live enrolment, whichever way a class comes back to life.
+describe('archived students stay out (M17d)', () => {
+  const statuses = async (classId: string) => (await listRoster(admin, classId)).map((r) => [r.name, r.status]);
+
+  it('undoing a promotion doesn’t put back a student who left the club and was archived since', async () => {
+    await setTermStatus(admin, t1, 'active'); // the class of the closed term opens again (BR-24)
+    await promote(admin, fromId, moves(), { now: AFTER_TERM }); // Kosal leaves the club
+    await setActive(admin, kosal.userId, false, { now: AFTER_TERM });
+    await undoPromotion(admin, fromId, { now: AFTER_TERM });
+    expect(await statuses(fromId)).toEqual([
+      ['Bopha Lim', 'active'],
+      ['Chenda Ouk', 'active'],
+      ['Kosal Meas', 'withdrawn'],
+    ]);
+  });
+
+  it('reopening a term doesn’t put back a student archived while it was closed', async () => {
+    await setTermStatus(admin, t1, 'closed');
+    await setActive(admin, chenda.userId, false, { now: AFTER_TERM }); // the class is archived, so nothing to leave yet
+    await setTermStatus(admin, t1, 'active');
+    expect(await statuses(fromId)).toEqual([
+      ['Bopha Lim', 'active'],
+      ['Chenda Ouk', 'withdrawn'],
+      ['Kosal Meas', 'withdrawn'],
+    ]);
+  });
+
+  it('promoting doesn’t move an archived student into a new class', async () => {
+    await pool.query(`update "user" set banned = true where id = $1`, [bopha.userId]); // archived some other way
+    await promote(admin, fromId, [{ enrolmentId: old[bopha.userId]!, toClassId: level2 }], { now: AFTER_TERM });
+    expect(await newEnrolment(bopha)).toBeUndefined();
+    expect(await statuses(level2)).toEqual([]);
   });
 });

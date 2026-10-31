@@ -124,13 +124,14 @@ describe('my progress', () => {
     expect(p.classes[0]).toMatchObject({ passMark: 60, standing: { overall: { overall: 85 }, homework: { percent: null } } });
   });
 
-  it('my scores by task, with the class average only where at least 5 students have a score (BR-11)', async () => {
+  it('my scores by task, with the class average as a 10-point band, only where at least 5 students have a score (BR-11)', async () => {
     const [c] = (await myProgress(bopha, { now: NOW })).classes;
-    // Lists quiz: 9, 8, 7, 6, 5, 4 → 65 %; Dict quiz has two scores, so no average.
-    expect(c!.tasks.map((t) => [t.title, t.mine, t.classAverage])).toEqual([
-      ['Lists quiz', 90, 65],
+    // Lists quiz: 9, 8, 7, 6, 5, 4 → 65 %, shown as 60–69 (M17d, F09); Dict quiz has two scores, so no average.
+    expect(c!.tasks.map((t) => [t.title, t.mine, t.classBand])).toEqual([
+      ['Lists quiz', 90, { low: 60, high: 69 }],
       ['Dict quiz', 80, null],
     ]);
+    expect(c!.tasks[0]).not.toHaveProperty('classAverage'); // the exact average never reaches the student's browser
   });
 
   it('my published term reports, without what teachers note for staff', async () => {

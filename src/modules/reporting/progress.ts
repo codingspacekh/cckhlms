@@ -7,14 +7,14 @@ import { enrolment, klass, studentReport, term } from '@/db/schema';
 import type { Kind } from '@/modules/assessments/rules';
 import type { Actor } from '@/server/actor';
 import { assertCan } from '@/server/errors';
-import { classAverage, lastTerm } from './progress-rules';
+import { classBand, lastTerm, type ClassBand } from './progress-rules';
 import type { Result } from './rules';
 import { loadStandings, type StudentStanding } from './standing';
 import type { Rating } from './term-report-rules';
 
 type Opts = { now?: Date };
 
-export type MyTask = { id: string; title: string; kind: Kind; week: number | null; mine: number | null; classAverage: number | null };
+export type MyTask = { id: string; title: string; kind: Kind; week: number | null; mine: number | null; classBand: ClassBand | null };
 export type MyClassProgress = {
   classId: string;
   className: string;
@@ -84,7 +84,7 @@ export async function myProgress(actor: Actor | null, opts: Opts = {}) {
         kind: w.kind,
         week: w.week,
         mine: myTasks.find((t) => t.id === w.id)?.percent ?? null,
-        classAverage: classAverage(s.students.map((x) => x.tasks.find((t) => t.id === w.id)?.percent ?? null)),
+        classBand: classBand(s.students.map((x) => x.tasks.find((t) => t.id === w.id)?.percent ?? null)),
       })),
     });
   }

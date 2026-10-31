@@ -1,13 +1,15 @@
 // Terms (FR-ADM-03, FR-ADM-14): planned → active → closed, at most one active, no overlapping dates. Closing a term
 // archives its classes. Each step can be undone, and a term with no classes can be deleted (M10, BR-23, BR-24).
-import { and, asc, count, desc, eq, gte, isNull, lte, max, min, ne } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, inArray, isNull, lte, max, min, ne, sql } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { classSession, klass, term } from '@/db/schema';
+import { classSession, enrolment, klass, term } from '@/db/schema';
+import { getClubSettings } from '@/modules/club/service';
 import type { Actor } from '@/server/actor';
 import { audit } from '@/server/audit';
 import { assertCan, ValidationError } from '@/server/errors';
 import { termInputSchema, termName, type TermInput } from './rules';
-import { formatDate } from './schedule';
+import { archivedAccounts } from './access';
+import { formatDate, todayIn } from './schedule';
 
 export type TermStatus = 'planned' | 'active' | 'closed';
 export type Term = typeof term.$inferSelect;
@@ -156,6 +158,23 @@ export async function setTermStatus(actor: Actor | null, id: string, status: Ter
         .where(and(eq(klass.termId, id), eq(klass.status, 'archived'), isNull(klass.promotedAt)))
         .returning({ id: klass.id });
       classes = reopened.length;
+      // Students archived while the term was closed stayed on its (archived) class lists; they leave now (M17d, F06).
+      if (reopened.length) {
+        const today = todayIn((await getClubSettings()).timeZone);
+        await tx
+          .update(enrolment)
+          .set({ status: 'withdrawn', endedOn: sql`greatest(${today}::date, ${enrolment.enrolledOn})` })
+          .where(
+            and(
+              inArray(
+                enrolment.classId,
+                reopened.map((c) => c.id),
+              ),
+              eq(enrolment.status, 'active'),
+              inArray(enrolment.studentId, archivedAccounts()),
+            ),
+          );
+      }
       for (const c of reopened)
         await audit(
           { actorId: actor.userId, action: 'class.unarchive', entity: 'class', entityId: c.id, detail: { reason: 'term_reopened' } },

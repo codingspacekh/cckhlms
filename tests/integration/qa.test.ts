@@ -161,6 +161,19 @@ describe('reporting (BR-20)', () => {
     expect(audit.rows).toEqual([{ detail: expect.objectContaining({ type: 'question', id: q2, reports: 1 }) }]);
   });
 
+  it('M17d, F11: once restored, the same student can’t hide it again; another report reaches the teacher without hiding it', async () => {
+    await expect(reportPost(chenda, { type: 'question', id: q2 }, 'Still spam')).rejects.toThrow(
+      'Your teacher has already looked at this post and kept it.',
+    );
+    await reportPost(rithy, { type: 'question', id: q2 }, 'I think it’s spam too');
+    expect((await visibleTo(chenda)).map((q) => q.id)).toEqual([q1, q2]); // still visible to the class
+    const forTeacher = (await visibleTo(sophea)).find((q) => q.id === q2);
+    expect(forTeacher).toEqual(
+      expect.objectContaining({ state: 'visible', reports: [{ by: 'Rithy Som', reason: 'I think it’s spam too' }] }),
+    );
+    await moderatePost(sophea, { type: 'question', id: q2 }, 'restore'); // resolves Rithy's report
+  });
+
   it('a reported reply is removed: gone for every student, even its author', async () => {
     await reportPost(rithy, { type: 'reply', id: r1 }, 'Rude');
     expect((await visibleTo(chenda))[0]!.replies.map((r) => r.id)).toEqual([r2]);
@@ -186,9 +199,11 @@ describe('reporting (BR-20)', () => {
   });
 
   it('nobody can reply to a question that is under review or removed', async () => {
-    await reportPost(rithy, { type: 'question', id: q2 }, '');
-    await expect(replyToQuestion(chenda, q2, 'Hi')).rejects.toThrow(/review/);
-    await moderatePost(sophea, { type: 'question', id: q2 }, 'restore');
+    const q = (await askQuestion(bopha, classId, 3, { body: 'One more question', code: '' })).id;
+    await reportPost(rithy, { type: 'question', id: q }, '');
+    await expect(replyToQuestion(chenda, q, 'Hi')).rejects.toThrow(/review/);
+    await moderatePost(sophea, { type: 'question', id: q }, 'remove');
+    await expect(replyToQuestion(chenda, q, 'Hi')).rejects.toThrow();
   });
 
   it('counts posts waiting for review, for the teacher’s weeks table', async () => {
