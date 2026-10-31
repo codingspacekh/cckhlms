@@ -6,7 +6,7 @@ import { ChartCard } from './ChartCard';
 import { fmt } from './format';
 import { useChartWidth, useTooltip } from './Tooltip';
 
-export type LinePoint = { label: string; full?: string; value: number | null };
+export type LinePoint = { label: string; full?: string; value: number | null; text?: string }; // text: shown instead of the value
 export type LineSeries = { name: string; points: LinePoint[] };
 
 export function LineCard({
@@ -33,7 +33,7 @@ export function LineCard({
   const name = (i: number) => points[i]!.full ?? points[i]!.label;
   const table = {
     head: ['Point', ...series.map((s) => s.name)],
-    rows: points.map((_, i) => [name(i), ...series.map((s) => fmt(s.points[i]?.value ?? null, unit))]),
+    rows: points.map((_, i) => [name(i), ...series.map((s) => s.points[i]?.text ?? fmt(s.points[i]?.value ?? null, unit))]),
   };
   const h = 240,
     pl = 40,
@@ -104,7 +104,11 @@ export function LineCard({
             );
           })()}
           {points.map((p, i) => {
-            const rows = series.map((s, si) => ({ value: fmt(s.points[i]?.value ?? null, unit), name: s.name, slot: (si + 1) as 1 | 2 }));
+            const rows = series.map((s, si) => ({
+              value: s.points[i]?.text ?? fmt(s.points[i]?.value ?? null, unit),
+              name: s.name,
+              slot: (si + 1) as 1 | 2,
+            }));
             return (
               <g key={i}>
                 <g

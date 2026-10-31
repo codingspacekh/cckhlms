@@ -1,7 +1,7 @@
 // FR-STU-07: a student's own progress. A tile per class they're in now, their scores by task next to the class
 // average (only where enough students have a score, BR-11), this term against their last, and their published
 // term reports. Nobody else's scores appear.
-import { LineCard, Meter } from '@/components/charts';
+import { LineCard, Meter, type LineSeries } from '@/components/charts';
 import { Pill } from '@/components/ui/Pill';
 import { TableScroll } from '@/components/ui/TableScroll';
 import { MIN_FOR_CLASS_AVERAGE } from '@/modules/reporting/progress-rules';
@@ -33,15 +33,23 @@ function ClassTile({ c }: { c: MyClassProgress }) {
 }
 
 function ScoresChart({ c }: { c: MyClassProgress }) {
-  const tasks = c.tasks.filter((t) => t.mine !== null || t.classAverage !== null);
-  const points = (pick: (t: (typeof tasks)[number]) => number | null) =>
-    tasks.map((t, i) => ({ label: `Task ${i + 1}`, full: t.title, value: pick(t) }));
-  const series = [{ name: 'You', points: points((t) => t.mine) }];
-  if (tasks.some((t) => t.classAverage !== null)) series.push({ name: 'Class average', points: points((t) => t.classAverage) });
+  const tasks = c.tasks.filter((t) => t.mine !== null || t.classBand !== null);
+  const label = (i: number) => ({ label: `Task ${i + 1}`, full: tasks[i]!.title });
+  const series: LineSeries[] = [{ name: 'You', points: tasks.map((t, i) => ({ ...label(i), value: t.mine })) }];
+  // The class average is a band (BR-11): drawn at its middle, read as e.g. "60–69%".
+  if (tasks.some((t) => t.classBand !== null))
+    series.push({
+      name: 'Class average',
+      points: tasks.map((t, i) =>
+        t.classBand
+          ? { ...label(i), value: (t.classBand.low + t.classBand.high) / 2, text: `${t.classBand.low}–${t.classBand.high}%` }
+          : { ...label(i), value: null },
+      ),
+    });
   return (
     <LineCard
       title={`${short(c.className)}: my scores by task`}
-      subtitle={`Each task as a percentage. The class average shows only where at least ${MIN_FOR_CLASS_AVERAGE} students have a score; other students’ own scores are never shown.`}
+      subtitle={`Each task as a percentage. The class average shows as a 10-point band, and only where at least ${MIN_FOR_CLASS_AVERAGE} students have a score; other students’ own scores are never shown.`}
       series={series}
       refValue={c.passMark}
       refLabel={`Pass mark ${c.passMark}`}

@@ -71,7 +71,7 @@ export async function eraseStudent(actor: Actor | null, studentId: string, confi
 
     const theirs = tx.select({ id: enrolment.id }).from(enrolment).where(eq(enrolment.studentId, studentId));
     await tx.update(submission).set({ files: [], feedbackMd: '' }).where(eq(submission.studentId, studentId));
-    await tx.update(studentReport).set({ comment: '', supportNote: '' }).where(inArray(studentReport.enrolmentId, theirs));
+    await tx.update(studentReport).set({ comment: '', supportNote: '', reason: null }).where(inArray(studentReport.enrolmentId, theirs));
     await tx.update(attendance).set({ note: null }).where(inArray(attendance.enrolmentId, theirs));
     await tx.update(classReportStudent).set({ comment: '', note: '' }).where(inArray(classReportStudent.enrolmentId, theirs));
     await tx.update(question).set({ bodyMd: '', codeSnippet: null, visibility: 'hidden' }).where(eq(question.authorId, studentId));
@@ -88,10 +88,11 @@ export async function eraseStudent(actor: Actor | null, studentId: string, confi
 
     // The audit log keeps every entry, without where she signed in from or her username in the details.
     await tx.update(auditLog).set({ ip: null }).where(eq(auditLog.actorId, studentId));
+    // Term-report entries are kept under her enrolments (M17d, F08).
     const about = await tx
       .select({ id: auditLog.id, detail: auditLog.detail })
       .from(auditLog)
-      .where(or(eq(auditLog.entityId, studentId), eq(auditLog.actorId, studentId)));
+      .where(or(eq(auditLog.entityId, studentId), eq(auditLog.actorId, studentId), inArray(auditLog.entityId, theirs)));
     for (const row of about) {
       const scrubbed = scrubAuditDetail(row.detail);
       if (JSON.stringify(scrubbed) !== JSON.stringify(row.detail))

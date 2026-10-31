@@ -12,8 +12,10 @@ export function confirmsErase(typed: string, username: string | null): boolean {
   return !!username && typed.trim().toLowerCase() === username.toLowerCase();
 }
 
-// Audit details keep what happened but not who it was: names and usernames come out.
+// Audit details keep what happened but not who it was: names and usernames come out, and what a teacher wrote
+// about the student as a term report's reason (M17d, F08).
+const SCRUBBED = new Set(['username', 'name', 'reason', 'changeReason']);
 export function scrubAuditDetail(detail: unknown): unknown {
   if (!detail || typeof detail !== 'object' || Array.isArray(detail)) return detail;
-  return Object.fromEntries(Object.entries(detail).filter(([k]) => k !== 'username' && k !== 'name'));
+  return Object.fromEntries(Object.entries(detail).filter(([k]) => !SCRUBBED.has(k)));
 }
