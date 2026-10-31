@@ -6,7 +6,7 @@ import { admin, username } from 'better-auth/plugins';
 import { db } from '@/db/client';
 import * as schema from '@/db/schema';
 import { audit } from './audit';
-import { recordSignIn, signInRefusal } from './sign-in-limit';
+import { reserveSignIn, settleSignIn } from './sign-in-limit';
 
 const DAY = 24 * 3600;
 export const LMS_ORIGIN = process.env.BETTER_AUTH_URL ?? 'http://lms.localhost:3300';
@@ -40,19 +40,23 @@ const beforeHook = createAuthMiddleware(async (ctx) => {
   requireLmsOrigin(ctx.request);
   const attempt = ctx.path === SIGN_IN ? signInAttempt(ctx) : null;
   if (!attempt) return;
-  const refused = await signInRefusal(attempt.username, attempt.ip);
+  const refused = await reserveSignIn(attempt.username, attempt.ip);
   if (refused) throw new APIError('TOO_MANY_REQUESTS', { message: REFUSED[refused] });
 });
 
 const afterHook = createAuthMiddleware(async (ctx) => {
   const attempt = ctx.path === SIGN_IN ? signInAttempt(ctx) : null;
   if (!attempt) return;
-  const r = ctx.context.returned;
-  // A wrong username or password is 401; a switched-off account (403) knew its password, so it isn't a guess.
-  if (r instanceof APIError) {
-    if (r.statusCode === 401) await recordSignIn(attempt.username, attempt.ip, false);
-  } else await recordSignIn(attempt.username, attempt.ip, true);
+  await settleSignIn(attempt.username, attempt.ip, outcomeOf(ctx.context.returned));
 });
+
+// A session is a success. A wrong username or password is 401. Anything else isn't a guess: a switched-off account
+// (403) knew its password, and a malformed body (400) never reached the password check. The error may come from
+// better-call rather than better-auth's own APIError class, so it's told by its status, not its class (M17c, F12).
+function outcomeOf(returned: unknown): 'ok' | 'failed' | 'other' {
+  if (returned && typeof returned === 'object' && !(returned instanceof Error) && 'token' in returned && 'user' in returned) return 'ok';
+  return (returned as { statusCode?: unknown } | null)?.statusCode === 401 ? 'failed' : 'other';
+}
 
 export const auth = betterAuth({
   appName: 'CCKH LMS',
