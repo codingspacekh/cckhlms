@@ -54,7 +54,7 @@ flowchart LR
 | **M14** ✅ | Weekly report sheet, online classes, support lines | The weekly report as a sheet with one row per student; online classes with a Zoom link; Admin's Weekly reports page; support lines for students who need help | FR-TCH-14 · FR-ADM-05, 17, 18 · FR-STU-13 · BR-27…29 | 7 days |
 | **M15** | Safer promotion | Promote several Ready classes at once, see each new class's places and timetable clashes before confirming, undo a promotion until the new classes start | FR-ADM-13 · BR-30 | 4 days |
 | **M16** | Student password, archived accounts | Students change their own password on My account; People shows active accounts only, with an Archived list to restore or delete from | FR-AUTH-04, 06 · BR-23, 31 | 2 days |
-| **M17** | Security fixes | Fix the 13 confirmed findings of the security audit run-1 (5 medium, 8 low): runner, shared-load limits, sign-in limits, lifecycle and privacy rules, backup restore | NFR-01, 05, 06, 07 · FR-AUTH-11 · BR-11 | 4 days |
+| **M17** ✅ | Security fixes | Fix the 13 confirmed findings of the security audit run-1 (5 medium, 8 low): runner, shared-load limits, sign-in limits, lifecycle and privacy rules, backup restore | NFR-01, 05, 06, 07 · FR-AUTH-11 · BR-11 | 4 days |
 | — | **R2: Club-wide launch** | Every class of the next term runs on `lms.cckh.dev` | | |
 
 \* *Effort = focused working days for one developer, tests included. Total ≈ **45 focused days**. At 2–3 focused days a week alongside teaching, that is about **4–5 months**: R1 could pilot in **Term 1 · 2027** (from Sat 9 Jan 2027) and R2 launch in **Term 2 · 2027**. These are planning ranges (±30%), not promises. AI-assisted pace on codingspacekh was faster, but the server work here is new.*
@@ -803,7 +803,7 @@ Built in two steps, one PR each. Each is merged only after the owner says so.
 
 **Exit criteria:** on `lms.cckh.dev`, a student changes their password and signs in with it; Admin archives a student who left, they disappear from the class and from Active, and restores or deletes them from Archived; the owner signs off M16.
 
-### M17 — Security fixes (4 days)
+### M17 — Security fixes (4 days) — ✅ DONE 2026-10-31 (owner signed off; PRs #78–#82)
 **Why:** the security audit run-1 (2026-10-31, Cloudflare's security-audit skill, standard profile, main `a63d7e9`) confirmed 13 findings: 5 medium, 8 low, none critical or high. Its report is outside the repo (`~/security-audit-skill/cckhlms/run-1/REPORT.md`). Every finding was reproduced in an offline sandbox with dummy data; nothing was sent to `lms.cckh.dev`. Most are ways one signed-in student can slow down or stop something everyone shares. One is in disaster recovery. The owner said "go ahead and fix" on 2026-10-31 and chose:
 - **Class average (F09):** students see a 10-point band such as "60–69", not the exact mean. Teachers and Admin still see exact numbers.
 - **Hand-ins (F04):** at most 20 versions per student per piece of work, and an unchanged hand-in is refused.
@@ -838,6 +838,36 @@ Built in five steps, one PR each, each from `main`. Each is merged only after th
 - **Tests first:** `infra/tests/backup-restore.sh`: a planted far-future backup is not restored and is reported; the cutoff picks the newest backup before it.
 
 **Exit criteria:** all five PRs merged with CI green; the M17 tests above pass on `main`; deployed to `lms.cckh.dev` and a Run, a hand-in and a Q&A post work there; the owner has done the four read-only checks (GitHub environment `production` only from `main`; Cloudflare body-size limit on `/api/auth`; a preview stall check in a real browser; submission sizes in production); the owner signs off M17.
+
+> **Result** (PRs #78–#82, each merged after CI passed on top of the one before; live as 8f65c53 on 2026-10-31, deployed by hand with `force` on a Saturday, as the owner asked). All 13 confirmed findings of audit run-1 are fixed. Each fix has a test that was written first and seen failing:
+> - **M17a, runner (#78).** After every run the slot is emptied and checked: the runner gives the folders back to their owner and removes what the program left in `/tmp` and `/dev/shm`. A slot that can't be emptied makes the runner restart. Each person gets one run at a time (`X-Run-Owner`, a SHA-256 of the user id). The healthcheck asks `/health`.
+> - **M17b, shared load (#79).**
+>   - `cluster.mjs` replaces a dead server process; 6 deaths in a minute still stop the container.
+>   - At most 20 hand-ins, and an unchanged one is refused.
+>   - Marks are read without files (`submissionMeta`), and the marking page reads only the shown version's files.
+>   - Q&A renders only what the viewer can see, and a post colours at most 2,000 characters of code.
+> - **M17c, sign-in limits (#80).** A username's attempt is counted before the password check, in one statement. The outcome is told by the response, not by the error's class. The per-address limit stays a read, so a class of 30 can still sign in together.
+> - **M17d, lifecycle and privacy (#81).**
+>   - Undo, reopen and promote leave archived or erased students out (`archivedAccounts()`).
+>   - Erase clears the term-report reason and its audit copies.
+>   - Students see the class average as a 10-point band (owner's choice).
+>   - A teacher's restore of a reported post holds.
+> - **M17e, backup restore (#82).**
+>   - `restore-latest` needs `RESTORE_BEFORE`, checked against the name and R2's upload time.
+>   - Uploads come only from the same run as the dump.
+>   - The nightly backup reports names in the future.
+>   - The drill restores as a non-superuser and checks the counts.
+>   - Runbook §4 and §5 and `docs/security-review.md` are updated.
+>
+> Still open, left by the owner for later (all read-only):
+> - In GitHub, the environment `production` takes deployments from `main` only.
+> - The Cloudflare body-size limit on `/api/auth/*`.
+> - The web-preview stall, checked in a real browser and compared with a `while(true)` page.
+> - Submission sizes in production.
+> - A Run, a hand-in and a Q&A post tried on `lms.cckh.dev`.
+> - The first laptop drill with the new `restore-drill.sh`.
+>
+> Seen while merging, unrelated to M17 and each passed on a rerun: three flaky tests, the Run panel's input-focus component test, `lessons.spec` (the week 9 editor) and the gradebook integration test "typing a score creates a submission without files".
 
 ### R2 — Club-wide launch
 - All classes of the next term (e.g. Term 2 · 2027) are set up and run on `lms.cckh.dev`. Teachers get a short walkthrough, and students get login slips.
