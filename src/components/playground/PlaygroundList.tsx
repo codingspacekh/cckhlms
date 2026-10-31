@@ -3,7 +3,6 @@
 // delete with a confirmation. Starting a project opens it.
 import Link from 'next/link';
 import { useActionState, useRef, useState, useTransition } from 'react';
-import { Icon } from '@/components/ui/Icon';
 import { TableScroll } from '@/components/ui/TableScroll';
 import { WORK_LANGUAGE_LABEL } from '@/modules/assessments/rules';
 import { createProjectAction, deleteProjectAction } from '@/modules/playground/actions';
@@ -60,7 +59,7 @@ export function PlaygroundList({ projects, limit }: { projects: PlaygroundRow[];
               newDialog.current?.showModal();
             }}
           >
-            <Icon name="plus" /> New project
+            New project
           </button>
         </div>
         {full && <p className="note m16">You have {projects.length} projects, the most you can keep. Delete one to start another.</p>}

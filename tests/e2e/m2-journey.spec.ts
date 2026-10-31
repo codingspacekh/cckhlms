@@ -30,7 +30,7 @@ test.describe('admin', () => {
     await c.getByRole('button', { name: 'Add course' }).click();
     await expect(page.getByRole('row', { name: /PY2/ })).toBeVisible();
 
-    await page.goto('/admin/classes/new');
+    await page.goto('/admin/classes?new=1');
     const f = page.getByRole('form', { name: 'New class' });
     await choose(f.getByLabel('Course'), { label: 'PY2 · Python Level 2' });
     await choose(f.getByLabel('Term'), { label: 'Term 2 · 2028' });

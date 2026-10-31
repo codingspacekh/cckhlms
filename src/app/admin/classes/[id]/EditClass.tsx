@@ -2,7 +2,6 @@
 import { useActionState, useRef, useState, useTransition } from 'react';
 import { DateField, TimeField } from '@/components/ui/DateTimeFields';
 import { ClassPlace } from '@/components/academics/ClassPlace';
-import { Icon } from '@/components/ui/Icon';
 import type { ClassMode } from '@/modules/academics/meeting';
 import { deleteClassAction, updateClassAction, type CreateClassFormResult } from '@/modules/academics/class-actions';
 import { DAY_NAME, formatDate, type Day } from '@/modules/academics/schedule';
@@ -50,7 +49,7 @@ export function EditClass(props: Props) {
           dialog.current?.showModal();
         }}
       >
-        <Icon name="pencil" /> Edit class
+        Edit class
       </button>
       <dialog ref={dialog} className="dialog wide" aria-labelledby="edit-class-title">
         {formKey > 0 && (

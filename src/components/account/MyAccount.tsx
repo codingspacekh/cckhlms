@@ -1,7 +1,9 @@
-// FR-AUTH-06 (M13, M16a): My account for everyone: who they are, and Change password.
+// FR-AUTH-06 (M13, M16a): My account for everyone: who they are, their profile picture (owner, 2026-10-31), and Change
+// password.
 import { PageHeader } from '@/components/ui/PageHeader';
 import type { Actor } from '@/server/actor';
 import { ChangePasswordForm } from './ChangePasswordForm';
+import { ProfilePicture } from './ProfilePicture';
 
 const FORGOT = {
   admin: 'Forgot your current password? Another admin can reset it on People. If no admin can sign in, see runbook §3.2.',
@@ -10,7 +12,7 @@ const FORGOT = {
 };
 const ROLE = { admin: 'Admin', teacher: 'Teacher', student: 'Student' };
 
-export function MyAccount({ actor, role }: { actor: Actor; role: 'admin' | 'teacher' | 'student' }) {
+export function MyAccount({ actor, role, image = null }: { actor: Actor; role: 'admin' | 'teacher' | 'student'; image?: string | null }) {
   const student = role === 'student';
   return (
     <>
@@ -33,6 +35,10 @@ export function MyAccount({ actor, role }: { actor: Actor; role: 'admin' | 'teac
             </div>
           </dl>
           <p className="small muted">To change your name or username, ask {student ? 'the club admin' : 'an admin'}.</p>
+        </section>
+        <section className="card stack" aria-labelledby="picture-title">
+          <h2 id="picture-title">Profile picture</h2>
+          <ProfilePicture userId={actor.userId} image={image} />
         </section>
         <section className="card stack" aria-labelledby="password-title">
           <div>

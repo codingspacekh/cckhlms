@@ -133,8 +133,8 @@ export function PromotionWizard({ plan }: { plan: PromotionPlan }) {
     <>
       {plan.options.length === 0 && (
         <p className="note warn" role="note">
-          There are no classes in a later term yet. <Link href="/admin/classes/new">Create next term&apos;s classes</Link> first, or choose
-          “Leave the club”.
+          There are no classes in a later term yet. <Link href="/admin/classes?new=1">Create next term&apos;s classes</Link> first, or
+          choose “Leave the club”.
         </p>
       )}
       <div className="grid g3">

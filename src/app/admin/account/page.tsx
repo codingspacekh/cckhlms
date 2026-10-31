@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
 import { MyAccount } from '@/components/account/MyAccount';
+import { avatarKeyOf } from '@/modules/identity/avatar';
 import { requireActor } from '@/server/guard';
 
 export const metadata: Metadata = { title: 'My account' };
 
 export default async function AdminAccountPage() {
-  return <MyAccount actor={await requireActor('password.change_own')} role="admin" />;
+  const actor = await requireActor('password.change_own');
+  return <MyAccount actor={actor} role="admin" image={await avatarKeyOf(actor.userId)} />;
 }

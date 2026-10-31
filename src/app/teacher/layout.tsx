@@ -12,6 +12,7 @@ export default async function TeacherLayout({ children }: { children: ReactNode 
     <AppShell
       role="teacher"
       notifications={{ href: '/teacher/notifications', unread }}
+      userId={actor.userId}
       name={actor.name}
       crumb="Teaching"
       classes={classes}

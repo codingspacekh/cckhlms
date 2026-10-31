@@ -11,6 +11,7 @@ export default async function StudentLayout({ children }: { children: ReactNode 
     <AppShell
       role="student"
       notifications={{ href: '/student/notifications', unread }}
+      userId={actor.userId}
       name={actor.name}
       crumb="Learning"
       classes={mine.map((c) => ({ id: c.id, name: c.name }))}

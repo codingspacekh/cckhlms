@@ -1,6 +1,5 @@
 'use client';
 import { useRef, useState, useTransition } from 'react';
-import { Icon } from '@/components/ui/Icon';
 import { formatDay } from '@/modules/academics/schedule';
 import { eraseStudentAction } from '@/modules/privacy/actions';
 
@@ -44,7 +43,7 @@ export function PersonalData({ studentId, username, erasedOn }: { studentId: str
       )}
       <div className="row">
         <a className="btn" href={`/api/students/${studentId}/export`} download>
-          <Icon name="download" /> Download their data
+          Download their data
         </a>
         {!erasedOn && (
           <button type="button" className="btn ghost" onClick={ask}>

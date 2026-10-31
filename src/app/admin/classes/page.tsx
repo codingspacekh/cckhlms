@@ -4,23 +4,38 @@ import { Where } from '@/components/academics/Where';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { TableScroll } from '@/components/ui/TableScroll';
 import { listClasses } from '@/modules/academics/classes';
+import { listCourses } from '@/modules/academics/courses';
+import { listTerms } from '@/modules/academics/terms';
+import { listPeople } from '@/modules/identity/service';
 import { scheduleLabel } from '@/modules/academics/schedule';
 import { requireActor } from '@/server/guard';
+import { AddClass } from './AddClass';
 
 export const metadata: Metadata = { title: 'Classes' };
 
-export default async function ClassesPage() {
+export default async function ClassesPage({ searchParams }: { searchParams: Promise<{ new?: string }> }) {
   const actor = await requireActor('classes.manage');
-  const classes = await listClasses(actor);
+  const [classes, courses, terms, teachers, { new: startNew }] = await Promise.all([
+    listClasses(actor),
+    listCourses(actor),
+    listTerms(actor),
+    listPeople(actor, 'teacher'),
+    searchParams,
+  ]);
   return (
     <>
       <PageHeader
         eyebrow="Club"
         title="Classes"
         actions={
-          <Link className="btn primary" href="/admin/classes/new">
-            New class
-          </Link>
+          <AddClass
+            startOpen={startNew === '1'}
+            courses={courses.map((c) => ({ id: c.id, label: `${c.code} · ${c.name}` }))}
+            terms={terms
+              .filter((t) => t.status !== 'closed')
+              .map((t) => ({ id: t.id, name: t.name, startDate: t.startDate, endDate: t.endDate }))}
+            teachers={teachers.filter((p) => p.active).map((p) => ({ id: p.id, name: p.name }))}
+          />
         }
       />
       <section className="card flush" aria-label="Classes">

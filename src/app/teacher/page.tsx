@@ -12,18 +12,12 @@ import { classWhen, firstName, greeting } from '@/modules/reporting/home-rules';
 import { teacherHome } from '@/modules/reporting/teacher-home';
 import { teacherSupportLines } from '@/modules/support/support-lines';
 import { requireActor } from '@/server/guard';
+import { Avatar } from '@/components/account/Avatar';
 
 export const metadata: Metadata = { title: 'Today' };
 
 const short = (className: string) => className.split(' · ')[0]!;
-const initials = (name: string) =>
-  name
-    .split(/\s+/)
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-// The logo's three colours, in turn, for each class and each student's initials.
+// The logo's three colours, in turn, for each class.
 const TONES = ['green', 'blue', 'pink'] as const;
 const DAY = (date: string) => formatDate(date).slice(0, 3).toUpperCase();
 
@@ -86,7 +80,6 @@ export default async function TeacherToday() {
                 {f.session.week && (
                   <>
                     <Link className="btn lg light" href={`${base}/weeks/${f.session.week}/attendance`}>
-                      <Icon name="check" />
                       Take attendance
                     </Link>
                     <Link className="btn lg outline" href={`${base}/weeks/${f.session.week}/work`}>
@@ -157,11 +150,9 @@ export default async function TeacherToday() {
           <section className="card stack full" aria-labelledby="mark-title">
             <h2 id="mark-title">New work to mark</h2>
             <ul className="plain marking">
-              {home.toMark.map((t, i) => (
+              {home.toMark.map((t) => (
                 <li key={`${t.workId}-${t.studentId}`}>
-                  <span className={`face ${TONES[i % TONES.length]}`} aria-hidden="true">
-                    {initials(t.name)}
-                  </span>
+                  <Avatar userId={t.studentId} image={t.image} className="face" />
                   <span className="who">
                     <strong>{t.name}</strong>
                     <span className="sub">

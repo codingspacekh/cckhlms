@@ -37,6 +37,7 @@ export type ToMark = {
   title: string;
   studentId: string;
   name: string;
+  image: string | null;
   submittedAt: Date;
 };
 export type WeekendSession = {
@@ -203,6 +204,7 @@ async function handInsToMark(classes: MyClass[]): Promise<ToMark[]> {
       title: assessment.title,
       studentId: latest.studentId,
       name: user.name,
+      image: user.image,
       submittedAt: latest.submittedAt,
     })
     .from(latest)

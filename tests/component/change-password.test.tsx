@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const changeOwnPasswordAction = vi.fn();
 vi.mock('@/modules/identity/actions', () => ({ changeOwnPasswordAction: (...a: unknown[]) => changeOwnPasswordAction(...a) }));
+vi.mock('@/modules/identity/avatar-actions', () => ({ removeAvatarAction: vi.fn() }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 const { ChangePasswordForm } = await import('@/components/account/ChangePasswordForm');
 const { MyAccount } = await import('@/components/account/MyAccount');
 

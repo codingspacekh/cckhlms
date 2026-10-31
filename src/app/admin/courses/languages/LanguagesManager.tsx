@@ -4,7 +4,6 @@
 // types, a link to these sites, or either. The built-in ones can't be changed.
 import { useRouter } from 'next/navigation';
 import { useActionState, useRef, useState, useTransition } from 'react';
-import { Icon } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
 import { TableScroll } from '@/components/ui/TableScroll';
 import { deleteLanguageAction, saveLanguageAction } from '@/modules/academics/language-actions';
@@ -51,7 +50,7 @@ export function LanguagesManager({ languages }: { languages: LanguageSummary[] }
           <p className="xs muted">What a course is taught in, and how its students hand in work.</p>
         </div>
         <button type="button" className="btn primary" onClick={() => open(null)}>
-          <Icon name="plus" /> Add language
+          Add language
         </button>
       </div>
       {status && (

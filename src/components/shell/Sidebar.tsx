@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
+import { Avatar } from '@/components/account/Avatar';
 import { ClubLogo } from './ClubLogo';
 import { CLASS_SECTIONS, classSectionActive, NAV, type ClassLink, type Role } from './nav';
 import { SignOutButton } from './SignOutButton';
@@ -23,21 +24,19 @@ function ClassName({ name }: { name: string }) {
   );
 }
 
-const initials = (name: string) =>
-  name
-    .split(/\s+/)
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-
-export function Sidebar({ role, user, classes = [] }: { role: Role; user: { name: string; roleLabel: string }; classes?: ClassLink[] }) {
+export function Sidebar({
+  role,
+  user,
+  classes = [],
+}: {
+  role: Role;
+  user: { id: string; image: string | null; name: string; roleLabel: string };
+  classes?: ClassLink[];
+}) {
   const pathname = usePathname();
   const me = (
     <>
-      <span className="av" aria-hidden="true">
-        {initials(user.name)}
-      </span>
+      <Avatar userId={user.id} image={user.image} />
       <span className="who">
         <span className="n">{user.name}</span>
         <span className="r">{user.roleLabel}</span>

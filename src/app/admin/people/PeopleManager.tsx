@@ -3,7 +3,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useActionState, useRef, useState, useTransition, type ReactNode } from 'react';
 import { SlipCard } from '@/components/accounts/SlipSheet';
-import { Icon } from '@/components/ui/Icon';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Pill } from '@/components/ui/Pill';
 import { TableScroll } from '@/components/ui/TableScroll';
@@ -101,10 +100,10 @@ export function PeopleManager({
         actions={
           <>
             <Link className="btn" href="/admin/people/import">
-              <Icon name="upload" /> Import students
+              Import students
             </Link>
             <button type="button" className="btn primary" onClick={openAdd}>
-              <Icon name="plus" /> Add a person
+              Add a person
             </button>
           </>
         }

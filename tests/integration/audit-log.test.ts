@@ -15,6 +15,7 @@ import { submitWork } from '@/modules/assessments/submissions';
 import { auditEntries } from '@/modules/audit/audit-log';
 import { actionsIn, PAGE_SIZE, parseAuditFilters, SENSITIVE_GROUPS, type AuditFilters } from '@/modules/audit/rules';
 import { issueCertificate, reissueCertificate, revokeCertificate } from '@/modules/certificates/certificates';
+import { setAvatar } from '@/modules/identity/avatar';
 import {
   changeOwnPassword,
   createAccount,
@@ -74,6 +75,7 @@ beforeAll(async () => {
   await setActive(admin, kosal.userId, true);
   await signOutEverywhere(admin, kosal.userId);
   await changeOwnPassword(admin, { current: 'admin-password-123', next: 'admin-password-456', again: 'admin-password-456' });
+  await setAvatar(admin, new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1])); // a profile picture (owner, 2026-10-31)
 
   // A class, its work and marks.
   const t1 = await createTerm(admin, { year: 2027, number: 1, startDate: '2027-01-09', endDate: '2027-04-04' });

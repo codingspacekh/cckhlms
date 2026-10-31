@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ReportSheetView } from '@/components/teaching/ReportSheetView';
-import { Icon } from '@/components/ui/Icon';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Pill } from '@/components/ui/Pill';
 import { formatDate, toClubTime } from '@/modules/academics/schedule';
@@ -28,12 +27,12 @@ export default async function AdminWeeklyReportPage({ params }: { params: Promis
           <>
             {r.prevWeek && (
               <Link className="btn" href={`${base}/${r.prevWeek}`}>
-                <Icon name="chevron-left" /> Week {r.prevWeek}
+                Previous: Week {r.prevWeek}
               </Link>
             )}
             {r.nextWeek && (
               <Link className="btn" href={`${base}/${r.nextWeek}`}>
-                Week {r.nextWeek} <Icon name="chevron-right" />
+                Next: Week {r.nextWeek}
               </Link>
             )}
           </>

@@ -1,6 +1,5 @@
 'use client';
 import { useState, type FormEvent } from 'react';
-import { Icon } from '@/components/ui/Icon';
 import { checkNewPath } from '@/lib/project/files';
 
 type Props = {
@@ -58,7 +57,7 @@ export function FileTree({ paths, current, readOnly = false, onOpen, onAdd, onRe
       {!readOnly && (
         <div className="tree-actions">
           <button type="button" className="btn sm" onClick={() => (setMode('add'), setError(null), setConfirmDelete(false))}>
-            <Icon name="plus" /> New file
+            New file
           </button>
           <button
             type="button"

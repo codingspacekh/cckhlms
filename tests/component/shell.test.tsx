@@ -14,7 +14,7 @@ afterEach(() => {
 
 describe('Sidebar', () => {
   it('shows the navigation for the role and marks the current page', () => {
-    render(<Sidebar role="admin" user={{ name: 'Club Admin', roleLabel: 'Admin' }} />);
+    render(<Sidebar role="admin" user={{ id: 'u1', image: null, name: 'Club Admin', roleLabel: 'Admin' }} />);
     const nav = screen.getByRole('navigation', { name: 'Sections' });
     for (const section of NAV.admin)
       for (const item of section.items) expect(within(nav).getByRole('link', { name: item.label })).toBeTruthy();
@@ -27,7 +27,7 @@ describe('Sidebar', () => {
       { id: 'c1', name: 'Python Level 1 · Sat 09:00' },
       { id: 'c2', name: 'Java Level 2 · Sat 14:00' },
     ];
-    render(<Sidebar role="teacher" user={{ name: 'Sophea Chan', roleLabel: 'Teacher' }} classes={classes} />);
+    render(<Sidebar role="teacher" user={{ id: 'u1', image: null, name: 'Sophea Chan', roleLabel: 'Teacher' }} classes={classes} />);
     const nav = screen.getByRole('navigation', { name: 'Sections' });
     expect(within(nav).getByRole('link', { name: 'Java Level 2 · Sat 14:00' }).getAttribute('href')).toBe('/teacher/classes/c2');
     const open = within(nav).getByRole('group', { name: 'Python Level 1 · Sat 09:00 sections' });
@@ -48,7 +48,7 @@ describe('Sidebar', () => {
   });
 
   it('FR-STU-07: a student has My week and My progress', () => {
-    render(<Sidebar role="student" user={{ name: 'Bopha Lim', roleLabel: 'Student' }} />);
+    render(<Sidebar role="student" user={{ id: 'u1', image: null, name: 'Bopha Lim', roleLabel: 'Student' }} />);
     const nav = screen.getByRole('navigation', { name: 'Sections' });
     expect(within(nav).getByRole('link', { name: 'My progress' }).getAttribute('href')).toBe('/student/progress');
   });
@@ -59,7 +59,7 @@ describe('Sidebar', () => {
     ['student', '/student/account'], // M16a
   ] as const)('FR-AUTH-06: a signed-in %s’s name links to My account', (role, href) => {
     pathname = href;
-    render(<Sidebar role={role} user={{ name: 'Sophea Chan', roleLabel: 'Teacher' }} />);
+    render(<Sidebar role={role} user={{ id: 'u1', image: null, name: 'Sophea Chan', roleLabel: 'Teacher' }} />);
     const me = screen.getByRole('link', { name: /Sophea Chan/ });
     expect(me.getAttribute('href')).toBe(href);
     expect(me.getAttribute('aria-current')).toBe('page');
@@ -67,7 +67,7 @@ describe('Sidebar', () => {
   });
 
   it('shows who is signed in and a sign-out button', () => {
-    render(<Sidebar role="student" user={{ name: 'Bopha Lim', roleLabel: 'Student' }} />);
+    render(<Sidebar role="student" user={{ id: 'u1', image: null, name: 'Bopha Lim', roleLabel: 'Student' }} />);
     expect(screen.getByText('Bopha Lim')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeTruthy();
   });

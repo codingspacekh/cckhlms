@@ -76,7 +76,6 @@ export default async function StudentHome() {
                     <>
                       <Link className={`btn lg${next.meetingUrl ? '' : ' primary'}`} href={weekPage}>
                         Open Week {s.week} lesson
-                        <Icon name="arrow" />
                       </Link>
                       {teacher && (
                         <Link className="btn lg" href={`${weekPage}#qa-title`}>
@@ -180,7 +179,6 @@ export default async function StudentHome() {
                   <p className="muted">Saved {formatDate(toClubTime(home.project.savedAt, timeZone).date)} in the Playground</p>
                   <div className="row">
                     <Link className="btn primary" href={`/student/playground/${home.project.id}`}>
-                      <Icon name="play" />
                       Keep coding
                     </Link>
                     <Link className="btn" href="/student/playground">
@@ -193,7 +191,6 @@ export default async function StudentHome() {
                   <p className="muted">Make anything you like in the Playground: a game, a story, a web page.</p>
                   <div>
                     <Link className="btn primary" href="/student/playground">
-                      <Icon name="code" />
                       Open the Playground
                     </Link>
                   </div>
