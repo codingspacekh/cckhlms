@@ -78,6 +78,11 @@ export default async function PromotionPage() {
                   </td>
                   <td>
                     <div className="row end nowrap">
+                      {c.undoUntil && (
+                        <Link className="btn sm" href={`/admin/classes/${c.id}#undo-title`}>
+                          Undo until {formatDate(c.undoUntil).replace(/ \d{4}$/, '')}
+                        </Link>
+                      )}
                       {!c.promotedAt && c.students > 0 && (
                         <Link className="btn sm" href={`/admin/classes/${c.id}/promote`}>
                           Open wizard

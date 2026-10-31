@@ -25,7 +25,7 @@ import {
 } from '@/modules/identity/service';
 import { eraseStudent } from '@/modules/privacy/erase';
 import { exportStudentData } from '@/modules/privacy/export';
-import { promote } from '@/modules/promotion/promotion';
+import { promote, undoPromotion } from '@/modules/promotion/promotion';
 import { publishTermReports, saveTermReport } from '@/modules/reporting/term-reports';
 import { weeksOf } from '@/modules/teaching/weeks';
 import type { Actor } from '@/server/actor';
@@ -140,15 +140,14 @@ beforeAll(async () => {
       now: AFTER_TERM,
     },
   );
-  await promote(
-    admin,
-    fromId,
-    [
-      { enrolmentId: enrolmentOf[bopha.userId]!, toClassId: level2 },
-      { enrolmentId: enrolmentOf[chenda.userId]!, toClassId: repeat },
-    ],
-    { now: AFTER_TERM },
-  );
+  const moves = [
+    { enrolmentId: enrolmentOf[bopha.userId]!, toClassId: level2 },
+    { enrolmentId: enrolmentOf[chenda.userId]!, toClassId: repeat },
+  ];
+  // Promoted, undone (M15b), then promoted again.
+  await promote(admin, fromId, moves, { now: AFTER_TERM });
+  await undoPromotion(admin, fromId, { now: AFTER_TERM });
+  await promote(admin, fromId, moves, { now: AFTER_TERM });
   const cert = await issueCertificate(admin, enrolmentOf[bopha.userId]!);
   const again = await reissueCertificate(admin, cert.id, 'Name spelled wrong.');
   await revokeCertificate(admin, again.id, 'Issued by mistake.');

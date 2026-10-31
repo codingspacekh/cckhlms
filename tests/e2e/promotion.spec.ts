@@ -48,6 +48,34 @@ test.describe('admin', () => {
     await expect(page.getByRole('button', { name: 'Withdraw' })).toHaveCount(0);
     await expect(page.getByRole('row', { name: /Nita Ung/ })).toContainText('Finished');
   });
+
+  test('M15b: undoes the promotion before the new classes start, then promotes again', async ({ page }) => {
+    await page.goto('/admin/promotion');
+    await page
+      .getByRole('row', { name: new RegExp(c.className) })
+      .getByRole('link', { name: /^Undo until / })
+      .click();
+    const card = page.getByRole('region', { name: 'Made a mistake?' });
+    await expect(card).toContainText(`when ${c.next} starts`);
+    await card.getByRole('button', { name: 'Undo promotion…' }).click();
+    const dialog = page.getByRole('dialog', { name: `Undo the promotion of ${c.className}?` });
+    await expect(dialog).toContainText('The 2 students are back in this class, as before.');
+    await expectAccessible(page);
+    await dialog.getByRole('button', { name: 'Undo promotion' }).click();
+
+    await expect(page.getByRole('status')).toHaveText(
+      'Promotion undone: every student is back in this class, which can be promoted again.',
+    );
+    await expect(page.getByRole('row', { name: /Nita Ung/ })).not.toContainText('Finished');
+    await expect(page.getByText('Archived.')).toHaveCount(0);
+
+    // Promoted again, as before, so the teacher's checks below still hold.
+    await page.getByRole('link', { name: 'Promote', exact: true }).click();
+    await choose(page.getByLabel('Passed (1) move to', { exact: true }), { label: c.next });
+    await choose(page.getByLabel('Not passed (1) move to', { exact: true }), { label: c.repeat });
+    await page.getByRole('button', { name: 'Confirm promotion' }).click();
+    await expect(page.getByRole('status')).toHaveText('Done: 2 students moved on. The class is archived.');
+  });
 });
 
 test.describe('teacher', () => {
