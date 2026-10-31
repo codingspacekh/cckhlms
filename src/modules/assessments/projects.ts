@@ -13,6 +13,7 @@ import { audit } from '@/server/audit';
 import { assertCan, ValidationError } from '@/server/errors';
 import { defaultStarter, type WorkLanguage } from './rules';
 import { readAssessment, type AssessmentView } from './service';
+import { isCodeLanguage } from '@/modules/academics/language-rules';
 
 const filesSchema = z
   .array(z.object({ path: z.string().max(LIMITS.maxPathLength), content: z.string() }))
@@ -56,10 +57,18 @@ export function validFiles(raw: unknown): ProjectFile[] {
   }
 }
 
-export async function codeWork(assessmentId: string) {
+// Work that is handed in (not paper): code in the editor, or a project file or link (M18b).
+export async function handedInWork(assessmentId: string) {
   const [a] = await db.select().from(assessment).where(eq(assessment.id, assessmentId)).limit(1);
   if (!a) throw new ValidationError('That work no longer exists.');
   if (a.language === 'paper') throw new ValidationError('This work is done on paper, so it has no files.');
+  return a;
+}
+
+// Work written in the code editor: Python, Java or HTML/CSS/JS.
+export async function codeWork(assessmentId: string) {
+  const a = await handedInWork(assessmentId);
+  if (!isCodeLanguage(a.language)) throw new ValidationError('This work is handed in as a file or a link, not in the code editor.');
   return a;
 }
 
@@ -67,9 +76,10 @@ export const starterOf = (a: { starterFiles: ProjectFile[]; language: string }) 
   a.starterFiles.length ? a.starterFiles : defaultStarter(a.language as WorkLanguage);
 
 export async function teacherProject(actor: Actor | null, assessmentId: string): Promise<{ view: AssessmentView; files: ProjectFile[] }> {
-  const a = await codeWork(assessmentId);
+  const a = await handedInWork(assessmentId);
   assertCan(actor, 'assessment.write', await classAccess(a.classId, 'read'));
-  return { view: await readAssessment(actor, assessmentId), files: starterOf(a) };
+  // Work in a language Admin added (M18b) has no starter files: students hand in a file or a link.
+  return { view: await readAssessment(actor, assessmentId), files: isCodeLanguage(a.language) ? starterOf(a) : [] };
 }
 
 export async function saveStarterFiles(actor: Actor | null, assessmentId: string, raw: unknown) {

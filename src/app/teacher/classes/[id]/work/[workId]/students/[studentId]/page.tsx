@@ -7,6 +7,7 @@ import { ProjectEditor } from '@/components/editor/ProjectEditor';
 import { Pill } from '@/components/ui/Pill';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { renderMarkdown } from '@/lib/markdown';
+import { isCodeLanguage } from '@/modules/academics/language-rules';
 import { gradingView } from '@/modules/assessments/grading';
 import { afterPenalty, formatDue, MARK_LABEL, zipNameFor } from '@/modules/assessments/rules';
 import { getClubSettings } from '@/modules/club/service';
@@ -117,6 +118,36 @@ export default async function MarkPage({
             </h2>
             {shown.byTeacher ? (
               <p className="card small muted">No files: this mark was entered in the gradebook, without a hand-in.</p>
+            ) : !isCodeLanguage(g.work.language) ? (
+              // A language Admin added (M18b): the project file to download and the link to open, never shown here.
+              <div className="card stack">
+                {g.shown?.file && (
+                  <div className="file-box">
+                    <span className="file-icon" aria-hidden="true">
+                      {g.shown.file.name.split('.').pop()}
+                    </span>
+                    <span className="grow">
+                      <strong>{g.shown.file.name}</strong>
+                      <br />
+                      <span className="xs muted">{`${(g.shown.file.size / 1024 / 1024).toFixed(1)} MB · open it on your computer`}</span>
+                    </span>
+                    <a className="btn primary" href={g.shown.file.href} download aria-label={`Download ${g.shown.file.name}`}>
+                      Download
+                    </a>
+                  </div>
+                )}
+                {g.shown?.link && (
+                  <div className="file-box">
+                    <span className="file-icon link" aria-hidden="true">
+                      link
+                    </span>
+                    <span className="grow strong">{g.shown.link.replace(/^https:\/\//, '')}</span>
+                    <a className="btn" href={g.shown.link} target="_blank" rel="noopener noreferrer" aria-label={`Open ${g.shown.link}`}>
+                      Open
+                    </a>
+                  </div>
+                )}
+              </div>
             ) : (
               <ProjectEditor
                 key={shown.version}

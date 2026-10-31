@@ -1,6 +1,6 @@
 // M18a · BR-32: the languages Admin adds, such as Scratch and Roblox, and how their work is handed in.
 import { describe, expect, it } from 'vitest';
-import { BUILT_IN, handInOf, isCodeLanguage, languageInputSchema, PAPER } from '@/modules/academics/language-rules';
+import { BUILT_IN, handInOf, isCodeLanguage, languageInputSchema, PAPER, projectLink } from '@/modules/academics/language-rules';
 
 const parse = (raw: Record<string, unknown>) => languageInputSchema.safeParse(raw);
 const ok = (raw: Record<string, unknown>) => {
@@ -71,5 +71,29 @@ describe('the built-in languages', () => {
     expect(handInOf({ id: 'python', byFile: false, byLink: false })).toBe('code');
     expect(handInOf({ id: 'paper', byFile: false, byLink: false })).toBe('paper');
     expect(handInOf({ id: 'x', byFile: true, byLink: true })).toBe('upload');
+  });
+});
+
+describe('a link to a project (M18b)', () => {
+  const sites = ['scratch.mit.edu'];
+  it('is https, on one of the language’s sites (or a part of one), and kept as typed', () => {
+    expect(projectLink(' https://scratch.mit.edu/projects/1093824551 ', sites)).toBe('https://scratch.mit.edu/projects/1093824551');
+    expect(projectLink('https://www.roblox.com/games/1', ['roblox.com'])).toBe('https://www.roblox.com/games/1');
+    expect(projectLink('https://anything.example/x', [])).toBe('https://anything.example/x'); // no sites listed: any https link
+  });
+
+  it('refuses anything else, saying what to use', () => {
+    const use = 'Use a link that starts with https://scratch.mit.edu/';
+    for (const bad of [
+      'http://scratch.mit.edu/projects/1',
+      'scratch.mit.edu/projects/1',
+      'javascript:alert(1)',
+      'https://evil.example/scratch.mit.edu',
+      'https://scratch.mit.edu.evil.example/x',
+      'https://user@evil.example/',
+      `https://scratch.mit.edu/${'a'.repeat(500)}`,
+    ])
+      expect(() => projectLink(bad, sites), bad).toThrow(use);
+    expect(() => projectLink('http://x.example', [])).toThrow('Use a link that starts with https://');
   });
 });
