@@ -268,7 +268,8 @@ export const otherTeachersClass = () =>
 
 // For the term-end specs (certificates, promotion): a Sunday class with two students of its own (so promoting it
 // doesn't move the shared e2e accounts), its exam marked (Nita Ung 80, Pich Ros 40) and its term reports
-// published, plus the two classes they can move to in Term 1 · 2029. Nita can sign in (stateFile('nita')).
+// published, plus the two classes they can move to in Term 1 · 2029. Nita can sign in (stateFile('nita')). The
+// repeat class has 1 place and Dara Phan already in it, so sending Pich there goes over its capacity (M15a).
 export async function termEndClass(): Promise<TeachingClass & { next: string; repeat: string }> {
   const main = await teachingClass();
   const { db } = await import('../../src/db/client');
@@ -328,7 +329,10 @@ export async function termEndClass(): Promise<TeachingClass & { next: string; re
   const classId = await weekend(level1.id, k!.termId, 'sun', '12:00', sunday, 'Promote room');
   const later = await createTerm(admin, { year: 2029, number: 1, startDate: '2029-01-13', endDate: '2029-03-25' });
   await weekend(level2.id, later.id, 'sat', '09:00', '2029-01-13', 'Promote next room', vibol);
-  await weekend(level1.id, later.id, 'sat', '11:00', '2029-01-13', 'Promote repeat room', vibol);
+  const repeatId = await weekend(level1.id, later.id, 'sat', '11:00', '2029-01-13', 'Promote repeat room', vibol);
+  await db.update(klass).set({ capacity: 1 }).where(eq(klass.id, repeatId));
+  const dara = await createAccount(admin, { role: 'student', name: 'Dara Phan' });
+  await enrolStudent(admin, repeatId, dara.userId, { enrolledOn: '2029-01-13' });
 
   const week2 = (await weeksOf(classId)).find((s) => s.week === 2)!.id;
   const { id: exam } = await saveAssessment(teacher, week2, {

@@ -34,6 +34,7 @@ type Props = {
   form?: string;
   className?: string;
   'aria-label'?: string;
+  'aria-describedby'?: string;
 };
 type Option = { value: string; label: string; disabled: boolean; group?: string };
 
@@ -178,6 +179,7 @@ export function Select({
         disabled={disabled}
         className={className}
         aria-label={aria['aria-label']}
+        aria-describedby={aria['aria-describedby']}
         {...(controlled === undefined ? { defaultValue } : { value: controlled, onChange })}
       >
         {children}
@@ -281,6 +283,7 @@ export function Select({
         form={form}
         disabled={disabled}
         aria-label={aria['aria-label']}
+        aria-describedby={aria['aria-describedby']}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={open ? listId : undefined}

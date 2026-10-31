@@ -93,7 +93,7 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
           </>
         }
       />
-      {archived && <ArchivedNote termName={c.termName} />}
+      {archived && <ArchivedNote termName={c.termName} timeZone={settings.timeZone} promotion={c.promotion} />}
       <section className="card summary" aria-label="Class summary">
         <div>
           <span className="k">Schedule</span>

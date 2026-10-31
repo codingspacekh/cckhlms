@@ -4191,3 +4191,26 @@ td.text-cell {
   white-space: normal;
   min-width: 160px;
 }
+
+/* Promotion places and clashes (M15a). */
+.tile .places,
+.tile .flag,
+td .flag {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+td .flag {
+  margin-top: 6px;
+  color: var(--warn-text);
+  white-space: normal;
+}
+.tile .places.over,
+.tile .flag.bad {
+  color: var(--bad-text);
+  font-weight: 600;
+}
+.note.warn ul {
+  margin: 0;
+  padding-left: 1.2em;
+}

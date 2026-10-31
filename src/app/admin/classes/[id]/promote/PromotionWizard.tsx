@@ -5,17 +5,43 @@ import { useId, useState, useTransition } from 'react';
 import { Pill } from '@/components/ui/Pill';
 import { TableScroll } from '@/components/ui/TableScroll';
 import { promoteAction } from '@/modules/promotion/actions';
-import type { PromotionPlan } from '@/modules/promotion/promotion';
+import type { PromotionOption, PromotionPlan } from '@/modules/promotion/promotion';
+import { clashesFor, placesAfter, placesText, type Places } from '@/modules/promotion/rules';
 import { Select } from '@/components/ui/Select';
 
 const LEAVE = 'leave';
 
+const slotOf = (o: PromotionOption) => ({
+  classId: o.id,
+  termId: o.termId,
+  name: o.name,
+  day: o.day,
+  startTime: o.startTime,
+  minutes: o.minutes,
+});
+
+// How full a group's class will be (M15a): a warning when it goes over, never a block.
+function GroupPlaces({ id, places }: { id: string; places: Places | null }) {
+  if (!places) return null;
+  return (
+    <>
+      <span id={id} className={places.over ? 'places over' : 'places'}>
+        {placesText(places)}
+      </span>
+      {places.over > 0 && <span className="flag bad">{places.over} over its capacity</span>}
+    </>
+  );
+}
+
 // FR-ADM-13: passed students are pre-selected for the next-level class and the others for a repeat class; the
-// admin can change any of them, then confirms once. '' means not chosen yet.
+// admin can change any of them, then confirms once. '' means not chosen yet. Each class to choose shows how full
+// it will be, and a student's row says when their new class meets at the same time as one they are in (M15a,
+// BR-30): warnings only.
 export function PromotionWizard({ plan }: { plan: PromotionPlan }) {
   const router = useRouter();
   const id = useId();
   const [targets, setTargets] = useState(() => new Map(plan.students.map((s) => [s.enrolmentId, s.target ?? ''])));
+  const [group, setGroupChoice] = useState({ pass: plan.defaults.pass ?? '', fail: plan.defaults.fail ?? '' });
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
   const passed = plan.students.filter((s) => s.result === 'pass');
@@ -47,8 +73,30 @@ export function PromotionWizard({ plan }: { plan: PromotionPlan }) {
     );
 
   const terms = [...new Set(plan.options.map((o) => o.termName))]; // in date order, from the server
-  const setGroup = (group: typeof plan.students, value: string) =>
-    setTargets((t) => new Map([...t, ...group.map((s) => [s.enrolmentId, value] as const)]));
+  const setGroup = (key: 'pass' | 'fail', students: typeof plan.students, value: string) => {
+    setGroupChoice((g) => ({ ...g, [key]: value }));
+    setTargets((t) => new Map([...t, ...students.map((s) => [s.enrolmentId, value] as const)]));
+  };
+  const byId = new Map(plan.options.map((o) => [o.id, o]));
+  const incoming = new Map<string, number>();
+  for (const t of targets.values()) if (byId.has(t)) incoming.set(t, (incoming.get(t) ?? 0) + 1);
+  const placesOf = (classId: string) => {
+    const o = byId.get(classId);
+    return o ? placesAfter(o, incoming.get(classId) ?? 0) : null;
+  };
+  const clashesOf = (s: (typeof plan.students)[number]) => {
+    const o = byId.get(targets.get(s.enrolmentId) ?? '');
+    return o ? clashesFor(slotOf(o), s.busy) : [];
+  };
+  const warnings = [
+    ...plan.options.flatMap((o) => {
+      const p = placesOf(o.id)!;
+      return incoming.has(o.id) && p.over ? [`${o.name}: ${p.taken} of ${p.capacity} places, ${p.over} over its capacity.`] : [];
+    }),
+    ...plan.students.flatMap((s) => clashesOf(s).map((c) => `${s.name} would also be in ${c.name} at the same time.`)),
+  ];
+  const passPlaces = placesOf(group.pass);
+  const failPlaces = placesOf(group.fail);
   const choices = (
     <>
       <option value="">Choose…</option>
@@ -102,11 +150,13 @@ export function PromotionWizard({ plan }: { plan: PromotionPlan }) {
           <Select
             id={`${id}-pass`}
             defaultValue={plan.defaults.pass ?? ''}
-            onChange={(e) => setGroup(passed, e.target.value)}
+            onChange={(e) => setGroup('pass', passed, e.target.value)}
             disabled={pending}
+            aria-describedby={passPlaces ? `${id}-pass-places` : undefined}
           >
             {choices}
           </Select>
+          <GroupPlaces id={`${id}-pass-places`} places={passPlaces} />
         </div>
         <div className="card tile">
           <label className="k" htmlFor={`${id}-fail`}>
@@ -115,11 +165,13 @@ export function PromotionWizard({ plan }: { plan: PromotionPlan }) {
           <Select
             id={`${id}-fail`}
             defaultValue={plan.defaults.fail ?? ''}
-            onChange={(e) => setGroup(notPassed, e.target.value)}
+            onChange={(e) => setGroup('fail', notPassed, e.target.value)}
             disabled={pending}
+            aria-describedby={failPlaces ? `${id}-fail-places` : undefined}
           >
             {choices}
           </Select>
+          <GroupPlaces id={`${id}-fail-places`} places={failPlaces} />
         </div>
       </div>
       <section className="card flush" aria-label="Students">
@@ -162,6 +214,11 @@ export function PromotionWizard({ plan }: { plan: PromotionPlan }) {
                     >
                       {choices}
                     </Select>
+                    {clashesOf(s).map((c) => (
+                      <span key={c.classId} className="flag">
+                        Also in {c.name} at the same time
+                      </span>
+                    ))}
                   </td>
                 </tr>
               ))}
@@ -169,6 +226,17 @@ export function PromotionWizard({ plan }: { plan: PromotionPlan }) {
           </table>
         </TableScroll>
       </section>
+      {warnings.length > 0 && (
+        <div className="note warn stack-sm" role="note" aria-labelledby={`${id}-warnings`}>
+          <strong id={`${id}-warnings`}>Check before you confirm</strong>
+          <ul>
+            {warnings.map((w) => (
+              <li key={w}>{w}</li>
+            ))}
+          </ul>
+          <span className="xs">These are warnings: you can still promote, and fix them afterwards on the class pages.</span>
+        </div>
+      )}
       {status && (
         <p className={status.ok ? 'note' : 'note bad'} role={status.ok ? 'status' : 'alert'}>
           {status.text}

@@ -30,12 +30,20 @@ test.describe('admin', () => {
     await expect(students.getByRole('row', { name: /Nita Ung/ })).toContainText('Pass');
     await expect(page.getByLabel('Next class for Nita Ung')).toHaveText(c.next);
     await expect(page.getByLabel('Next class for Pich Ros')).toHaveText(c.repeat);
+    // M15a: the repeat class has 1 place and someone in it already. A warning, not a block.
+    await expect(page.getByText('2 of 1 places after this')).toBeVisible();
+    await expect(page.getByRole('note', { name: 'Check before you confirm' })).toContainText(
+      `${c.repeat}: 2 of 1 places, 1 over its capacity.`,
+    );
+    await expectAccessible(page);
 
     await page.getByRole('button', { name: 'Confirm promotion' }).click();
     await expect(page.getByRole('status')).toHaveText('Done: 2 students moved on. The class is archived.');
 
     await page.goto(`/admin/classes/${c.classId}`);
-    await expect(page.getByRole('note')).toContainText('Archived.');
+    await expect(page.getByRole('note')).toHaveText(
+      /^Archived\. Promoted on \w{3} \d{1,2} \w{3} \d{4} by .+: 2 moved on\. This class can be looked at but not changed\.$/,
+    );
     await expect(page.getByRole('link', { name: 'Promote' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Withdraw' })).toHaveCount(0);
     await expect(page.getByRole('row', { name: /Nita Ung/ })).toContainText('Finished');
@@ -48,7 +56,9 @@ test.describe('teacher', () => {
   test('opens the archived class from Past classes and sees it can only be looked at', async ({ page }) => {
     await page.goto('/teacher');
     await page.getByRole('region', { name: 'Past classes' }).getByRole('link', { name: c.className }).click();
-    await expect(page.getByRole('note')).toHaveText(/^Archived\. .* has ended, so this class can be looked at but not changed\.$/);
+    await expect(page.getByRole('note')).toHaveText(
+      /^Archived\. Promoted on .+: 2 moved on\. This class can be looked at but not changed\.$/,
+    );
     await page.goto(`/teacher/classes/${c.classId}/students`);
     await expect(page.getByRole('note')).toContainText('Archived.');
   });
