@@ -37,6 +37,7 @@ const item = {
   title: 'Countdown',
   instructionsMd: 'Count down.',
   language: 'python' as const,
+  languageName: 'Python',
   maxScore: 10,
   dueMode: 'fixed' as const,
   dueDate: '2027-01-20',
@@ -46,7 +47,13 @@ const item = {
   latePenaltyPct: 10,
   status: 'draft' as const,
 };
-const props = { classId: 'c1', sessionId: 's1', choices, items: [] };
+const languages = [
+  { id: 'python', name: 'Python', handIn: 'code' as const },
+  { id: 'java', name: 'Java', handIn: 'code' as const },
+  { id: 'web', name: 'HTML/CSS/JS', handIn: 'code' as const },
+  { id: 'paper', name: 'Paper / in class', handIn: 'paper' as const },
+];
+const props = { classId: 'c1', sessionId: 's1', choices, items: [], languages, defaultLanguage: 'python' };
 
 describe('WorkManager', () => {
   it('lists the week’s work, or says there is none', () => {

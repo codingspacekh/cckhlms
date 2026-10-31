@@ -5,16 +5,8 @@ import { Icon } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
 import { TableScroll } from '@/components/ui/TableScroll';
 import { deleteAssessmentAction, saveAssessmentAction } from '@/modules/assessments/actions';
-import {
-  defaultDueMode,
-  KIND_LABEL,
-  KINDS,
-  WORK_LANGUAGE_LABEL,
-  WORK_LANGUAGES,
-  type DueMode,
-  type Kind,
-  type WorkLanguage,
-} from '@/modules/assessments/rules';
+import { defaultDueMode, KIND_LABEL, KINDS, type DueMode, type Kind, type WorkLanguage } from '@/modules/assessments/rules';
+import type { LanguageChoice } from '@/modules/academics/languages';
 import type { FormResult } from '@/server/action-result';
 import { DateField, TimeField } from '@/components/ui/DateTimeFields';
 import { Select } from '@/components/ui/Select';
@@ -25,6 +17,7 @@ export type WorkRow = {
   title: string;
   instructionsMd: string;
   language: WorkLanguage;
+  languageName: string;
   maxScore: number;
   dueMode: DueMode;
   dueDate?: string; // club time, for a day and time the teacher chose
@@ -34,10 +27,11 @@ export type WorkRow = {
   latePenaltyPct: number;
   status: 'draft' | 'published';
 };
-type Props = { classId: string; sessionId: string; choices: { mode: DueMode; label: string }[]; items: WorkRow[] };
+type Languages = { languages: LanguageChoice[]; defaultLanguage: string }; // what this class's work can be set in (M18)
+type Props = { classId: string; sessionId: string; choices: { mode: DueMode; label: string }[]; items: WorkRow[] } & Languages;
 
 // FR-TCH-07/08: the week's classwork, homework and exams; "Set new work" and "Edit" open the form in a dialog.
-export function WorkManager({ classId, sessionId, choices, items }: Props) {
+export function WorkManager({ classId, sessionId, choices, items, languages, defaultLanguage }: Props) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [editing, setEditing] = useState<WorkRow | null>(null);
   const [formKey, setFormKey] = useState(0);
@@ -97,7 +91,7 @@ export function WorkManager({ classId, sessionId, choices, items }: Props) {
                     {a.language === 'paper' ? a.title : <Link href={`/teacher/classes/${classId}/work/${a.id}`}>{a.title}</Link>}
                   </th>
                   <td>{KIND_LABEL[a.kind]}</td>
-                  <td>{WORK_LANGUAGE_LABEL[a.language]}</td>
+                  <td>{a.languageName}</td>
                   <td className="n tnum">{a.maxScore}</td>
                   <td className="tnum">{a.dueLabel}</td>
                   <td>
@@ -121,7 +115,18 @@ export function WorkManager({ classId, sessionId, choices, items }: Props) {
         </TableScroll>
       )}
       <dialog ref={dialog} className="dialog wide" aria-labelledby="work-form-title">
-        {formKey > 0 && <WorkForm key={formKey} classId={classId} sessionId={sessionId} choices={choices} row={editing} onDone={close} />}
+        {formKey > 0 && (
+          <WorkForm
+            key={formKey}
+            classId={classId}
+            sessionId={sessionId}
+            choices={choices}
+            languages={languages}
+            defaultLanguage={defaultLanguage}
+            row={editing}
+            onDone={close}
+          />
+        )}
       </dialog>
     </section>
   );
@@ -131,6 +136,8 @@ function WorkForm({
   classId,
   sessionId,
   choices,
+  languages,
+  defaultLanguage,
   row,
   onDone,
 }: Omit<Props, 'items'> & { row: WorkRow | null; onDone: (message?: string) => void }) {
@@ -185,10 +192,10 @@ function WorkForm({
         </label>
         <label className="f">
           Language
-          <Select name="language" defaultValue={row?.language ?? 'python'}>
-            {WORK_LANGUAGES.map((l) => (
-              <option key={l} value={l}>
-                {WORK_LANGUAGE_LABEL[l]}
+          <Select name="language" defaultValue={row?.language ?? defaultLanguage}>
+            {languages.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.name}
               </option>
             ))}
           </Select>

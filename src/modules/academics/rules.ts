@@ -1,10 +1,6 @@
 // Term and course rules (FR-ADM-03/04), shared by services and forms.
 import { z } from 'zod';
 
-export const LANGUAGES = ['python', 'java', 'web'] as const;
-export type Language = (typeof LANGUAGES)[number];
-export const LANGUAGE_LABEL: Record<Language, string> = { python: 'Python', java: 'Java', web: 'HTML/CSS/JS' };
-
 export const termName = (year: number, number: number) => `Term ${number} · ${year}`;
 
 const isoDate = z
@@ -36,7 +32,7 @@ export const courseInputSchema = z
       (v) => (v === '' || v === null ? undefined : v),
       z.string().trim().max(2000, 'The description is too long.').optional(),
     ),
-    defaultLanguage: z.enum(LANGUAGES, { message: 'Choose Python, Java or HTML/CSS/JS.' }),
+    defaultLanguage: z.string({ error: 'Choose a language.' }).trim().min(1, 'Choose a language.'), // checked against the list (M18)
     passMark: percent(60),
     weightExam: percent(60),
     weightClasswork: percent(30),

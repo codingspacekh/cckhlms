@@ -8,7 +8,10 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { studentProject } from '@/modules/assessments/projects';
 import { myMark } from '@/modules/assessments/gradebook';
 import { mySubmissions } from '@/modules/assessments/submissions';
-import { formatDue, KIND_LABEL, WORK_LANGUAGE_LABEL, zipNameFor } from '@/modules/assessments/rules';
+import { HandInBox } from '@/components/assessments/HandInBox';
+import { isCodeLanguage } from '@/modules/academics/language-rules';
+import { getLanguage } from '@/modules/academics/languages';
+import { formatDue, KIND_LABEL, zipNameFor } from '@/modules/assessments/rules';
 import { readAssessment } from '@/modules/assessments/service';
 import { getClubSettings } from '@/modules/club/service';
 import { pageData, requireActor } from '@/server/guard';
@@ -46,7 +49,7 @@ export default async function StudentWorkPage({ params }: { params: Promise<{ id
         </div>
         <div>
           <span className="k">Language</span>
-          <span>{WORK_LANGUAGE_LABEL[a.language]}</span>
+          <span>{a.languageName}</span>
         </div>
         <div>
           <span className="k">Out of</span>
@@ -68,6 +71,9 @@ export default async function StudentWorkPage({ params }: { params: Promise<{ id
       />
       {a.language === 'paper' ? (
         <PaperMark assessmentId={workId} maxScore={a.maxScore} latePenaltyPct={a.latePenaltyPct} />
+      ) : !isCodeLanguage(a.language) ? (
+        // A language Admin added (M18b): handed in as a project file or a link, not in the code editor.
+        <HandIn assessmentId={workId} language={a.language} latePenaltyPct={a.latePenaltyPct} maxScore={a.maxScore} timeZone={timeZone} />
       ) : (
         <Workspace
           classId={id}
@@ -160,5 +166,39 @@ async function PaperMark({ assessmentId, maxScore, latePenaltyPct }: { assessmen
       {/* Sanitised by renderMarkdown on the server (src/lib/markdown.ts). */}
       {m.feedbackHtml && <div className="md" dangerouslySetInnerHTML={{ __html: m.feedbackHtml }} />}
     </section>
+  );
+}
+
+// Work in a language Admin added (M18b, BR-32): the file or link box, what was handed in, and the mark.
+async function HandIn(props: { assessmentId: string; language: string; latePenaltyPct: number; maxScore: number; timeZone: string }) {
+  const actor = await requireActor('student.area');
+  const [mine, language] = await Promise.all([pageData(mySubmissions(actor, props.assessmentId)), getLanguage(props.language)]);
+  if (!language) notFound();
+  return (
+    <HandInBox
+      assessmentId={props.assessmentId}
+      language={language}
+      submit={{
+        canSubmit: mine.next.ok,
+        reason: mine.next.ok ? null : mine.next.reason,
+        late: mine.next.ok && mine.next.late,
+        latePenaltyPct: props.latePenaltyPct,
+        dueLabel: formatDue(mine.due, props.timeZone),
+        maxScore: props.maxScore,
+        mark: mine.mark,
+        versions: mine.versions.map((v) => ({
+          version: v.version,
+          at: formatDue(v.submittedAt, props.timeZone),
+          late: v.late,
+          score: v.score,
+          counts: v.counts,
+          feedbackHtml: v.feedbackHtml,
+          returned: v.returned,
+          byTeacher: v.byTeacher,
+          file: v.file,
+          link: v.link,
+        })),
+      }}
+    />
   );
 }

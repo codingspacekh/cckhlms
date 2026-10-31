@@ -79,7 +79,7 @@ test.describe('admin', () => {
     expect(Math.abs(box.y + box.height / 2 - 360)).toBeLessThan(2);
   });
 
-  for (const path of ['/admin', '/admin/people', '/admin/courses']) {
+  for (const path of ['/admin', '/admin/people', '/admin/courses', '/admin/courses/languages']) {
     test(`${path} fits without scrolling sideways`, async ({ page }) => {
       await page.goto(path);
       await expect(page.getByRole('table').first()).toBeVisible();

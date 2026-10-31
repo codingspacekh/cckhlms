@@ -5,7 +5,8 @@ import { notFound } from 'next/navigation';
 import { SubmissionsTable } from '@/components/assessments/SubmissionsTable';
 import { StarterEditor } from '@/components/editor/StarterEditor';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { formatDue, KIND_LABEL, WORK_LANGUAGE_LABEL, zipNameFor } from '@/modules/assessments/rules';
+import { isCodeLanguage } from '@/modules/academics/language-rules';
+import { formatDue, KIND_LABEL, zipNameFor } from '@/modules/assessments/rules';
 import { teacherProject } from '@/modules/assessments/projects';
 import { submissionList } from '@/modules/assessments/submissions';
 import { getClubSettings } from '@/modules/club/service';
@@ -49,7 +50,7 @@ export default async function TeacherWorkPage({ params }: { params: Promise<{ id
         </div>
         <div>
           <span className="k">Language</span>
-          <span>{WORK_LANGUAGE_LABEL[a.language]}</span>
+          <span>{a.languageName}</span>
         </div>
         <div>
           <span className="k">Out of</span>
@@ -79,16 +80,23 @@ export default async function TeacherWorkPage({ params }: { params: Promise<{ id
           submittedLabel: r.latest ? formatDue(r.latest.submittedAt, timeZone) : null,
         }))}
       />
-      <StarterEditor
-        classId={id}
-        assessmentId={workId}
-        initial={files}
-        nonce={nonce}
-        java={a.language === 'java'}
-        previewOrigin={a.language === 'web' ? PREVIEW_ORIGIN : undefined}
-        run={a.language === 'python' || a.language === 'java' ? a.language : undefined}
-        zipName={`${zipNameFor(a.title)}-starter`}
-      />
+      {isCodeLanguage(a.language) ? (
+        <StarterEditor
+          classId={id}
+          assessmentId={workId}
+          initial={files}
+          nonce={nonce}
+          java={a.language === 'java'}
+          previewOrigin={a.language === 'web' ? PREVIEW_ORIGIN : undefined}
+          run={a.language === 'python' || a.language === 'java' ? a.language : undefined}
+          zipName={`${zipNameFor(a.title)}-starter`}
+        />
+      ) : (
+        <p className="card small muted">
+          Students hand in a {a.languageName} file or link: open each one from its student’s row above. To give them a starting project,
+          attach it to the lesson.
+        </p>
+      )}
     </>
   );
 }
