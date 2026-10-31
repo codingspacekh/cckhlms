@@ -1,21 +1,42 @@
 'use client';
 import { useId, useState } from 'react';
 import { Select } from '@/components/ui/Select';
-import type { Candidate } from '@/modules/support/support-lines';
 
 // FR-ADM-18 (owner, 2026-10-31): find the students to add to a support line by typing part of a name or a class, or
 // by choosing a class, instead of scrolling one long list. The students are grouped by class, in name order; Enter
-// adds the only match, so a few names can be added from the keyboard one after another.
+// adds the only match, so a few names can be added from the keyboard one after another. Enrolling a student in a
+// class (FR-ADM-07) uses it too, to choose one student: there a student is listed under each class they're in, and
+// those in none under "Not in a class".
+export type FinderStudent = { key: string; name: string; className: string; note?: string | null };
+type Props = {
+  candidates: FinderStudent[];
+  onAdd: (c: FinderStudent) => void;
+  title?: string | null; // null: no heading of its own (it sits in a form that has one)
+  action?: string; // the button on each student
+  done?: (name: string) => string; // what a screen reader hears after it
+  empty?: string; // when there's nobody to list at all
+  firstGroup?: string; // a group shown before the classes
+};
 const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const byName = (a: string, b: string) => a.localeCompare(b, 'en', { sensitivity: 'base' });
 
-export function StudentFinder({ candidates, onAdd }: { candidates: Candidate[]; onAdd: (c: Candidate) => void }) {
+export function StudentFinder({
+  candidates,
+  onAdd,
+  title = 'Add students',
+  action = 'Add',
+  done = (name) => `${name} added.`,
+  empty = 'Every student in a class is already in this support line.',
+  firstGroup,
+}: Props) {
   const id = useId();
   const [query, setQuery] = useState('');
   const [klass, setKlass] = useState('');
   const [added, setAdded] = useState('');
 
-  const classes = [...new Set(candidates.map((c) => c.className))].sort(byName);
+  const classes = [...new Set(candidates.map((c) => c.className))].sort(
+    (a, b) => Number(b === firstGroup) - Number(a === firstGroup) || byName(a, b),
+  );
   const q = fold(query.trim());
   const shown = candidates
     .filter((c) => !klass || c.className === klass)
@@ -23,14 +44,14 @@ export function StudentFinder({ candidates, onAdd }: { candidates: Candidate[]; 
     .sort((a, b) => byName(a.className, b.className) || byName(a.name, b.name));
   const groups = classes.map((name) => ({ name, students: shown.filter((c) => c.className === name) })).filter((g) => g.students.length);
 
-  function add(c: Candidate) {
+  function add(c: FinderStudent) {
     onAdd(c);
-    setAdded(`${c.name} added.`);
+    setAdded(done(c.name));
   }
 
   return (
-    <section className="finder stack-sm" aria-labelledby={`${id}-title`}>
-      <h3 id={`${id}-title`}>Add students</h3>
+    <section className="finder stack-sm" aria-labelledby={title ? `${id}-title` : undefined}>
+      {title && <h3 id={`${id}-title`}>{title}</h3>}
       <div className="finder-bar">
         <label className="f">
           Find a student
@@ -69,11 +90,7 @@ export function StudentFinder({ candidates, onAdd }: { candidates: Candidate[]; 
       <div className="finder-list">
         {groups.length === 0 ? (
           <p className="small muted">
-            {candidates.length === 0
-              ? 'Every student in a class is already in this support line.'
-              : q
-                ? `No student matches “${query.trim()}”.`
-                : 'No student in this class is left to add.'}
+            {candidates.length === 0 ? empty : q ? `No student matches “${query.trim()}”.` : 'No student in this class is left to add.'}
           </p>
         ) : (
           groups.map((g) => (
@@ -81,13 +98,13 @@ export function StudentFinder({ candidates, onAdd }: { candidates: Candidate[]; 
               <div className="finder-class xs muted">{g.name}</div>
               <ul>
                 {g.students.map((c) => (
-                  <li key={c.enrolmentId}>
+                  <li key={c.key}>
                     <span>
                       {c.name}
-                      {c.why && <span className="xs muted"> · needs support</span>}
+                      {c.note && <span className="xs muted"> · {c.note}</span>}
                     </span>
-                    <button type="button" className="btn sm" aria-label={`Add ${c.name}`} onClick={() => add(c)}>
-                      Add
+                    <button type="button" className="btn sm" aria-label={`${action} ${c.name}`} onClick={() => add(c)}>
+                      {action}
                     </button>
                   </li>
                 ))}

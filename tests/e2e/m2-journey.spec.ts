@@ -60,7 +60,13 @@ test.describe('admin', () => {
     await page.getByRole('link', { name: 'Python Level 2 · Sat 09:00' }).click();
     const enrol = page.getByRole('form', { name: 'Enrol a student' });
     for (const name of ['Kosal Meas', 'Nita Keo']) {
-      await choose(enrol.getByLabel('Student'), { label: name });
+      // Found by typing part of the name, as on a support line (owner, 2026-10-31).
+      await enrol.getByLabel('Find a student').fill(name.split(' ')[0]!.toLowerCase());
+      await enrol
+        .getByRole('button', { name: `Choose ${name}` })
+        .first()
+        .click();
+      await expect(enrol.getByTestId('chosen-student')).toContainText(name);
       await enrol.getByRole('button', { name: 'Enrol' }).click();
       await expect(page.getByRole('table', { name: 'Students' }).getByRole('row', { name: new RegExp(name) })).toContainText('Active');
     }
