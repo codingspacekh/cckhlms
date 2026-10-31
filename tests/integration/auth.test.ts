@@ -241,6 +241,24 @@ describe('brute force (FR-AUTH-11)', () => {
     expect((await pool.query(`select 1 from rate_limit where id = 'old'`)).rowCount).toBe(0);
   });
 
+  it('M17c, F13: 15 wrong passwords sent at once for one username get at most 5 password checks', async () => {
+    await seedUser({ username: 'racer', name: 'Racer', password: 'racer-pass-1234', role: 'student' });
+    const statuses = await Promise.all(Array.from({ length: 15 }, (_, i) => signIn('racer', `wrong-${i}`).then((r) => r.status)));
+    expect(statuses.filter((st) => st === 401).length).toBeLessThanOrEqual(5);
+    expect(statuses.filter((st) => st === 429).length).toBeGreaterThanOrEqual(10);
+    expect((await signIn('racer', 'racer-pass-1234')).status).toBe(429); // even the right password waits
+  });
+
+  it('M17c, F12: a malformed sign-in body doesn’t clear the username’s failed tries', async () => {
+    await seedUser({ username: 'malformed', name: 'Malformed', password: 'malformed-pass-1234', role: 'student' });
+    for (let i = 0; i < 4; i++) expect((await signIn('malformed', `wrong-${i}`)).status).toBe(401);
+    const odd = await call('/sign-in/username', { body: { username: 'malformed', password: 12345 } });
+    expect(odd.status).toBeGreaterThanOrEqual(400);
+    expect(odd.status).toBeLessThan(500);
+    expect((await signIn('malformed', 'wrong-4')).status).toBe(401);
+    expect((await signIn('malformed', 'malformed-pass-1234')).status).toBe(429);
+  });
+
   it('lets a class of 30 sign in together from one address, with a few typos', async () => {
     const ip = freshIp();
     const kids = Array.from({ length: 30 }, (_, i) => ({ username: `kid${i}`, password: `kid-pass-${1000 + i}` }));

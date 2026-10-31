@@ -381,7 +381,7 @@ stateDiagram-v2
 |---|---|
 | Authentication | Better Auth sessions (HTTP-only, Secure, SameSite cookies); Argon2/bcrypt hashes; Admin-only password reset (new password shown once, audit logged); optional forced change at first login. |
 | Sessions (FR-AUTH-10) | **Students: 2 h idle / 12 h max, no "remember me"** (shared club laptops). Teachers/admins: up to 7 days, renewed on activity. "Signed in as … · Sign out" always visible; Admin can sign a user out everywhere. |
-| Brute force (FR-AUTH-11) | App rate limit per username and per IP, with temporary lockout; plus a **Cloudflare rate-limit rule** on `/api/auth/*`. |
+| Brute force (FR-AUTH-11) | App rate limit per username and per IP, with temporary lockout; plus a **Cloudflare rate-limit rule** on `/api/auth/*`. A username's attempt is counted before its password is checked (one atomic statement), so parallel attempts can't get past the limit (M17c). |
 | Authorisation | One `Policy` module, e.g. `canGrade(user, assessment)`; all checks on the server; queries scoped by enrolment/assignment (BR-01, BR-02, BR-11). **Policy matrix tests** cover every role × action × own/other class **(ADR-10: app-layer authorisation, no database RLS)**. |
 | Input | Zod validation on every server action; parameterised queries via ORM; size limits on submissions and uploads. |
 | XSS / CSP | **Strict CSP** on `lms.cckh.dev` (nonces, no inline scripts); Markdown rendered with a sanitiser; user HTML never trusted. Student web pages run only on `preview.cckh.dev` in a sandboxed iframe (§6.3). |

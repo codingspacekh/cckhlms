@@ -118,4 +118,13 @@ describe('changing my own password', () => {
     });
     expect(await signIn('sophea', 'old-password-1')).toBe(429); // the same count as signing in
   });
+
+  it('M17c, F13: 10 wrong current passwords at once get at most 5 checks', async () => {
+    const me = await signedIn('sophea', 'teacher');
+    const results = await Promise.all(
+      Array.from({ length: 10 }, (_, i) => change(me, 'guess-' + i, 'new-password-123').catch((e: Error) => e.message)),
+    );
+    expect(results.filter((m) => m === 'That isn’t your current password.').length).toBeLessThanOrEqual(5);
+    expect(results.filter((m) => m === 'Too many wrong tries. Wait a minute and try again.').length).toBeGreaterThanOrEqual(5);
+  });
 });
