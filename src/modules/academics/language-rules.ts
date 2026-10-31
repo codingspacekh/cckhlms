@@ -2,6 +2,7 @@
 // the code editor; paper is work done on paper or in class; any language Admin adds (Scratch, Roblox …) is handed
 // in as a project file or a link and opened by the teacher outside the LMS.
 import { z } from 'zod';
+import { ValidationError } from '@/server/errors';
 
 export const BUILT_IN = ['python', 'java', 'web'] as const;
 export type CodeLanguage = (typeof BUILT_IN)[number];
@@ -100,3 +101,23 @@ export const languageInputSchema = z
   // What isn't chosen isn't kept: no file types without files, no sites without links.
   .transform((l) => ({ ...l, fileTypes: l.byFile ? l.fileTypes : [], linkSites: l.byLink ? l.linkSites : [] }));
 export type LanguageInput = Partial<Record<keyof z.input<typeof languageInputSchema>, unknown>>;
+
+export const MAX_LINK_LENGTH = 500;
+
+// A link a student hands in (M18b): https only, with no user name in it, on one of the language's sites or a part of one
+// (www.roblox.com for roblox.com). Returned as typed (trimmed), or a ValidationError says what to use.
+export function projectLink(raw: string, sites: string[]): string {
+  const link = raw.trim();
+  const use = sites.length ? `Use a link that starts with https://${sites[0]}/` : 'Use a link that starts with https://';
+  let url: URL;
+  try {
+    url = new URL(link);
+  } catch {
+    throw new ValidationError(use, 'link');
+  }
+  const host = url.hostname.toLowerCase();
+  const onSite = !sites.length || sites.some((s) => host === s || host.endsWith(`.${s}`));
+  if (url.protocol !== 'https:' || url.username || url.password || !onSite || link.length > MAX_LINK_LENGTH)
+    throw new ValidationError(use, 'link');
+  return link;
+}

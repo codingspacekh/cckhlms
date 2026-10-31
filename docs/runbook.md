@@ -203,7 +203,7 @@ The R2 lock stops anyone deleting or overwriting backups, but the server's R2 to
 | Pages slow, or the odd 502 | the server is short of CPU or memory | `docker stats --no-stream`. The M7 load test held 3× the weekend peak with p95 < 0.5 s on this server size; if real use comes near that, move to a 4 vCPU server and set `WEB_WORKERS: '4'` in `compose.prod.yaml`. |
 | healthchecks: backup failed/missed | no successful backup in the window | `logs backup`; R2 token still valid? Run "Backup now". |
 | `logs backup` says "a backup named in the future" | a file in the bucket is named after the time of the run: not one the backup made | Treat the server as possibly taken over: rotate the R2 token (§2.5), look at the file's upload time in the Cloudflare dashboard, and when restoring use a `RESTORE_BEFORE` before it (§4). Delete the file once its lock has passed. Tonight's backup was still made. |
-| healthchecks: disk | disk > 80 % | `docker system df`; prune old images (`docker image prune -a` keeps running ones) |
+| healthchecks: disk | disk > 80 % | `docker system df`; prune old images (`docker image prune -a` keeps running ones). Scratch and Roblox hand-ins (M18) are kept in the uploads volume (up to 20 MB each, 20 per student per piece of work): `du -sh` the `uploads` volume to see how much they take, and remember each nightly uploads archive is a full copy. |
 | Deploy workflow failed | new version unhealthy → rolled back | Read the job log; fix in a PR. The site stays on the previous version. |
 
 ---

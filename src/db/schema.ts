@@ -671,9 +671,21 @@ export const submission = pgTable(
     returnedAt: ts('returned_at'),
     // Entered by the teacher in the gradebook (paper work, or a score for work not handed in): no files.
     byTeacher: boolean('by_teacher').notNull().default(false),
+    // Work in a language Admin added (M18b, BR-32): a project file kept on the uploads volume under a random key,
+    // and/or a link to the project. Such a version has no files above.
+    fileKey: text('file_key'),
+    fileName: text('file_name'),
+    fileSize: integer('file_size'),
+    fileSha256: text('file_sha256'),
+    linkUrl: text('link_url'),
   },
   (t) => [
     unique('submission_version_unique').on(t.assessmentId, t.studentId, t.version),
+    check(
+      'submission_file_complete',
+      sql`(${t.fileKey} is null) = (${t.fileName} is null) and (${t.fileKey} is null) = (${t.fileSize} is null) and (${t.fileKey} is null) = (${t.fileSha256} is null)`,
+    ),
+    check('submission_link_https', sql`${t.linkUrl} is null or (${t.linkUrl} like 'https://%' and char_length(${t.linkUrl}) <= 500)`),
     index('submission_assessment_idx').on(t.assessmentId),
     check('submission_version_positive', sql`${t.version} >= 1`),
     check('submission_score_positive', sql`${t.score} >= 0`),

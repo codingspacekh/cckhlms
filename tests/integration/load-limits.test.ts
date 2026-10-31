@@ -154,7 +154,7 @@ describe('N03: marks are read without the hand-ins’ files', () => {
     expect(sql.filter(readsFiles)).toHaveLength(1);
     const g = await gradingView(sophea, workId, bopha.userId, { version: 2 });
     expect(g.versions.map((v) => v.version)).toEqual([3, 2, 1]);
-    expect(g.shown).toEqual({ version: 2, files: [{ path: 'main.py', content: 'print(2)' }] });
+    expect(g.shown).toEqual({ version: 2, files: [{ path: 'main.py', content: 'print(2)' }], file: null, link: null });
     expect((await gradingView(sophea, workId, bopha.userId)).shown?.version).toBe(3); // the latest by default
   });
 });
