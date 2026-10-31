@@ -8,10 +8,11 @@ export const KINDS = ['classwork', 'homework', 'exam'] as const;
 export type Kind = (typeof KINDS)[number];
 export const KIND_LABEL: Record<Kind, string> = { classwork: 'Classwork', homework: 'Homework', exam: 'Exam' };
 
-// 'paper' is work done on paper or in class: no editor, scores go straight into the gradebook.
-export const WORK_LANGUAGES = ['python', 'java', 'web', 'paper'] as const;
-export type WorkLanguage = (typeof WORK_LANGUAGES)[number];
-export const WORK_LANGUAGE_LABEL: Record<WorkLanguage, string> = {
+// A language's id (src/modules/academics/language-rules.ts, M18): the built-in ones, 'paper' (work done on paper or in
+// class: no editor, scores go straight into the gradebook), or one Admin added (handed in as a file or a link).
+export type WorkLanguage = string;
+// The built-in ones' names, for code that has no database at hand (the Playground's own list).
+export const WORK_LANGUAGE_LABEL: Record<string, string> = {
   python: 'Python',
   java: 'Java',
   web: 'HTML/CSS/JS',

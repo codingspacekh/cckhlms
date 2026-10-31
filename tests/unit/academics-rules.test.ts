@@ -31,8 +31,9 @@ describe('courses', () => {
     expect(courseInputSchema.safeParse({ ...ok, weightExam: 50, weightClasswork: 40, weightHomework: 10 }).success).toBe(true);
     expect(courseInputSchema.safeParse({ ...ok, passMark: 101 }).success).toBe(false);
   });
-  it('teach one of the club languages', () => {
-    expect(courseInputSchema.safeParse({ ...ok, defaultLanguage: 'ruby' }).success).toBe(false);
+  it('need a language (which one is checked against the club’s list: M18, tests/integration/languages.test.ts)', () => {
+    expect(courseInputSchema.safeParse({ ...ok, defaultLanguage: ' ' }).success).toBe(false);
+    expect(courseInputSchema.safeParse({ ...ok, defaultLanguage: 'scratch-id' }).success).toBe(true);
   });
 });
 

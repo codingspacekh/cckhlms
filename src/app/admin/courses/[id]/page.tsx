@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { getCourse, listCourses } from '@/modules/academics/courses';
+import { languageChoices } from '@/modules/academics/languages';
 import { pageData, requireActor } from '@/server/guard';
 import { CourseForm } from '../CourseForm';
 import { DeleteCourse } from './DeleteCourse';
@@ -22,7 +23,7 @@ export default async function CoursePage({ params }: { params: Promise<{ id: str
         actions={<DeleteCourse courseId={course.id} code={course.code} />}
       />
       <div className="grid g2 start">
-        <CourseForm course={course} others={others} />
+        <CourseForm course={course} languages={await languageChoices()} others={others} />
         <SyllabusForm courseId={course.id} topics={course.topics.map((t) => t.title)} />
       </div>
     </>

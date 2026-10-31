@@ -3,18 +3,20 @@ import Link from 'next/link';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { TableScroll } from '@/components/ui/TableScroll';
 import { listCourses } from '@/modules/academics/courses';
-import { LANGUAGE_LABEL, type Language } from '@/modules/academics/rules';
+import { languageChoices } from '@/modules/academics/languages';
 import { requireActor } from '@/server/guard';
 import { AddCourse } from './AddCourse';
+import { CourseTabs } from './CourseTabs';
 
 export const metadata: Metadata = { title: 'Courses' };
 
 export default async function CoursesPage() {
   const actor = await requireActor('courses.manage');
-  const courses = await listCourses(actor);
+  const [courses, languages] = await Promise.all([listCourses(actor), languageChoices()]);
   return (
     <>
-      <PageHeader eyebrow="Club" title="Courses" actions={<AddCourse />} />
+      <PageHeader eyebrow="Club" title="Courses" actions={<AddCourse languages={languages} />} />
+      <CourseTabs on="courses" />
       <section className="card flush" aria-label="Courses">
         <TableScroll label="Courses table">
           <table>
@@ -44,7 +46,7 @@ export default async function CoursesPage() {
                 <tr key={c.id}>
                   <td className="strong mono">{c.code}</td>
                   <td>{c.name}</td>
-                  <td>{LANGUAGE_LABEL[c.defaultLanguage as Language]}</td>
+                  <td>{c.languageName}</td>
                   <td className="tnum">
                     {c.weightExam} / {c.weightClasswork} / {c.weightHomework}
                   </td>

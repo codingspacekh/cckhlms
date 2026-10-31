@@ -15,6 +15,12 @@ const { CourseForm } = await import('@/app/admin/courses/CourseForm');
 const { SyllabusForm } = await import('@/app/admin/courses/[id]/SyllabusForm');
 const { TableScroll } = await import('@/components/ui/TableScroll');
 
+const LANGUAGES = [
+  { id: 'python', name: 'Python', handIn: 'code' as const },
+  { id: 'java', name: 'Java', handIn: 'code' as const },
+  { id: 'web', name: 'HTML/CSS/JS', handIn: 'code' as const },
+];
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -23,7 +29,7 @@ afterEach(() => {
 describe('CourseForm', () => {
   it('adds a course with the default pass mark and weights, and no next-level choice', async () => {
     createCourseAction.mockResolvedValue({ ok: true, message: 'PY1 added.' });
-    render(<CourseForm />);
+    render(<CourseForm languages={LANGUAGES} />);
     expect(screen.getByRole('form', { name: 'Add a course' })).toBeTruthy();
     expect(screen.queryByLabelText(/Next level/)).toBeNull();
     expect((screen.getByLabelText('Pass mark') as HTMLInputElement).value).toBe('60');
@@ -40,6 +46,7 @@ describe('CourseForm', () => {
     updateCourseAction.mockResolvedValue({ ok: false, error: 'That would make a loop of next levels.' });
     render(
       <CourseForm
+        languages={LANGUAGES}
         course={{
           id: 'c1',
           code: 'PY1',

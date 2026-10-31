@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation';
 import { SubmissionsTable } from '@/components/assessments/SubmissionsTable';
 import { StarterEditor } from '@/components/editor/StarterEditor';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { formatDue, KIND_LABEL, WORK_LANGUAGE_LABEL, zipNameFor } from '@/modules/assessments/rules';
+import { formatDue, KIND_LABEL, zipNameFor } from '@/modules/assessments/rules';
 import { teacherProject } from '@/modules/assessments/projects';
 import { submissionList } from '@/modules/assessments/submissions';
 import { getClubSettings } from '@/modules/club/service';
@@ -49,7 +49,7 @@ export default async function TeacherWorkPage({ params }: { params: Promise<{ id
         </div>
         <div>
           <span className="k">Language</span>
-          <span>{WORK_LANGUAGE_LABEL[a.language]}</span>
+          <span>{a.languageName}</span>
         </div>
         <div>
           <span className="k">Out of</span>

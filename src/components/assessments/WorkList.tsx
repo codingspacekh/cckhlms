@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Pill } from '@/components/ui/Pill';
-import { KIND_LABEL, WORK_LANGUAGE_LABEL, type Kind, type WorkLanguage } from '@/modules/assessments/rules';
+import { KIND_LABEL, type Kind, type WorkLanguage } from '@/modules/assessments/rules';
 import type { MyStanding } from '@/modules/assessments/submissions';
 
 export type WorkListItem = {
@@ -8,6 +8,7 @@ export type WorkListItem = {
   title: string;
   kind: Kind;
   language: WorkLanguage;
+  languageName: string;
   maxScore: number;
   dueLabel: string;
   week?: number | null;
@@ -45,7 +46,7 @@ export function WorkList({ classId, items, showWeek = false }: { classId: string
             <Pill>{KIND_LABEL[a.kind]}</Pill>
             <span className="small muted">
               {showWeek && a.week ? `Week ${a.week} · ` : ''}
-              {WORK_LANGUAGE_LABEL[a.language]} · out of {a.maxScore}
+              {a.languageName} · out of {a.maxScore}
             </span>
           </span>
           <span className="cell-line">

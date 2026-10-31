@@ -1,10 +1,11 @@
 'use client';
 import { useRef, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import type { LanguageChoice } from '@/modules/academics/languages';
 import { CourseForm } from './CourseForm';
 
 // "Add a course" opens the form in a dialog, so the courses table keeps the full width.
-export function AddCourse() {
+export function AddCourse({ languages }: { languages: LanguageChoice[] }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [formKey, setFormKey] = useState(0); // a fresh form each time
   const [added, setAdded] = useState<string | null>(null);
@@ -30,6 +31,7 @@ export function AddCourse() {
         {formKey > 0 && (
           <CourseForm
             key={formKey}
+            languages={languages}
             onCancel={() => dialog.current?.close()}
             onSaved={(message) => {
               setAdded(message);

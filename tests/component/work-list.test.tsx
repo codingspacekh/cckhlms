@@ -9,6 +9,7 @@ const item = {
   title: 'Countdown',
   kind: 'homework' as const,
   language: 'python' as const,
+  languageName: 'Python',
   maxScore: 10,
   dueLabel: 'Sat 16 Jan 2027, 09:00',
   week: 3,
@@ -26,7 +27,10 @@ describe('WorkList', () => {
     render(
       <WorkList
         classId="c1"
-        items={[item, { ...item, id: 'a2', title: 'Quiz', kind: 'classwork', language: 'paper', week: null }]}
+        items={[
+          item,
+          { ...item, id: 'a2', title: 'Quiz', kind: 'classwork', language: 'paper', languageName: 'Paper / in class', week: null },
+        ]}
         showWeek
       />,
     );
