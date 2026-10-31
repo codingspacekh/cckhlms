@@ -16,7 +16,7 @@ const MATRIX: Record<Action, Record<Role, Rule>> = {
   'teacher.area': { admin: false, teacher: true, student: false },
   'student.area': { admin: false, teacher: false, student: true },
   'accounts.manage': { admin: true, teacher: false, student: false },
-  'password.change_own': { admin: true, teacher: true, student: false },
+  'password.change_own': { admin: true, teacher: true, student: true },
   'settings.manage': { admin: true, teacher: false, student: false },
   'terms.manage': { admin: true, teacher: false, student: false },
   'courses.manage': { admin: true, teacher: false, student: false },

@@ -38,8 +38,8 @@ export const ACTIONS = {
   'teacher.area': hasRole('teacher'),
   'student.area': hasRole('student'),
   'accounts.manage': hasRole('admin'),
-  // FR-AUTH-06 (M13): admins and teachers change their own password; a student's is reset by a teacher or Admin.
-  'password.change_own': either(hasRole('admin'), hasRole('teacher')),
+  // FR-AUTH-06 (M13, M16a): everyone changes their own password; Admin can still reset anyone's.
+  'password.change_own': either(hasRole('admin'), hasRole('teacher'), hasRole('student')),
   'settings.manage': hasRole('admin'),
   'terms.manage': hasRole('admin'),
   'courses.manage': hasRole('admin'),

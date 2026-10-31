@@ -53,6 +53,7 @@ flowchart LR
 | **M13** ✅ | Change my password | Admins and teachers change their own password on a My account page | FR-AUTH-06 | 1 day |
 | **M14** ✅ | Weekly report sheet, online classes, support lines | The weekly report as a sheet with one row per student; online classes with a Zoom link; Admin's Weekly reports page; support lines for students who need help | FR-TCH-14 · FR-ADM-05, 17, 18 · FR-STU-13 · BR-27…29 | 7 days |
 | **M15** | Safer promotion | Promote several Ready classes at once, see each new class's places and timetable clashes before confirming, undo a promotion until the new classes start | FR-ADM-13 · BR-30 | 4 days |
+| **M16** | Student password, archived accounts | Students change their own password on My account; People shows active accounts only, with an Archived list to restore or delete from | FR-AUTH-04, 06 · BR-23, 31 | 2 days |
 | — | **R2: Club-wide launch** | Every class of the next term runs on `lms.cckh.dev` | | |
 
 \* *Effort = focused working days for one developer, tests included. Total ≈ **45 focused days**. At 2–3 focused days a week alongside teaching, that is about **4–5 months**: R1 could pilot in **Term 1 · 2027** (from Sat 9 Jan 2027) and R2 launch in **Term 2 · 2027**. These are planning ranges (±30%), not promises. AI-assisted pace on codingspacekh was faster, but the server work here is new.*
@@ -775,6 +776,29 @@ Built in three steps, one PR each. Each is merged only after the owner says so.
   - Playwright + axe: Admin ticks two Ready classes, reviews the warnings, promotes both, and undoes one.
 
 **Exit criteria:** on a copy of the club, never on real students first, Admin promotes several classes at once, sees capacity and clash warnings, and undoes a promotion. Then the owner signs off M15.
+
+### M16 — Student password, archived accounts (2 days)
+**Why:** the owner asked on 2026-10-31 for two things. Students should change their own password, while a forgotten one is still reset by Admin with a login slip; this reverses M13's "admins and teachers only". And a student who leaves should be deleted, or at least archived, instead of staying in People's list of students. Switch off already stopped them signing in, but they stayed in the same list; Delete was inside the Edit dialog and refused for anyone who had been in a class. Prototype approved 2026-10-31 (https://claude.ai/artifact/RQvVpFHXjdhFTS8dfD1EjD), with the defaults it proposed:
+- A student's new password follows the staff rule: at least 12 characters.
+- **Archive** replaces Switch off, for every kind of account, with the same safety rules (not yourself, not the last admin).
+- Archiving a student takes them out of the classes they're still in, from today. Restore lets them sign in again but doesn't put them back in a class.
+- **Delete** on an archived account removes it for good when it was never used (BR-23); a used student's account offers **Delete personal data** (NFR-07) instead.
+
+Built in two steps, one PR each. Each is merged only after the owner says so.
+
+**M16a — Students change their own password (0.5 day)**
+- **Build:** the policy row `password.change_own` includes students. A student's name at the bottom of the sidebar links to **My account** (`/student/account`): their name, username and role, and the M13 **Change password** form. The words fit a student: three words with dashes, like the login slip; "Forgot your password? Ask your teacher or the club admin for a new login slip." Everything else is M13's: the sign-in limit, this session kept and the others ended, the audit entry.
+- **Tests first:** unit: the policy row (all three roles yes); component: the student's name links to My account; integration: a student changes their password, signs in with the new one, and their other sessions end; Playwright + axe: a student changes their password from My account and signs in with the new one, and Admin's Reset password still works afterwards.
+
+**M16b — Archived accounts (1.5 days)**
+- **Build:**
+  - People gets **Active** and **Archived** under each tab, with counts. Active lists only accounts that can sign in; it shows a student's current classes.
+  - **Archive** (was Switch off) opens a dialog that says what happens: signed out, can't sign in, moves to Archived, leaves the classes they're still in from today (named), marks and certificates stay (BR-31).
+  - Archived shows when each account was archived (from the audit log), with **Restore** and **Delete…**. Delete removes an unused account for good; for a used student it offers Delete personal data (type the username), the existing NFR-07 erase; for used staff it explains why the account stays.
+  - "Switched off" becomes "archived" in messages and the audit log's labels; the audit actions stay `account.deactivate` / `account.reactivate`, so old entries keep their meaning.
+- **Tests first:** component: Active and Archived lists and counts, the Archive dialog names the classes, Delete offers the right choice; integration: archiving a student withdraws their active enrolments from today, signs them out and is audited; restoring doesn't re-enrol; archived accounts aren't in the Active list and are in Archived with their date; delete of an unused archived account, and the erase path for a used student; the existing self and last-admin rules; Playwright + axe: Admin archives a student, finds them under Archived and restores them.
+
+**Exit criteria:** on `lms.cckh.dev`, a student changes their password and signs in with it; Admin archives a student who left, they disappear from the class and from Active, and restores or deletes them from Archived; the owner signs off M16.
 
 ### R2 — Club-wide launch
 - All classes of the next term (e.g. Term 2 · 2027) are set up and run on `lms.cckh.dev`. Teachers get a short walkthrough, and students get login slips.

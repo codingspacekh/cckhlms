@@ -101,19 +101,15 @@ export function Sidebar({ role, user, classes = [] }: { role: Role; user: { name
         )}
       </nav>
       <div className="me">
-        {role === 'student' ? (
-          me
-        ) : (
-          // FR-AUTH-06 (M13): admins and teachers open My account (Change password) from their name.
-          <Link
-            className="me-link"
-            href={`/${role}/account`}
-            title="My account"
-            aria-current={pathname === `/${role}/account` ? 'page' : undefined}
-          >
-            {me}
-          </Link>
-        )}
+        {/* FR-AUTH-06 (M13, M16a): everyone opens My account (Change password) from their name. */}
+        <Link
+          className="me-link"
+          href={`/${role}/account`}
+          title="My account"
+          aria-current={pathname === `/${role}/account` ? 'page' : undefined}
+        >
+          {me}
+        </Link>
         <SignOutButton />
       </div>
     </aside>

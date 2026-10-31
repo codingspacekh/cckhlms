@@ -1,4 +1,4 @@
-// FR-AUTH-06 (M13): My account for admins and teachers: who they are, and Change password.
+// FR-AUTH-06 (M13, M16a): My account for everyone: who they are, and Change password.
 import { PageHeader } from '@/components/ui/PageHeader';
 import type { Actor } from '@/server/actor';
 import { ChangePasswordForm } from './ChangePasswordForm';
@@ -6,9 +6,12 @@ import { ChangePasswordForm } from './ChangePasswordForm';
 const FORGOT = {
   admin: 'Forgot your current password? Another admin can reset it on People. If no admin can sign in, see runbook §3.2.',
   teacher: 'Forgot your current password? Ask an admin to reset it on People.',
+  student: 'Forgot your password? Ask your teacher or the club admin for a new login slip.',
 };
+const ROLE = { admin: 'Admin', teacher: 'Teacher', student: 'Student' };
 
-export function MyAccount({ actor, role }: { actor: Actor; role: 'admin' | 'teacher' }) {
+export function MyAccount({ actor, role }: { actor: Actor; role: 'admin' | 'teacher' | 'student' }) {
+  const student = role === 'student';
   return (
     <>
       <PageHeader title="My account" />
@@ -26,17 +29,23 @@ export function MyAccount({ actor, role }: { actor: Actor; role: 'admin' | 'teac
             </div>
             <div>
               <dt className="xs muted">Role</dt>
-              <dd>{role === 'admin' ? 'Admin' : 'Teacher'}</dd>
+              <dd>{ROLE[role]}</dd>
             </div>
           </dl>
-          <p className="small muted">To change your name or username, ask an admin.</p>
+          <p className="small muted">To change your name or username, ask {student ? 'the club admin' : 'an admin'}.</p>
         </section>
         <section className="card stack" aria-labelledby="password-title">
           <div>
             <h2 id="password-title">Change password</h2>
-            <p className="small muted">You stay signed in here. Any other computer or phone signed in as you is signed out.</p>
+            <p className="small muted">
+              You stay signed in here. Any other computer or phone signed in as you is signed out.
+              {student && ' The password on your login slip stops working.'}
+            </p>
           </div>
-          <ChangePasswordForm forgotHint={FORGOT[role]} />
+          <ChangePasswordForm
+            forgotHint={FORGOT[role]}
+            help={student ? 'At least 12 characters. Three words with dashes are easy to remember, like on your login slip.' : undefined}
+          />
         </section>
       </div>
     </>
