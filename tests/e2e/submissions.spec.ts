@@ -23,6 +23,12 @@ test.describe('student', () => {
     await expect(page.getByRole('status').filter({ hasText: 'Submitted. Your teacher can see it now.' })).toBeVisible();
     await expect(page.getByTestId('submit-state')).toHaveText(/^Version 1 submitted .+\. You can submit again until .+\.$/);
 
+    // M17b, F04: handing in the same work again is refused; after a change it's version 2.
+    await page.getByRole('button', { name: 'Submit again' }).click();
+    await expect(page.getByText('Nothing has changed since your last hand-in.')).toBeVisible();
+    await page.getByRole('textbox', { name: 'Code for main.py' }).click();
+    await page.keyboard.press('ControlOrMeta+End');
+    await page.keyboard.type('\nprint("done")');
     await page.getByRole('button', { name: 'Submit again' }).click();
     await expect(page.getByRole('status').filter({ hasText: 'Submitted again (version 2).' })).toBeVisible();
     await expect(page.getByRole('list', { name: 'Versions you submitted' }).getByRole('listitem')).toHaveCount(2);

@@ -11,6 +11,7 @@ import { createTerm } from '@/modules/academics/terms';
 import { gradebook, myMark, saveCell, saveComment } from '@/modules/assessments/gradebook';
 import { gradeSubmission } from '@/modules/assessments/grading';
 import { saveAssessment, type AssessmentInput } from '@/modules/assessments/service';
+import { saveDraft } from '@/modules/assessments/projects';
 import { myStanding, mySubmissions, submissionList, submitWork } from '@/modules/assessments/submissions';
 import { createAccount } from '@/modules/identity/service';
 import { weeksOf } from '@/modules/teaching/weeks';
@@ -163,6 +164,7 @@ describe('code work in the gradebook', () => {
   it('BR-04: a score goes on the latest version; a newer hand-in since the table loaded is not overwritten', async () => {
     const id = await work();
     await submitWork(bopha, id, { now: BEFORE });
+    await saveDraft(bopha, id, [{ path: 'main.py', content: 'print(2)' }]);
     await submitWork(bopha, id, { now: BEFORE });
     await expect(saveCell(sophea, id, bopha.userId, { value: '7', version: 1 })).rejects.toThrow(
       'Bopha Lim handed in version 2 after the gradebook loaded. Reload to see it.',

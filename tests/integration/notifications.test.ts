@@ -12,6 +12,7 @@ import { addDays, todayIn, toClubTime } from '@/modules/academics/schedule';
 import { createTerm } from '@/modules/academics/terms';
 import { gradeSubmission, returnSubmission } from '@/modules/assessments/grading';
 import { saveAssessment, type AssessmentInput } from '@/modules/assessments/service';
+import { saveDraft } from '@/modules/assessments/projects';
 import { submitWork } from '@/modules/assessments/submissions';
 import { createAccount } from '@/modules/identity/service';
 import { markSeen, notificationsFor, unreadCount } from '@/modules/notifications/notifications';
@@ -199,6 +200,7 @@ describe('teachers', () => {
     });
     expect(items.find((n) => n.kind === 'to_mark')).toBeUndefined(); // Bopha's is marked, Chenda's sent back
 
+    await saveDraft(chenda, id, [{ path: 'main.py', content: 'for i in range(3, 0, -1):\n    print(i)' }]);
     await submitWork(chenda, id);
     expect((await feed(sophea, 'teacher')).find((n) => n.kind === 'to_mark')).toMatchObject({
       title: '1 hand-in to mark: Countdown',
