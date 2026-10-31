@@ -1,5 +1,5 @@
 'use client';
-import { useActionState, useEffect, useRef, useState, useTransition, type FormEvent } from 'react';
+import { useActionState, useRef, useState, useTransition, type FormEvent } from 'react';
 import { RosterTable } from '@/components/academics/RosterTable';
 import { enrolAction, transferAction, withdrawAction } from '@/modules/academics/enrolment-actions';
 import type { RosterRow } from '@/modules/academics/enrolments';
@@ -18,12 +18,16 @@ type Props = {
 };
 
 export function RosterManager({ classId, roster, candidates, otherClasses, today }: Props) {
-  const [enrolled, enrolFormAction, enrolling] = useActionState(enrolAction, null);
   // The student to enrol, found by name or class (owner, 2026-10-31: as on a support line, FR-ADM-18).
   const [chosen, setChosen] = useState<{ id: string; name: string } | null>(null);
-  useEffect(() => {
-    if (enrolled?.ok) setChosen(null); // enrolled: ready for the next one
-  }, [enrolled]);
+  const [enrolled, enrolFormAction, enrolling] = useActionState(
+    async (prev: Awaited<ReturnType<typeof enrolAction>> | null, form: FormData) => {
+      const r = await enrolAction(prev, form);
+      if (r.ok) setChosen(null); // enrolled: ready for the next one
+      return r;
+    },
+    null,
+  );
   const [target, setTarget] = useState<RosterRow | null>(null);
   const [mode, setMode] = useState<'withdraw' | 'move'>('withdraw');
   const [error, setError] = useState<string | null>(null);
