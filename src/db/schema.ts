@@ -170,6 +170,36 @@ export const term = pgTable(
   ],
 );
 
+// The languages a course is taught in (M18, BR-32). Python, Java, HTML/CSS/JS (code in the editor) and paper (work
+// done on paper or in class) come with the app as built-in rows. Admin adds others, such as Scratch or Roblox, whose
+// work is handed in as a project file (of these types) or a link (to these sites). Courses and work point here, so a
+// language in use can't be deleted.
+export const language = pgTable(
+  'language',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    builtIn: boolean('built_in').notNull().default(false),
+    byFile: boolean('by_file').notNull().default(false),
+    fileTypes: text('file_types')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    byLink: boolean('by_link').notNull().default(false),
+    linkSites: text('link_sites')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    position: smallint('position').notNull().default(100), // the built-in ones first, in their order
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('language_name_unique').on(sql`lower(${t.name})`),
+    check('language_hand_in_known', sql`${t.builtIn} or ${t.byFile} or ${t.byLink}`),
+    check('language_name_length', sql`char_length(${t.name}) between 1 and 40`),
+  ],
+);
+
 // Courses (FR-ADM-04): reusable across terms; a class is one run of a course in a term.
 export const course = pgTable(
   'course',
@@ -178,7 +208,9 @@ export const course = pgTable(
     code: text('code').notNull().unique(),
     name: text('name').notNull(),
     description: text('description'),
-    defaultLanguage: text('default_language').notNull(),
+    defaultLanguage: text('default_language')
+      .notNull()
+      .references(() => language.id, { onDelete: 'restrict' }),
     passMark: smallint('pass_mark').notNull().default(60),
     weightExam: smallint('weight_exam').notNull().default(60),
     weightClasswork: smallint('weight_classwork').notNull().default(30),
@@ -187,7 +219,6 @@ export const course = pgTable(
     createdAt: ts('created_at').notNull().defaultNow(),
   },
   (t) => [
-    check('course_language_known', sql`${t.defaultLanguage} in ('python', 'java', 'web')`),
     check('course_pass_mark_range', sql`${t.passMark} between 0 and 100`),
     check('course_weights_sum_100', sql`${t.weightExam} + ${t.weightClasswork} + ${t.weightHomework} = 100`),
   ],
@@ -571,7 +602,9 @@ export const assessment = pgTable(
     kind: text('kind').notNull(),
     title: text('title').notNull(),
     instructionsMd: text('instructions_md').notNull().default(''),
-    language: text('language').notNull(),
+    language: text('language')
+      .notNull()
+      .references(() => language.id, { onDelete: 'restrict' }),
     maxScore: integer('max_score').notNull(),
     dueMode: text('due_mode').notNull(),
     dueAt: ts('due_at'),
@@ -588,7 +621,6 @@ export const assessment = pgTable(
   (t) => [
     index('assessment_class_idx').on(t.classId),
     check('assessment_kind_known', sql`${t.kind} in ('classwork', 'homework', 'exam')`),
-    check('assessment_language_known', sql`${t.language} in ('python', 'java', 'web', 'paper')`),
     check('assessment_status_known', sql`${t.status} in ('draft', 'published')`),
     check('assessment_max_score_range', sql`${t.maxScore} between 1 and 1000`),
     check('assessment_penalty_range', sql`${t.latePenaltyPct} between 0 and 100`),

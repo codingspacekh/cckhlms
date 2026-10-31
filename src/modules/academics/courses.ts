@@ -2,20 +2,27 @@
 import { and, asc, count, eq, ne, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { db } from '@/db/client';
-import { course, klass, syllabusTopic } from '@/db/schema';
+import { course, klass, language, syllabusTopic } from '@/db/schema';
 import type { Actor } from '@/server/actor';
 import { audit } from '@/server/audit';
 import { assertCan, ValidationError } from '@/server/errors';
+import { getLanguage } from './languages';
 import { courseInputSchema, parseSyllabus, wouldCreateCycle, type CourseInput } from './rules';
 
 export type Course = typeof course.$inferSelect;
-export type CourseSummary = Course & { nextCourseCode: string | null; topicCount: number };
+export type CourseSummary = Course & { nextCourseCode: string | null; topicCount: number; languageName: string };
 export type CourseDetail = Course & { topics: { id: string; position: number; title: string }[] };
 
 function parse(raw: CourseInput) {
   const parsed = courseInputSchema.safeParse(raw);
   if (!parsed.success) throw ValidationError.fromZod(parsed.error);
   return parsed.data;
+}
+
+// A course is taught in a language from the list (M18), not "on paper".
+async function checkLanguage(id: string) {
+  const l = await getLanguage(id);
+  if (!l || l.handIn === 'paper') throw new ValidationError('Choose a language from the list.', 'defaultLanguage');
 }
 
 async function checkCodeAndLevel(id: string | null, code: string, nextCourseId: string | null | undefined) {
@@ -37,13 +44,15 @@ export async function listCourses(actor: Actor | null): Promise<CourseSummary[]>
   const rows = await db
     .select({
       c: course,
+      languageName: language.name,
       nextCourseCode: next.code,
       topicCount: sql<number>`(select count(*)::int from ${syllabusTopic} where ${syllabusTopic.courseId} = ${course.id})`,
     })
     .from(course)
+    .innerJoin(language, eq(language.id, course.defaultLanguage))
     .leftJoin(next, eq(next.id, course.nextCourseId))
     .orderBy(asc(course.code));
-  return rows.map((r) => ({ ...r.c, nextCourseCode: r.nextCourseCode, topicCount: r.topicCount }));
+  return rows.map((r) => ({ ...r.c, languageName: r.languageName, nextCourseCode: r.nextCourseCode, topicCount: r.topicCount }));
 }
 
 export async function getCourse(actor: Actor | null, id: string): Promise<CourseDetail> {
@@ -61,6 +70,7 @@ export async function getCourse(actor: Actor | null, id: string): Promise<Course
 export async function createCourse(actor: Actor | null, raw: CourseInput): Promise<Course> {
   assertCan(actor, 'courses.manage');
   const c = parse(raw);
+  await checkLanguage(c.defaultLanguage);
   await checkCodeAndLevel(null, c.code, c.nextCourseId);
   return db.transaction(async (tx) => {
     const [created] = await tx
@@ -75,6 +85,7 @@ export async function createCourse(actor: Actor | null, raw: CourseInput): Promi
 export async function updateCourse(actor: Actor | null, id: string, raw: CourseInput): Promise<void> {
   assertCan(actor, 'courses.manage');
   const c = parse(raw);
+  await checkLanguage(c.defaultLanguage);
   await checkCodeAndLevel(id, c.code, c.nextCourseId);
   await db.transaction(async (tx) => {
     const res = await tx

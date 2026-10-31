@@ -55,6 +55,7 @@ flowchart LR
 | **M15** | Safer promotion | Promote several Ready classes at once, see each new class's places and timetable clashes before confirming, undo a promotion until the new classes start | FR-ADM-13 · BR-30 | 4 days |
 | **M16** | Student password, archived accounts | Students change their own password on My account; People shows active accounts only, with an Archived list to restore or delete from | FR-AUTH-04, 06 · BR-23, 31 | 2 days |
 | **M17** ✅ | Security fixes | Fix the 13 confirmed findings of the security audit run-1 (5 medium, 8 low): runner, shared-load limits, sign-in limits, lifecycle and privacy rules, backup restore | NFR-01, 05, 06, 07 · FR-AUTH-11 · BR-11 | 4 days |
+| **M18** | More course languages | Admin adds languages such as Scratch and Roblox; their work is handed in as a project file or a link, which the teacher downloads or opens to mark | FR-ADM-04 · FR-STU-05 · FR-TCH-11 · BR-32 | 3 days |
 | — | **R2: Club-wide launch** | Every class of the next term runs on `lms.cckh.dev` | | |
 
 \* *Effort = focused working days for one developer, tests included. Total ≈ **45 focused days**. At 2–3 focused days a week alongside teaching, that is about **4–5 months**: R1 could pilot in **Term 1 · 2027** (from Sat 9 Jan 2027) and R2 launch in **Term 2 · 2027**. These are planning ranges (±30%), not promises. AI-assisted pace on codingspacekh was faster, but the server work here is new.*
@@ -868,6 +869,62 @@ Built in five steps, one PR each, each from `main`. Each is merged only after th
 > - The first laptop drill with the new `restore-drill.sh`.
 >
 > Seen while merging, unrelated to M17 and each passed on a rerun: three flaky tests, the Run panel's input-focus component test, `lessons.spec` (the week 9 editor) and the gradebook integration test "typing a score creates a submission without files".
+
+### M18 — More course languages (3 days)
+**Why:** the owner asked on 2026-10-31 for the club's other courses, such as **Roblox** and **Scratch**: today a course can only be Python, Java or HTML/CSS/JS. These need no preview or Run. Students hand in a project file or a link, and the teacher opens it in Scratch or Roblox Studio. Prototype approved 2026-10-31 (https://claude.ai/artifact/PJvkmoLt9QWgHT1MMsXb5h), with the defaults it proposed and one note from the owner: the forms use the club's own checkboxes and Select drop-down.
+
+The defaults:
+- Admin adds languages on Courses → **Languages**: a name, and whether students hand in a project file (which file types), a link (from which sites), or either.
+- Python, Java and HTML/CSS/JS stay as they are.
+- A project file can be up to **20 MB**. Files are kept with the lesson files, not in the database, and go into the nightly backups. A link must be https.
+- Due time, late work, the 20 hand-ins (M17), marks, feedback and redo work as for code work.
+- New languages aren't in the Playground.
+- A language can be renamed, but not deleted while a course or a piece of work uses it.
+
+Built in two steps, one PR each. Each is merged only after the owner says so.
+
+**M18a — Languages and courses (1 day)**
+- **Build:**
+  - A `language` table. Python, Java, HTML/CSS/JS and Paper are added by the migration as built-in rows. Courses and work point at it by key, so a language in use can't be deleted.
+  - The Languages tab lists each language, how it is handed in and how many courses use it, with **Add language**, **Edit** and **Delete** (only when unused).
+  - The course form's Language list groups "Code in the editor" and "Hand in a file or a link".
+  - The work form offers the course's language and Paper.
+  - Every place that showed a fixed label reads the language's name. The student's work page no longer treats an unknown language as Python.
+- **Tests first:**
+  - Unit: the language rules (name, file types like `.sb3`, sites like `scratch.mit.edu`, at least one way to hand in).
+  - Integration:
+    - Admin only;
+    - names unique, any case;
+    - delete only when unused;
+    - a course can use an added language, but not Paper;
+    - work for a course in an added language;
+    - the built-in rows exist after migrating.
+  - Component: the Languages tab and the Add dialog, with the club's checkboxes and Select.
+  - Playwright + axe: Admin adds Roblox and creates a Roblox course.
+
+**M18b — Handing in a file or a link (2 days)**
+- **Build:**
+  - The student's work page for an added language shows a drop box for the file and a link field, then **Hand in**. A route handler takes the upload: the same Origin check as attachments, a 20 MB cap read as it streams, only the language's file types, and a link only from its sites.
+  - Each hand-in is a version, with the M17 rules. A hand-in identical to the last one (the same file, by its SHA-256, and the same link) is refused.
+  - The marking page shows **Download** (a file, sent as an attachment) and **Open** (the link) instead of the code editor.
+  - Only the student and the class's teachers (and Admin) can download.
+  - Export includes the file's name and the link. Erase deletes the files and links.
+  - Reminders and to-do lists treat this work like code work.
+- **Tests first:**
+  - Integration:
+    - a file and a link are handed in;
+    - a wrong type, over 20 MB, another site's link or plain http is refused;
+    - the 21st or an unchanged hand-in is refused;
+    - a late hand-in after the due time;
+    - who can download;
+    - erase removes the file.
+  - Unit: link checks.
+  - Component: the hand-in box (drop, choose, remove, link).
+  - Playwright + axe:
+    - a student hands in an `.sb3` file and then a Scratch link;
+    - the teacher downloads the file and marks it.
+
+**Exit criteria:** on `lms.cckh.dev`, Admin adds Scratch and a Scratch course, a teacher sets Scratch homework, a student hands in an `.sb3` and a link, and the teacher downloads, opens and marks them; the owner signs off M18.
 
 ### R2 — Club-wide launch
 - All classes of the next term (e.g. Term 2 · 2027) are set up and run on `lms.cckh.dev`. Teachers get a short walkthrough, and students get login slips.

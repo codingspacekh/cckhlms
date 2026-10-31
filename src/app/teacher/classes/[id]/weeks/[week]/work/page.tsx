@@ -16,5 +16,15 @@ export default async function WeekWorkPage({ params }: { params: Promise<{ id: s
     const fixed = a.dueMode === 'fixed' && dueAt ? toClubTime(dueAt, settings.timeZone) : null;
     return { ...a, dueLabel: formatDue(due, settings.timeZone), dueDate: fixed?.date, dueTime: fixed?.time };
   });
-  return <WorkManager key={work.sessionId} classId={id} sessionId={work.sessionId} choices={work.choices} items={items} />;
+  return (
+    <WorkManager
+      key={work.sessionId}
+      classId={id}
+      sessionId={work.sessionId}
+      choices={work.choices}
+      languages={work.languages}
+      defaultLanguage={work.defaultLanguage}
+      items={items}
+    />
+  );
 }

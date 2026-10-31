@@ -1,7 +1,7 @@
 'use client';
 import { useActionState } from 'react';
 import { createCourseAction, updateCourseAction } from '@/modules/academics/actions';
-import { LANGUAGE_LABEL, LANGUAGES } from '@/modules/academics/rules';
+import type { LanguageChoice } from '@/modules/academics/languages';
 import type { FormResult } from '@/server/action-result';
 import { Select } from '@/components/ui/Select';
 
@@ -20,13 +20,14 @@ type Values = {
 
 type Props = {
   course?: Values;
+  languages: LanguageChoice[];
   others?: { id: string; code: string; name: string }[];
   onSaved?: (message: string) => void; // in a dialog: close it after a successful save
   onCancel?: () => void;
 };
 
 // Add a course (no `course`) or edit one (with `course`; then the next level can be chosen).
-export function CourseForm({ course, others = [], onSaved, onCancel }: Props) {
+export function CourseForm({ course, languages, others = [], onSaved, onCancel }: Props) {
   const editing = !!course?.id;
   const [result, formAction, saving] = useActionState(async (prev: FormResult | null, form: FormData) => {
     const r = await (editing ? updateCourseAction : createCourseAction)(prev, form);
@@ -46,11 +47,23 @@ export function CourseForm({ course, others = [], onSaved, onCancel }: Props) {
         <label className="f">
           Language
           <Select name="defaultLanguage" defaultValue={v.defaultLanguage ?? 'python'}>
-            {LANGUAGES.map((l) => (
-              <option key={l} value={l}>
-                {LANGUAGE_LABEL[l]}
-              </option>
-            ))}
+            {(
+              [
+                ['code', 'Code in the editor'],
+                ['upload', 'Hand in a file or a link'],
+              ] as const
+            ).map(([handIn, label]) => {
+              const group = languages.filter((l) => l.handIn === handIn);
+              return group.length ? (
+                <optgroup key={handIn} label={label}>
+                  {group.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ) : null;
+            })}
           </Select>
         </label>
       </div>

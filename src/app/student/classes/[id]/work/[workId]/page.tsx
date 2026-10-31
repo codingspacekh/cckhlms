@@ -8,7 +8,8 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { studentProject } from '@/modules/assessments/projects';
 import { myMark } from '@/modules/assessments/gradebook';
 import { mySubmissions } from '@/modules/assessments/submissions';
-import { formatDue, KIND_LABEL, WORK_LANGUAGE_LABEL, zipNameFor } from '@/modules/assessments/rules';
+import { isCodeLanguage } from '@/modules/academics/language-rules';
+import { formatDue, KIND_LABEL, zipNameFor } from '@/modules/assessments/rules';
 import { readAssessment } from '@/modules/assessments/service';
 import { getClubSettings } from '@/modules/club/service';
 import { pageData, requireActor } from '@/server/guard';
@@ -46,7 +47,7 @@ export default async function StudentWorkPage({ params }: { params: Promise<{ id
         </div>
         <div>
           <span className="k">Language</span>
-          <span>{WORK_LANGUAGE_LABEL[a.language]}</span>
+          <span>{a.languageName}</span>
         </div>
         <div>
           <span className="k">Out of</span>
@@ -68,6 +69,9 @@ export default async function StudentWorkPage({ params }: { params: Promise<{ id
       />
       {a.language === 'paper' ? (
         <PaperMark assessmentId={workId} maxScore={a.maxScore} latePenaltyPct={a.latePenaltyPct} />
+      ) : !isCodeLanguage(a.language) ? (
+        // A language Admin added (M18): handed in as a file or a link, not in the code editor.
+        <p className="card small muted">Your teacher will tell you how to hand in {a.languageName} work.</p>
       ) : (
         <Workspace
           classId={id}

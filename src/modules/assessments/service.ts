@@ -3,8 +3,9 @@
 import { and, asc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/db/client';
-import { assessment, classSession, klass } from '@/db/schema';
+import { assessment, classSession, course, klass } from '@/db/schema';
 import { classAccess } from '@/modules/academics/access';
+import { languageNames, workLanguagesFor, type LanguageChoice } from '@/modules/academics/languages';
 import { zonedToUtc } from '@/modules/academics/schedule';
 import { getClubSettings } from '@/modules/club/service';
 import { weeksOf } from '@/modules/teaching/weeks';
@@ -12,17 +13,7 @@ import { renderMarkdown } from '@/lib/markdown';
 import type { Actor } from '@/server/actor';
 import { audit } from '@/server/audit';
 import { assertCan, ValidationError } from '@/server/errors';
-import {
-  DUE_MODES,
-  dueChoices,
-  KINDS,
-  nextHeldSession,
-  resolveDue,
-  WORK_LANGUAGES,
-  type DueMode,
-  type Kind,
-  type WorkLanguage,
-} from './rules';
+import { DUE_MODES, dueChoices, KINDS, nextHeldSession, resolveDue, type DueMode, type Kind, type WorkLanguage } from './rules';
 
 export const MAX_INSTRUCTIONS = 20_000;
 
@@ -32,7 +23,7 @@ export const assessmentInputSchema = z.object({
   kind: z.enum(KINDS, { error: 'Choose classwork, homework or exam.' }),
   title: z.string().trim().min(1, 'Give the work a title.').max(120, 'Keep the title under 120 characters.'),
   instructionsMd: z.string().max(MAX_INSTRUCTIONS, `Keep the instructions under ${MAX_INSTRUCTIONS.toLocaleString('en')} characters.`),
-  language: z.enum(WORK_LANGUAGES, { error: 'Choose a language, or paper / in class.' }),
+  language: z.string({ error: 'Choose a language, or paper / in class.' }).min(1, 'Choose a language, or paper / in class.'),
   maxScore: z.coerce.number({ error: scoreRange }).int(scoreRange).min(1, scoreRange).max(1000, scoreRange),
   dueMode: z.enum(DUE_MODES, { error: 'Choose when it’s due.' }),
   dueDate: z.string().optional(),
@@ -52,6 +43,7 @@ export type WorkItem = {
   title: string;
   instructionsMd: string;
   language: WorkLanguage;
+  languageName: string;
   maxScore: number;
   dueMode: DueMode;
   dueAt: Date | null;
@@ -68,12 +60,25 @@ async function weekSession(classId: string, week: number) {
   return { s, sessions };
 }
 
-const toItem = (a: Row, sessions: Awaited<ReturnType<typeof weeksOf>>, tz: string): WorkItem => ({
+// The languages work in this class can be set in (M18), the course's own first.
+async function classLanguages(classId: string): Promise<{ defaultLanguage: string; languages: LanguageChoice[] }> {
+  const [c] = await db
+    .select({ language: course.defaultLanguage })
+    .from(klass)
+    .innerJoin(course, eq(course.id, klass.courseId))
+    .where(eq(klass.id, classId))
+    .limit(1);
+  const defaultLanguage = c?.language ?? 'python';
+  return { defaultLanguage, languages: await workLanguagesFor(defaultLanguage) };
+}
+
+const toItem = (a: Row, sessions: Awaited<ReturnType<typeof weeksOf>>, tz: string, names: Map<string, string>): WorkItem => ({
   id: a.id,
   kind: a.kind as Kind,
   title: a.title,
   instructionsMd: a.instructionsMd,
   language: a.language as WorkLanguage,
+  languageName: names.get(a.language) ?? a.language,
   maxScore: a.maxScore,
   dueMode: a.dueMode as DueMode,
   dueAt: a.dueAt,
@@ -90,11 +95,17 @@ const inSession = (sessionId: string) =>
 export async function weekWork(actor: Actor | null, classId: string, week: number) {
   assertCan(actor, 'assessment.write', await classAccess(classId, 'read'));
   const { s, sessions } = await weekSession(classId, week);
-  const tz = (await getClubSettings()).timeZone;
+  const [tz, names, langs, rows] = await Promise.all([
+    getClubSettings().then((c) => c.timeZone),
+    languageNames(),
+    classLanguages(classId),
+    inSession(s.id),
+  ]);
   return {
     sessionId: s.id,
     choices: dueChoices(sessions, s.id),
-    items: (await inSession(s.id)).map((a) => toItem(a, sessions, tz)),
+    ...langs,
+    items: rows.map((a) => toItem(a, sessions, tz, names)),
   };
 }
 
@@ -111,6 +122,11 @@ export async function saveAssessment(
   const parsed = assessmentInputSchema.safeParse(raw);
   if (!parsed.success) throw ValidationError.fromZod(parsed.error);
   const input = parsed.data;
+  const { languages } = await classLanguages(s.classId);
+  if (!languages.some((l) => l.id === input.language)) {
+    const own = languages.find((l) => l.handIn === 'upload');
+    throw new ValidationError(own ? `Choose ${own.name}, or paper / in class.` : 'Choose a language, or paper / in class.', 'language');
+  }
 
   let dueAt: Date | null = null;
   if (input.dueMode === 'fixed') {
@@ -186,8 +202,8 @@ export async function deleteAssessment(actor: Actor | null, assessmentId: string
 export async function studentWeekWork(actor: Actor | null, classId: string, week: number): Promise<WorkItem[]> {
   assertCan(actor, 'assessment.read', await classAccess(classId));
   const { s, sessions } = await weekSession(classId, week);
-  const tz = (await getClubSettings()).timeZone;
-  return (await inSession(s.id)).filter((a) => a.status === 'published').map((a) => toItem(a, sessions, tz));
+  const [tz, names] = [(await getClubSettings()).timeZone, await languageNames()];
+  return (await inSession(s.id)).filter((a) => a.status === 'published').map((a) => toItem(a, sessions, tz, names));
 }
 
 // All the class's published work, by week and then by when it's due: the student's class page.
@@ -200,8 +216,9 @@ export async function studentClassWork(actor: Actor | null, classId: string): Pr
     .from(assessment)
     .where(and(eq(assessment.classId, classId), eq(assessment.status, 'published')));
   const weekOf = new Map(sessions.map((s) => [s.id, s.week]));
+  const names = await languageNames();
   return rows
-    .map((a) => ({ ...toItem(a, sessions, tz), week: weekOf.get(a.sessionId) ?? null }))
+    .map((a) => ({ ...toItem(a, sessions, tz, names), week: weekOf.get(a.sessionId) ?? null }))
     .sort((x, y) => (x.week ?? 0) - (y.week ?? 0) || (x.due?.getTime() ?? 0) - (y.due?.getTime() ?? 0));
 }
 
@@ -221,7 +238,7 @@ export async function readAssessment(actor: Actor | null, assessmentId: string):
   const teaches = (access.classTeacherIds ?? []).includes(actor.userId);
   if (a.a.status !== 'published' && !teaches) throw new ValidationError('That work no longer exists.');
   const sessions = await weeksOf(a.a.classId);
-  const item = toItem(a.a, sessions, (await getClubSettings()).timeZone);
+  const item = toItem(a.a, sessions, (await getClubSettings()).timeZone, await languageNames());
   return {
     ...item,
     classId: a.a.classId,
