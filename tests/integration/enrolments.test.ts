@@ -85,7 +85,7 @@ describe('enrolling', () => {
     await expect(enrolStudent(admin, satClass, sophea.userId, { now: NOW })).rejects.toThrow(/not a student/);
     const off = as(await createAccount(admin, { role: 'student', name: 'Switched Off' }), 'Switched Off', 'student');
     await setActive(admin, off.userId, false);
-    await expect(enrolStudent(admin, satClass, off.userId, { now: NOW })).rejects.toThrow(/switched off/);
+    await expect(enrolStudent(admin, satClass, off.userId, { now: NOW })).rejects.toThrow(/archived\. Restore it first/);
   });
 
   it('warns when the student already has a class at that time, and enrols once confirmed', async () => {

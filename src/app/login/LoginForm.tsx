@@ -5,7 +5,7 @@ const MESSAGES: Record<number, string> = {
   401: 'Wrong username or password.',
   429: 'Too many attempts. Wait a minute and try again.',
 };
-const SWITCHED_OFF = 'This account is switched off. Ask the club admin.';
+const ARCHIVED = 'This account is archived. Ask the club admin.';
 
 export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +32,7 @@ export function LoginForm() {
     }
     setBusy(false);
     const body = (await res.json().catch(() => ({}))) as { code?: string };
-    setError(body.code === 'BANNED_USER' ? SWITCHED_OFF : (MESSAGES[res.status] ?? 'Sign-in failed. Please try again.'));
+    setError(body.code === 'BANNED_USER' ? ARCHIVED : (MESSAGES[res.status] ?? 'Sign-in failed. Please try again.'));
   }
 
   return (

@@ -68,7 +68,7 @@ describe('LoginSlipsManager', () => {
   it('lists the class, and a switched-off student can’t be chosen', () => {
     render(<LoginSlipsManager {...props} />);
     expect(box('Kosal Meas').disabled).toBe(true);
-    expect(screen.getByRole('row', { name: /Kosal Meas/ }).textContent).toContain('Switched off');
+    expect(screen.getByRole('row', { name: /Kosal Meas/ }).textContent).toContain('Archived');
     expect(go().disabled).toBe(true);
   });
 

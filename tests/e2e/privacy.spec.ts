@@ -67,7 +67,8 @@ test('Admin downloads a student’s data, then deletes their personal data', asy
   await expect(again.page).toHaveURL(/\/login/);
   await again.ctx.close();
 
-  await page.goto('/admin/people');
+  // M16b: they're on People's Archived list now, as a deleted student.
+  await page.goto('/admin/people?role=student&show=archived');
   await expect(page.getByRole('row', { name: /Malis Chea/ })).toHaveCount(0);
   await expect(page.getByRole('row', { name: /Deleted student/ }).first()).toContainText('Personal data deleted');
 });

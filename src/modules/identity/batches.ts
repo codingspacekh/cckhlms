@@ -178,7 +178,7 @@ export async function resetForSlips(actor: Actor | null, classId: string, studen
       const [other] = await db.select({ name: user.name }).from(user).where(eq(user.id, id)).limit(1);
       throw new ValidationError(other ? `${other.name} is not in this class.` : 'That student no longer exists.');
     }
-    if (!s.active) throw new ValidationError(`${s.name}'s account is switched off. Switch it on first.`);
+    if (!s.active) throw new ValidationError(`${s.name}'s account is archived. Restore it first.`);
   }
 
   const ctx = await auth.$context;

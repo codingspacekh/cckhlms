@@ -1,6 +1,6 @@
 // Account management (FR-ADM-01/02, FR-AUTH-02/03/04/07/10). Every function checks the Policy first
 // and writes an audit entry (NFR-11). Passwords are generated here and returned once; only hashes are stored.
-import { and, eq, ne, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { db } from '@/db/client';
 import {
   assessment,
@@ -10,6 +10,7 @@ import {
   classReport,
   classTeacher,
   enrolment,
+  klass,
   lesson,
   playgroundProject,
   question,
@@ -21,6 +22,8 @@ import {
   teacherProfile,
   user,
 } from '@/db/schema';
+import { todayIn } from '@/modules/academics/schedule';
+import { getClubSettings } from '@/modules/club/service';
 import type { Actor } from '@/server/actor';
 import { audit } from '@/server/audit';
 import { auth } from '@/server/auth';
@@ -40,6 +43,10 @@ export type Person = {
   guardianPhone: string | null;
   phone: string | null; // a teacher's
   notes: string | null;
+  classes: string[]; // M16b: the names of the open classes a student is in or a teacher teaches
+  archivedAt: string | null; // the club date it was archived (or its personal data deleted)
+  deletable: boolean; // archived and nothing depends on it (BR-23)
+  keptBecause: string | null; // archived but used: why it can't be deleted, e.g. "Bopha Lim is in 2 classes"
 };
 
 const hasRole = (role: string) => sql`${role} = any(string_to_array(${user.role}, ','))`;
@@ -50,7 +57,7 @@ async function findUser(userId: string) {
   return u;
 }
 
-// An anonymised student (NFR-07) stays switched off, with no password.
+// An anonymised student (NFR-07) stays archived, with no password.
 async function findLiveUser(userId: string) {
   const u = await findUser(userId);
   if (u.erasedAt) throw new ValidationError('This student’s personal data has been deleted.');
@@ -161,30 +168,62 @@ export async function resetAdminPasswordFromServer(r: { username: string; passwo
   return 'reset';
 }
 
-export async function setActive(actor: Actor | null, userId: string, active: boolean) {
+const inOrder = [asc(klass.firstDate), asc(klass.startTime), asc(klass.name)];
+
+// Archive (was "switch off", M16b, BR-31): the account can't sign in and its sessions end. A student also leaves,
+// from today (club time), every open class they're still in: the enrolment is withdrawn, as on the class's roster,
+// and their marks stay. A class not started yet ends on its own join date. Restore doesn't put them back in a class.
+export async function setActive(actor: Actor | null, userId: string, active: boolean, opts: { now?: Date } = {}) {
   assertCan(actor, 'accounts.manage');
   const target = await findLiveUser(userId);
   if (!active) {
-    if (userId === actor.userId) throw new ValidationError("You can't switch off your own account.");
+    if (userId === actor.userId) throw new ValidationError("You can't archive your own account.");
     if ((target.role ?? '').split(',').includes('admin')) {
       const [other] = await db
         .select({ n: sql<number>`count(*)::int` })
         .from(user)
         .where(and(hasRole('admin'), ne(user.id, userId), sql`coalesce(${user.banned}, false) = false`));
-      if (!other?.n) throw new ValidationError('This is the last active admin. Add or switch on another admin first.');
+      if (!other?.n) throw new ValidationError('This is the last active admin. Add or restore another admin first.');
     }
   }
+  const today = todayIn((await getClubSettings()).timeZone, opts.now);
+  const leaving = active
+    ? []
+    : await db
+        .select({ id: enrolment.id, label: klass.name })
+        .from(enrolment)
+        .innerJoin(klass, eq(klass.id, enrolment.classId))
+        .where(and(eq(enrolment.studentId, userId), eq(enrolment.status, 'active'), eq(klass.status, 'active')))
+        .orderBy(...inOrder);
   await db.transaction(async (tx) => {
     await tx
       .update(user)
-      .set({ banned: !active, banReason: active ? null : 'Switched off by the club admin', updatedAt: new Date() })
+      .set({ banned: !active, banReason: active ? null : 'Archived by the club admin', updatedAt: new Date() })
       .where(eq(user.id, userId));
+    for (const e of leaving) {
+      const [{ on } = { on: today }] = await tx
+        .update(enrolment)
+        .set({ status: 'withdrawn', endedOn: sql`greatest(${today}::date, ${enrolment.enrolledOn})` })
+        .where(eq(enrolment.id, e.id))
+        .returning({ on: enrolment.endedOn });
+      await audit(
+        { actorId: actor.userId, action: 'enrolment.withdraw', entity: 'enrolment', entityId: e.id, detail: { on, archived: true } },
+        tx,
+      );
+    }
     await audit(
-      { actorId: actor.userId, action: active ? 'account.reactivate' : 'account.deactivate', entity: 'user', entityId: userId },
+      {
+        actorId: actor.userId,
+        action: active ? 'account.reactivate' : 'account.deactivate',
+        entity: 'user',
+        entityId: userId,
+        detail: active ? undefined : { leftClasses: leaving.length },
+      },
       tx,
     );
   });
   if (!active) await (await auth.$context).internalAdapter.deleteUserSessions(userId);
+  return { leftClasses: leaving.map((e) => e.label) };
 }
 
 export async function signOutEverywhere(actor: Actor | null, userId: string) {
@@ -194,6 +233,7 @@ export async function signOutEverywhere(actor: Actor | null, userId: string) {
   await audit({ actorId: actor.userId, action: 'account.sign_out_everywhere', entity: 'user', entityId: userId });
 }
 
+// People (M16b): every account of a role, with what the Active and Archived lists show.
 export async function listPeople(actor: Actor | null, role: Role): Promise<Person[]> {
   assertCan(actor, 'accounts.manage');
   const rows = await db
@@ -215,6 +255,38 @@ export async function listPeople(actor: Actor | null, role: Role): Promise<Perso
     .leftJoin(teacherProfile, eq(teacherProfile.userId, user.id))
     .where(hasRole(role))
     .orderBy(user.name);
+  const ids = rows.map((r) => r.id);
+  const archivedIds = rows.filter((r) => r.banned).map((r) => r.id);
+  const { timeZone } = await getClubSettings();
+  const [classes, archived, kept] = await Promise.all([
+    ids.length === 0 || role === 'admin'
+      ? []
+      : role === 'student'
+        ? db
+            .select({ id: enrolment.studentId, label: klass.name })
+            .from(enrolment)
+            .innerJoin(klass, eq(klass.id, enrolment.classId))
+            .where(and(inArray(enrolment.studentId, ids), eq(enrolment.status, 'active'), eq(klass.status, 'active')))
+            .orderBy(...inOrder)
+        : db
+            .select({ id: classTeacher.userId, label: klass.name })
+            .from(classTeacher)
+            .innerJoin(klass, eq(klass.id, classTeacher.classId))
+            .where(and(inArray(classTeacher.userId, ids), eq(klass.status, 'active')))
+            .orderBy(...inOrder),
+    archivedIds.length === 0
+      ? []
+      : db
+          .select({ id: auditLog.entityId, at: sql<Date>`max(${auditLog.at})` })
+          .from(auditLog)
+          .where(and(inArray(auditLog.entityId, archivedIds), inArray(auditLog.action, ['account.deactivate', 'student.erase'])))
+          .groupBy(auditLog.entityId),
+    Promise.all(rows.filter((r) => r.banned && !r.erasedAt).map(async (r) => [r.id, await accountUse(r.id, r.name)] as const)),
+  ]);
+  const classesOf = new Map<string, string[]>();
+  for (const c of classes) classesOf.set(c.id, [...(classesOf.get(c.id) ?? []), c.label]);
+  const archivedOn = new Map(archived.map((a) => [a.id, todayIn(timeZone, new Date(a.at))]));
+  const keptBecause = new Map(kept);
   return rows.map((r) => ({
     id: r.id,
     name: r.name,
@@ -226,6 +298,10 @@ export async function listPeople(actor: Actor | null, role: Role): Promise<Perso
     guardianPhone: r.guardianPhone,
     phone: r.phone,
     notes: r.studentNotes ?? r.teacherNotes,
+    classes: r.banned ? [] : (classesOf.get(r.id) ?? []),
+    archivedAt: r.banned ? (archivedOn.get(r.id) ?? null) : null,
+    deletable: !!r.banned && !r.erasedAt && !keptBecause.get(r.id),
+    keptBecause: keptBecause.get(r.id) ?? null,
   }));
 }
 
@@ -287,12 +363,9 @@ export async function updateAccount(actor: Actor | null, userId: string, raw: Ac
   });
 }
 
-// Only an account nobody has used yet (BR-23): never in a class, never teaching one, and nothing written, marked or
-// changed in the LMS (signing in doesn't count). Anything else is switched off instead, so its history stays.
-export async function deleteAccount(actor: Actor | null, userId: string): Promise<void> {
-  assertCan(actor, 'accounts.manage');
-  if (userId === actor.userId) throw new ValidationError("You can't delete your own account.");
-  const target = await findUser(userId);
+// Why an account can't be deleted (BR-23), e.g. "Bopha Lim is in 2 classes", or null when nothing depends on it:
+// never in a class, never teaching one, and nothing written, marked or changed in the LMS (signing in doesn't count).
+async function accountUse(userId: string, name: string): Promise<string | null> {
   const [use] = await db
     .select({
       classes: sql<number>`(select count(distinct ${enrolment.classId})::int from ${enrolment} where ${enrolment.studentId} = ${userId})`,
@@ -319,7 +392,16 @@ export async function deleteAccount(actor: Actor | null, userId: string): Promis
     use!.written && `has ${plural(use!.written, 'thing')} they wrote or marked`,
     use!.changes && `made ${plural(use!.changes, 'change')} in the LMS`,
   ].filter(Boolean);
-  if (why.length) throw new ValidationError(`${target.name} ${why.join(' and ')}, so the account can't be deleted. Switch it off instead.`);
+  return why.length ? `${name} ${why.join(' and ')}` : null;
+}
+
+// Only an account nobody has used yet (BR-23). Anything else is archived instead, so its history stays.
+export async function deleteAccount(actor: Actor | null, userId: string): Promise<void> {
+  assertCan(actor, 'accounts.manage');
+  if (userId === actor.userId) throw new ValidationError("You can't delete your own account.");
+  const target = await findUser(userId);
+  const kept = await accountUse(userId, target.name);
+  if (kept) throw new ValidationError(`${kept}, so the account can't be deleted.${target.banned ? '' : ' Archive it instead.'}`);
   await db.transaction(async (tx) => {
     // Their sessions, password login and profile go with them (cascade); the audit entry keeps the username only.
     await tx.delete(user).where(eq(user.id, userId));

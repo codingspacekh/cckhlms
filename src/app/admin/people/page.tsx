@@ -13,9 +13,9 @@ const TABS: { role: Role; label: string }[] = [
   { role: 'admin', label: 'Admins' },
 ];
 
-export default async function PeoplePage({ searchParams }: { searchParams: Promise<{ role?: string }> }) {
+export default async function PeoplePage({ searchParams }: { searchParams: Promise<{ role?: string; show?: string }> }) {
   const actor = await requireActor('accounts.manage');
-  const { role: requested } = await searchParams;
+  const { role: requested, show } = await searchParams;
   const role: Role = TABS.some((t) => t.role === requested) ? (requested as Role) : 'student';
   const [people, { clubName }] = await Promise.all([listPeople(actor, role), getClubSettings()]);
   const tabs = (
@@ -28,6 +28,14 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
     </nav>
   );
   return (
-    <PeopleManager people={people} role={role} selfId={actor.userId} tabs={tabs} clubName={clubName} site={new URL(LMS_ORIGIN).host} />
+    <PeopleManager
+      people={people}
+      role={role}
+      show={show === 'archived' ? 'archived' : 'active'}
+      selfId={actor.userId}
+      tabs={tabs}
+      clubName={clubName}
+      site={new URL(LMS_ORIGIN).host}
+    />
   );
 }
