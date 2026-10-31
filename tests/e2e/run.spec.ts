@@ -17,6 +17,7 @@ test.beforeAll(async () => {
 
 async function newProject(page: import('@playwright/test').Page, name: string, language: string) {
   await page.goto('/student/playground');
+  await page.getByRole('button', { name: 'New project' }).click();
   const form = page.getByRole('form', { name: 'New project' });
   await form.getByLabel('Name').fill(name);
   await choose(form.getByLabel('Language'), { label: language });

@@ -25,7 +25,7 @@
   --side-2: #1f3a78;
   --side-ink: #d5ddf0;
   --side-muted: #9fb0d8;
-  /* the page you're on: a soft lift of the sidebar with a green edge, not a white block (owner, 2026-10-31) */
+  /* the page you're on: a soft lift of the sidebar, not a white block (owner, 2026-10-31) */
   --side-active: #334671;
   --side-active-ink: #ffffff;
   /* the dark blue "next class" card on the teacher's Today */
@@ -364,7 +364,6 @@ svg.i {
   background: var(--side-active);
   color: var(--side-active-ink);
   font-weight: 700;
-  box-shadow: inset 4px 0 0 var(--green);
 }
 .nav svg.i {
   width: 20px;
@@ -1380,6 +1379,31 @@ td.pick {
 }
 .narrow-form {
   max-width: 560px;
+}
+/* Settings: one row per setting, what it is on the left and its field on the right; stacked on a phone. */
+.setting-rows {
+  display: flex;
+  flex-direction: column;
+}
+.setting-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 8px 32px;
+  align-items: center;
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+}
+.setting-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.setting-row p {
+  margin: 2px 0 0;
+}
+@media (max-width: 720px) {
+  .setting-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .g2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3271,7 +3295,7 @@ table.gradebook .sticky-col {
 .lead {
   font-size: 1.2rem;
   color: var(--ink);
-  max-width: 40ch;
+  max-width: 56ch;
 }
 .hello {
   background: var(--accent-soft);
@@ -3335,6 +3359,36 @@ table.gradebook .sticky-col {
   max-width: 200px;
   height: auto;
 }
+/* A student's My week: the puzzle and the latest project on the left, what to do on the right (owner, 2026-10-31). */
+.home-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  grid-template-areas: 'main side';
+  gap: 24px;
+  align-items: start;
+}
+.home-main,
+.home-side {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+.home-main {
+  grid-area: main;
+}
+.home-side {
+  grid-area: side;
+}
+.home-side:empty {
+  display: none;
+}
+@media (max-width: 1100px) {
+  .home-cols {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'side' 'main';
+  }
+}
 .home-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3372,6 +3426,14 @@ table.gradebook .sticky-col {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
   gap: 6px 4px;
+}
+.puzzle.balanced {
+  grid-template-columns: repeat(var(--cols), minmax(0, 76px));
+}
+@media (max-width: 640px) {
+  .puzzle.balanced {
+    grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
+  }
 }
 .piece {
   display: flex;
