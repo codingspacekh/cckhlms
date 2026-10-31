@@ -13,8 +13,16 @@ fail() { echo "backup FAILED: $1" >&2; ping /fail; exit 1; }
 
 # Keep the newest $2 files in folder $1 (names sort by time). The R2 bucket has a retention lock (runbook §2.5), so a
 # copy younger than the lock can't be deleted, even by this server: it is kept and pruned on a later night.
+# A name after this run's time can't be a real backup: it would be someone with the server's R2 token planting a
+# "newest" one (M17e). Each is reported, left out of the count (so it can't take a real backup's place), and fails
+# the run at the end, so the alert fires.
 prune() {
-  list=$(rclone lsf "$BACKUP_REMOTE/$1" --files-only --include '*.age' | sort)
+  all=$(rclone lsf "$BACKUP_REMOTE/$1" --files-only --include '*.age' | sort)
+  list=$(printf '%s\n' "$all" | while read -r f; do
+    [ -n "$f" ] || continue
+    s=${f#*-}
+    if [ "${s%%.*}" \> "$stamp" ]; then echo "$1/$f" >> "$tmp/future"; else echo "$f"; fi
+  done)
   total=$(printf '%s\n' "$list" | grep -c . || true)
   extra=$((total - $2))
   [ "$extra" -gt 0 ] || return 0
@@ -43,5 +51,9 @@ fi
 
 prune daily "$KEEP_DAILY"
 prune weekly "$KEEP_WEEKLY"
+if [ -s "$tmp/future" ]; then
+  while read -r f; do echo "a backup named in the future: $f (runbook §4: check who could have added it)" >&2; done < "$tmp/future"
+  fail "backups named in the future (uploaded $name anyway)"
+fi
 ping ""
 echo "backup ok: $name ($(wc -c < "$tmp/$name") bytes)"
