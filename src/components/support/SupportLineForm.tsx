@@ -81,7 +81,12 @@ export function SupportLineForm({ candidates, picked, lastMeetingUrl, line }: Pr
             </tbody>
           </table>
         </TableScroll>
-        <StudentFinder candidates={candidates.filter((c) => !ids.includes(c.enrolmentId))} onAdd={(c) => setIds([...ids, c.enrolmentId])} />
+        <StudentFinder
+          candidates={candidates
+            .filter((c) => !ids.includes(c.enrolmentId))
+            .map((c) => ({ key: c.enrolmentId, name: c.name, className: c.className, note: c.why ? 'needs support' : null }))}
+          onAdd={(c) => setIds([...ids, c.key])}
+        />
       </div>
 
       <div className="f">

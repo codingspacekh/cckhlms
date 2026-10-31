@@ -5,17 +5,29 @@ import { enrolAction, transferAction, withdrawAction } from '@/modules/academics
 import type { RosterRow } from '@/modules/academics/enrolments';
 import { DateField } from '@/components/ui/DateTimeFields';
 import { Select } from '@/components/ui/Select';
+import { StudentFinder } from '@/components/support/StudentFinder';
+
+const NO_CLASS = 'Not in a class';
 
 type Props = {
   classId: string;
   roster: RosterRow[];
-  candidates: { id: string; name: string }[];
+  candidates: { id: string; name: string; classes: string[] }[]; // the open classes each is in now
   otherClasses: { id: string; name: string }[];
   today: string;
 };
 
 export function RosterManager({ classId, roster, candidates, otherClasses, today }: Props) {
-  const [enrolled, enrolFormAction, enrolling] = useActionState(enrolAction, null);
+  // The student to enrol, found by name or class (owner, 2026-10-31: as on a support line, FR-ADM-18).
+  const [chosen, setChosen] = useState<{ id: string; name: string } | null>(null);
+  const [enrolled, enrolFormAction, enrolling] = useActionState(
+    async (prev: Awaited<ReturnType<typeof enrolAction>> | null, form: FormData) => {
+      const r = await enrolAction(prev, form);
+      if (r.ok) setChosen(null); // enrolled: ready for the next one
+      return r;
+    },
+    null,
+  );
   const [target, setTarget] = useState<RosterRow | null>(null);
   const [mode, setMode] = useState<'withdraw' | 'move'>('withdraw');
   const [error, setError] = useState<string | null>(null);
@@ -79,19 +91,34 @@ export function RosterManager({ classId, roster, candidates, otherClasses, today
             <p className="small muted">Every active student is already in this class. Add students on the People page.</p>
           ) : (
             <>
-              <label className="f">
-                Student
-                <Select name="studentId" required defaultValue="">
-                  <option value="" disabled>
-                    Choose a student
-                  </option>
-                  {candidates.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </Select>
-              </label>
+              {chosen ? (
+                <div className="chosen-student" data-testid="chosen-student">
+                  <input type="hidden" name="studentId" value={chosen.id} />
+                  <span className="grow">
+                    <span className="xs muted">Student</span>
+                    <br />
+                    <strong>{chosen.name}</strong>
+                  </span>
+                  <button type="button" className="btn ghost sm" aria-label="Change the student" onClick={() => setChosen(null)}>
+                    Change
+                  </button>
+                </div>
+              ) : (
+                <StudentFinder
+                  title={null}
+                  action="Choose"
+                  done={(name) => `${name} chosen.`}
+                  firstGroup={NO_CLASS}
+                  candidates={candidates.flatMap((c) =>
+                    (c.classes.length ? c.classes : [NO_CLASS]).map((className) => ({
+                      key: `${c.id}:${className}`,
+                      name: c.name,
+                      className,
+                    })),
+                  )}
+                  onAdd={(c) => setChosen({ id: c.key.slice(0, c.key.indexOf(':')), name: c.name })}
+                />
+              )}
               <DateField label="Joins on" name="enrolledOn" defaultValue={today} />
               <p className="xs muted">Work and sessions before this date don&apos;t count for the student (BR-17).</p>
               {enrolled && !enrolled.ok && (
@@ -112,7 +139,7 @@ export function RosterManager({ classId, roster, candidates, otherClasses, today
                 </p>
               )}
               <div className="row">
-                <button type="submit" className="btn primary" disabled={enrolling}>
+                <button type="submit" className="btn primary" disabled={enrolling || !chosen}>
                   Enrol
                 </button>
                 {enrolWarnings && (

@@ -4237,6 +4237,15 @@ table.gradebook .sticky-col {
 .finder-group li:last-child {
   border-bottom: 0;
 }
+/* The student chosen to enrol, with Change (class page). */
+.chosen-student {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
 /* An invitation on My week or Today: a support line. */
 .invite {
   border-left: 6px solid var(--accent);

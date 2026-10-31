@@ -159,7 +159,7 @@ export default async function ClassPage({
         <RosterManager
           classId={c.id}
           roster={roster}
-          candidates={students.filter((p) => p.active && !inClass.has(p.id)).map((p) => ({ id: p.id, name: p.name }))}
+          candidates={students.filter((p) => p.active && !inClass.has(p.id)).map((p) => ({ id: p.id, name: p.name, classes: p.classes }))}
           otherClasses={termClasses.filter((k) => k.id !== c.id).map((k) => ({ id: k.id, name: k.name }))}
           today={todayIn(settings.timeZone)}
         />
