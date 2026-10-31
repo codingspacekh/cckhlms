@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { sessionWhen } from '@/components/academics/nextSessionText';
 import { JoinZoom } from '@/components/academics/Where';
-import { TeacherSupportCard } from '@/components/support/SupportLineCards';
+import { TeacherSupportLines } from '@/components/support/SupportLineCards';
 import { Icon } from '@/components/ui/Icon';
 import { pastClasses } from '@/modules/academics/enrolments';
 import { whereLabel } from '@/modules/academics/meeting';
@@ -44,9 +44,7 @@ export default async function TeacherToday() {
       {home.classes.length === 0 && <p className="card muted">Your classes will appear here once the club admin assigns you to one.</p>}
 
       <div className="home-grid">
-        {support.map((l) => (
-          <TeacherSupportCard key={l.id} line={l} today={home.today} />
-        ))}
+        <TeacherSupportLines lines={support} today={home.today} />
         {f && (
           <section className="next-up wide" aria-labelledby="today-title">
             <div className="spread">

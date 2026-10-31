@@ -74,9 +74,11 @@ test.describe('their teacher', () => {
 
   test('sees it on Today, with their own students', async ({ page }) => {
     await page.goto('/teacher');
-    const card = page.getByRole('region', { name: '2 of your students have a support line' });
-    await expect(card.getByRole('rowheader')).toHaveText(['Leakena Som', 'Rotanak Ry']);
-    await expect(card.getByRole('link', { name: /Join on Zoom/ })).toHaveAttribute('href', ZOOM);
+    const card = page.getByRole('region', { name: 'Support lines' });
+    const line = card.getByRole('listitem', { name: /18:00–19:00 support line$/ });
+    await expect(line.locator('.sl-who li strong')).toHaveText(['Leakena Som', 'Rotanak Ry']);
+    await expect(line).toContainText('Missed the loops lesson.');
+    await expect(line.getByRole('link', { name: /Join on Zoom/ })).toHaveAttribute('href', ZOOM);
     await expectAccessible(page);
   });
 });

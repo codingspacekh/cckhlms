@@ -39,7 +39,8 @@ test('a teacher changes their password from My account and signs in with the new
   await expect(page.getByText(ME.username, { exact: true })).toBeVisible();
   await expectAccessible(page);
 
-  const form = page.getByRole('form', { name: 'Change password' });
+  await page.getByRole('button', { name: 'Change password' }).click();
+  const form = page.getByRole('dialog', { name: 'Change password' }).getByRole('form', { name: 'Change password' });
   await form.getByLabel('Current password').fill('not-my-password');
   await form.getByLabel('New password', { exact: true }).fill('my-new-password-1');
   await form.getByLabel('New password again').fill('my-new-password-1');
@@ -51,7 +52,8 @@ test('a teacher changes their password from My account and signs in with the new
   await form.getByLabel('New password', { exact: true }).fill('my-new-password-1');
   await form.getByLabel('New password again').fill('my-new-password-1');
   await form.getByRole('button', { name: 'Change password' }).click();
-  await expect(form.getByRole('status')).toContainText('Password changed.');
+  await expect(page.getByRole('dialog')).toBeHidden();
+  await expect(page.getByRole('status')).toContainText('Password changed.');
 
   // Still signed in here; then out, and back in with the new password.
   await page.goto('/teacher');
@@ -73,7 +75,8 @@ test.describe('admin', () => {
       .getByRole('link', { name: /Club Admin/ })
       .click();
     await expect(page).toHaveURL(/\/admin\/account$/);
-    await expect(page.getByRole('form', { name: 'Change password' })).toBeVisible();
+    await page.getByRole('button', { name: 'Change password' }).click();
+    await expect(page.getByRole('dialog', { name: 'Change password' }).getByLabel('Current password')).toBeVisible();
     await expectAccessible(page);
   });
 });
@@ -90,12 +93,14 @@ test('M16a: a student changes their password from My account; Admin can still re
   await expect(page.getByText('Ask your teacher or the club admin for a new login slip.')).toBeVisible();
   await expectAccessible(page);
 
-  const form = page.getByRole('form', { name: 'Change password' });
+  await page.getByRole('button', { name: 'Change password' }).click();
+  const form = page.getByRole('dialog', { name: 'Change password' }).getByRole('form', { name: 'Change password' });
   await form.getByLabel('Current password').fill(KID.password);
   await form.getByLabel('New password', { exact: true }).fill('panda-rocket-mango');
   await form.getByLabel('New password again').fill('panda-rocket-mango');
   await form.getByRole('button', { name: 'Change password' }).click();
-  await expect(form.getByRole('status')).toContainText('Password changed.');
+  await expect(page.getByRole('dialog')).toBeHidden();
+  await expect(page.getByRole('status')).toContainText('Password changed.');
   await expectAccessible(page);
 
   await page.getByRole('button', { name: 'Sign out' }).click();

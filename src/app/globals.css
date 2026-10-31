@@ -4483,3 +4483,43 @@ button.link {
   padding: 0 4px;
   color: var(--muted);
 }
+
+/* A teacher's support lines on Today (owner, 2026-11-01): one compact card, a row per line: when | their students |
+   Join on Zoom. The accent edge marks it as an invitation, like the student's card. */
+.home-grid > .full {
+  grid-column: 1 / -1;
+}
+.support-card {
+  border-left: 6px solid var(--accent);
+}
+.sl-row {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 16px;
+  padding: 14px 20px;
+}
+.sl-row + .sl-row {
+  border-top: 1px solid var(--line);
+}
+.sl-when,
+.sl-who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sl-when strong {
+  color: var(--heading);
+}
+.sl-who li .small {
+  white-space: normal;
+}
+@media (max-width: 640px) {
+  .sl-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .sl-row .btn {
+    justify-self: start;
+  }
+}
