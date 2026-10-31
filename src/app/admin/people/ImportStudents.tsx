@@ -1,7 +1,6 @@
 'use client';
-import { useRouter } from 'next/navigation';
 import { useState, useTransition, type ChangeEvent } from 'react';
-import { SlipSheet, type SlipData } from '@/components/accounts/SlipSheet';
+import type { SlipData } from '@/components/accounts/SlipSheet';
 import { TableScroll } from '@/components/ui/TableScroll';
 import { checkImportAction, importStudentsAction } from '@/modules/identity/actions';
 import type { ImportTarget } from '@/modules/identity/batches';
@@ -17,7 +16,8 @@ const readText = (file: File) =>
     reader.onerror = () => reject(reader.error);
     reader.readAsText(file, 'utf-8');
   });
-const accounts = (n: number) => `${n} ${n === 1 ? 'account' : 'accounts'}`;
+export const accounts = (n: number) => `${n} ${n === 1 ? 'account' : 'accounts'}`;
+export type Imported = { slips: SlipData[]; enrolled: string | null };
 
 function placesLabel(t: ImportTarget) {
   if (t.placesLeft == null) return t.name;
@@ -26,14 +26,12 @@ function placesLabel(t: ImportTarget) {
 }
 
 // FR-AUTH-08: choosing a file checks it on the server (nothing is written); with no errors, one click creates every
-// account (and enrolment) at once, and the login slips are shown to print.
-export function ImportStudents({ targets, clubName, site }: { targets: ImportTarget[]; clubName: string; site: string }) {
-  const router = useRouter();
+// account (and enrolment) at once, and the login slips are handed on to print. It opens in a dialog on People.
+export function ImportStudents({ targets, onCreated }: { targets: ImportTarget[]; onCreated: (done: Imported) => void }) {
   const [text, setText] = useState<string | null>(null);
   const [check, setCheck] = useState<ImportCheck | null>(null);
   const [classId, setClassId] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<{ slips: SlipData[]; enrolled: string | null } | null>(null);
   const [pending, start] = useTransition();
   const terms = [...new Set(targets.map((t) => t.termName))];
 
@@ -64,26 +62,14 @@ export function ImportStudents({ targets, clubName, site }: { targets: ImportTar
     start(async () => {
       const r = await importStudentsAction(text, classId);
       if (!r.ok) setError(r.error);
-      else if (r.data) setDone(r.data);
+      else if (r.data) onCreated(r.data);
     });
   }
 
-  if (done)
-    return (
-      <SlipSheet
-        title={`${accounts(done.slips.length)} created${done.enrolled ? ` and enrolled in ${done.enrolled}` : ''}`}
-        clubName={clubName}
-        site={site}
-        className={done.enrolled ?? undefined}
-        slips={done.slips}
-        onDone={() => router.push('/admin/people?role=student')}
-      />
-    );
-
   const ready = check && check.errors.length === 0 && check.rows.length > 0;
   return (
-    <>
-      <section className="card stack narrow-form" aria-label="The file">
+    <div className="stack">
+      <section className="card stack" aria-label="The file">
         <p className="small">
           A CSV file whose first line names the columns: <strong>name</strong> (needed), and if you like <strong>username</strong>,{' '}
           <strong>guardian name</strong>, <strong>guardian phone</strong> and <strong>notes</strong>. Leave a username blank and one is
@@ -191,6 +177,6 @@ export function ImportStudents({ targets, clubName, site }: { targets: ImportTar
           </div>
         </>
       )}
-    </>
+    </div>
   );
 }

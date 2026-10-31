@@ -35,7 +35,7 @@ const rows: AuditRowView[] = [
 
 describe('AuditLogView', () => {
   it('shows each entry: when, who, what, about whom and the details', () => {
-    render(<AuditLogView rows={rows} next={null} filters={parseAuditFilters({})} />);
+    render(<AuditLogView rows={rows} total={rows.length} filters={parseAuditFilters({})} />);
     const table = screen.getByRole('table', { name: 'Audit log' });
     const [first, second] = within(table).getAllByRole('row').slice(1);
     expect(
@@ -56,7 +56,7 @@ describe('AuditLogView', () => {
     render(
       <AuditLogView
         rows={rows}
-        next={null}
+        total={rows.length}
         filters={parseAuditFilters({ group: 'certificates', person: 'bopha', from: '2027-04-01', to: '2027-04-30' })}
       />,
     );
@@ -73,19 +73,45 @@ describe('AuditLogView', () => {
     expect(within(form).getByRole('link', { name: 'Clear' }).getAttribute('href')).toBe('/admin/audit');
   });
 
-  it('links to older entries with the same filters, and back to the newest', () => {
-    render(<AuditLogView rows={rows} next={40} filters={parseAuditFilters({ group: 'certificates', before: '90' })} />);
-    expect(screen.getByRole('link', { name: 'Older entries' }).getAttribute('href')).toBe('/admin/audit?group=certificates&before=40');
-    expect(screen.getByRole('link', { name: 'Newest entries' }).getAttribute('href')).toBe('/admin/audit?group=certificates');
+  it('numbers the pages, keeping the filters, and says which entries are shown', () => {
+    render(<AuditLogView rows={rows} total={230} filters={parseAuditFilters({ group: 'certificates', page: '2' })} />);
+    const pages = within(screen.getByRole('navigation', { name: 'Pages' }));
+    expect(screen.getByText('Showing 51–100 of 230 entries')).toBeTruthy();
+    expect(pages.getAllByRole('link').map((a) => [a.textContent, a.getAttribute('href')])).toEqual([
+      ['Previous', '/admin/audit?group=certificates'],
+      ['1', '/admin/audit?group=certificates'],
+      ['3', '/admin/audit?group=certificates&page=3'],
+      ['4', '/admin/audit?group=certificates&page=4'],
+      ['5', '/admin/audit?group=certificates&page=5'],
+      ['Next', '/admin/audit?group=certificates&page=3'],
+    ]);
+    expect(pages.getByText('2').getAttribute('aria-current')).toBe('page');
+  });
+
+  it('has no Previous on the first page and no Next on the last', () => {
+    render(<AuditLogView rows={rows} total={120} filters={parseAuditFilters({ page: '3' })} />);
+    const pages = within(screen.getByRole('navigation', { name: 'Pages' }));
+    expect(screen.getByText('Showing 101–120 of 120 entries')).toBeTruthy();
+    expect(pages.queryByRole('link', { name: 'Next' })).toBeNull();
+    expect(pages.getByText('Next').getAttribute('aria-disabled')).toBe('true');
+    cleanup();
+    render(<AuditLogView rows={rows} total={120} filters={parseAuditFilters({})} />);
+    expect(within(screen.getByRole('navigation', { name: 'Pages' })).queryByRole('link', { name: 'Previous' })).toBeNull();
+  });
+
+  it('has no page numbers when everything fits on one page', () => {
+    render(<AuditLogView rows={rows} total={rows.length} filters={parseAuditFilters({})} />);
+    expect(screen.queryByRole('navigation', { name: 'Pages' })).toBeNull();
+    expect(screen.getByText(`Showing 1–${rows.length} of ${rows.length} ${rows.length === 1 ? 'entry' : 'entries'}`)).toBeTruthy();
   });
 
   it('says when nothing matches, and offers no Clear without filters', () => {
-    render(<AuditLogView rows={[]} next={null} filters={parseAuditFilters({ person: 'nobody' })} />);
+    render(<AuditLogView rows={[]} total={0} filters={parseAuditFilters({ person: 'nobody' })} />);
     expect(screen.getByText('Nothing matches these filters.')).toBeTruthy();
     cleanup();
-    render(<AuditLogView rows={[]} next={null} filters={parseAuditFilters({})} />);
+    render(<AuditLogView rows={[]} total={0} filters={parseAuditFilters({})} />);
     expect(screen.getByText('Nothing has been recorded yet.')).toBeTruthy();
     expect(screen.queryByRole('link', { name: 'Clear' })).toBeNull();
-    expect(screen.queryByRole('link', { name: 'Older entries' })).toBeNull();
+    expect(screen.queryByRole('navigation', { name: 'Pages' })).toBeNull();
   });
 });

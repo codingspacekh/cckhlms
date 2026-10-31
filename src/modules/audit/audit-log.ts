@@ -1,6 +1,6 @@
 // The audit log viewer (FR-SYS-02): Admin reads what was recorded (NFR-11), newest first, with who did it and who
 // or what it was about in names rather than ids. The rows themselves are never changed.
-import { and, desc, eq, gte, ilike, inArray, lt, notInArray, or, sql, type SQL } from 'drizzle-orm';
+import { and, count, desc, eq, gte, ilike, inArray, lt, notInArray, or, sql, type SQL } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { assessment, auditLog, certificate, classSession, course, enrolment, klass, lesson, submission, term, user } from '@/db/schema';
 import { addDays, zonedToUtc } from '@/modules/academics/schedule';
@@ -55,30 +55,38 @@ async function personCondition(person: string): Promise<SQL | null> {
   )!;
 }
 
-export async function auditEntries(actor: Actor | null, f: AuditFilters): Promise<{ rows: AuditView[]; next: number | null }> {
+// One page of entries, newest first, with how many match. A page past the end shows the last one.
+export async function auditEntries(actor: Actor | null, f: AuditFilters): Promise<{ rows: AuditView[]; total: number; page: number }> {
   assertCan(actor, 'audit.view');
   const { timeZone } = await getClubSettings();
   const where: SQL[] = [f.group ? inArray(auditLog.action, actionsIn(f.group)) : notInArray(auditLog.action, actionsIn('signins'))];
   if (f.person) {
     const c = await personCondition(f.person);
-    if (!c) return { rows: [], next: null };
+    if (!c) return { rows: [], total: 0, page: 1 };
     where.push(c);
   }
   if (f.from) where.push(gte(auditLog.at, zonedToUtc(f.from, '00:00', timeZone)));
   if (f.to) where.push(lt(auditLog.at, zonedToUtc(addDays(f.to, 1), '00:00', timeZone)));
-  if (f.before) where.push(lt(auditLog.id, f.before));
 
+  const total =
+    (
+      await db
+        .select({ n: count() })
+        .from(auditLog)
+        .where(and(...where))
+    )[0]?.n ?? 0;
+  const page = Math.min(f.page, Math.max(1, Math.ceil(total / PAGE_SIZE)));
   const found = await db
     .select({ x: auditLog, byName: user.name, byUsername: user.username })
     .from(auditLog)
     .leftJoin(user, eq(user.id, auditLog.actorId))
     .where(and(...where))
     .orderBy(desc(auditLog.id))
-    .limit(PAGE_SIZE + 1);
-  const page = found.slice(0, PAGE_SIZE);
-  const about = await describeSubjects(page.map((r) => r.x));
+    .limit(PAGE_SIZE)
+    .offset((page - 1) * PAGE_SIZE);
+  const about = await describeSubjects(found.map((r) => r.x));
   return {
-    rows: page.map(({ x, byName, byUsername }) => ({
+    rows: found.map(({ x, byName, byUsername }) => ({
       id: x.id,
       at: x.at,
       action: x.action,
@@ -89,7 +97,8 @@ export async function auditEntries(actor: Actor | null, f: AuditFilters): Promis
       lines: detailLines(x.action, x.detail, about.names),
       ip: x.ip,
     })),
-    next: found.length > PAGE_SIZE ? page.at(-1)!.x.id : null,
+    total,
+    page,
   };
 }
 

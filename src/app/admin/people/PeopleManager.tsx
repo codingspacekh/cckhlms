@@ -1,8 +1,8 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useActionState, useRef, useState, useTransition, type ReactNode } from 'react';
-import { SlipCard } from '@/components/accounts/SlipSheet';
+import { useActionState, useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
+import { SlipCard, SlipSheet } from '@/components/accounts/SlipSheet';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Pill } from '@/components/ui/Pill';
 import { TableScroll } from '@/components/ui/TableScroll';
@@ -20,9 +20,12 @@ import type { Person, Role } from '@/modules/identity/service';
 import { formatDay } from '@/modules/academics/schedule';
 import { eraseStudentAction } from '@/modules/privacy/actions';
 import { Select } from '@/components/ui/Select';
+import type { ImportTarget } from '@/modules/identity/batches';
+import { accounts, ImportStudents, type Imported } from './ImportStudents';
 
-// The accounts table takes the full width; adding a person, editing one (M10), archiving or deleting one (M16b) and
-// the one-time login slip open in a dialog. Active and Archived accounts are listed apart (BR-31).
+// The accounts table takes the full width; adding a person, editing one (M10), archiving or deleting one (M16b),
+// importing students (FR-AUTH-08) and the one-time login slip open in a dialog. Active and Archived accounts are
+// listed apart (BR-31). Once an import is made its login slips are all the page shows, to print.
 export function PeopleManager({
   people,
   role,
@@ -31,6 +34,8 @@ export function PeopleManager({
   tabs,
   clubName,
   site,
+  importTargets = [],
+  startImport = false,
 }: {
   people: Person[];
   role: Role;
@@ -39,9 +44,17 @@ export function PeopleManager({
   tabs: ReactNode;
   clubName: string;
   site: string;
+  importTargets?: ImportTarget[];
+  startImport?: boolean; // /admin/people?import=1
 }) {
   const router = useRouter();
   const dialog = useRef<HTMLDialogElement>(null);
+  const importDialog = useRef<HTMLDialogElement>(null);
+  const [importKey, setImportKey] = useState(startImport ? 1 : 0); // a fresh import each time
+  const [imported, setImported] = useState<Imported | null>(null);
+  useEffect(() => {
+    if (startImport) importDialog.current?.showModal();
+  }, [startImport]);
   const [view, setView] = useState<'add' | 'slip' | 'edit' | 'archive' | 'delete' | null>(null);
   const [editing, setEditing] = useState<Person | null>(null);
   const active = people.filter((p) => p.active);
@@ -92,6 +105,24 @@ export function PeopleManager({
     });
   }
 
+  if (imported)
+    return (
+      <>
+        <PageHeader eyebrow="People" title="Import students" />
+        <SlipSheet
+          title={`${accounts(imported.slips.length)} created${imported.enrolled ? ` and enrolled in ${imported.enrolled}` : ''}`}
+          clubName={clubName}
+          site={site}
+          className={imported.enrolled ?? undefined}
+          slips={imported.slips}
+          onDone={() => {
+            setImported(null);
+            router.refresh();
+          }}
+        />
+      </>
+    );
+
   return (
     <>
       <PageHeader
@@ -99,9 +130,16 @@ export function PeopleManager({
         title="People"
         actions={
           <>
-            <Link className="btn" href="/admin/people/import">
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                setImportKey((k) => k + 1);
+                importDialog.current?.showModal();
+              }}
+            >
               Import students
-            </Link>
+            </button>
             <button type="button" className="btn primary" onClick={openAdd}>
               Add a person
             </button>
@@ -238,6 +276,32 @@ export function PeopleManager({
               showSlip(s);
               // Show the new person in the list: switch to their tab (the slip stays on screen).
               if (createdRole !== role) router.push(`/admin/people?role=${createdRole}`);
+            }}
+          />
+        )}
+      </dialog>
+
+      <dialog
+        ref={importDialog}
+        className="dialog wide flat"
+        aria-labelledby="import-title"
+        onClose={() => {
+          if (startImport) router.replace(`/admin/people?role=${role}`, { scroll: false });
+        }}
+      >
+        <div className="spread">
+          <h2 id="import-title">Import students</h2>
+          <button type="button" className="btn ghost" onClick={() => importDialog.current?.close()}>
+            Close
+          </button>
+        </div>
+        {importKey > 0 && (
+          <ImportStudents
+            key={importKey}
+            targets={importTargets}
+            onCreated={(done) => {
+              importDialog.current?.close();
+              setImported(done);
             }}
           />
         )}

@@ -1644,11 +1644,14 @@ tbody th {
 .dialog.xwide {
   width: min(1120px, calc(100vw - 32px));
 }
-.dialog.xwide > .spread {
+.dialog.xwide > .spread,
+.dialog.flat > .spread {
   margin-bottom: 16px;
 }
-/* Inside the dialog the form and the preview are its two halves, not cards of their own. */
-.dialog.xwide .card {
+/* Inside the dialog the form and the preview are its two halves, not cards of their own (and the import's file and
+   preview, in .flat). */
+.dialog.xwide .card,
+.dialog.flat .card {
   border: 0;
   padding: 0;
   box-shadow: none;
@@ -4446,4 +4449,37 @@ button.link {
   font: inherit;
   text-decoration: underline;
   cursor: pointer;
+}
+
+/* Numbered pages under a table (audit log; owner, 2026-10-31): "Showing 51–100 of 230 entries", then Previous,
+   the page numbers and Next. This page is a quiet filled square; the others are ghost buttons. */
+.list-bar.foot {
+  border-bottom: 0;
+  border-top: 1px solid var(--line);
+}
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.pager .num {
+  min-width: 36px;
+  padding: 0 8px;
+}
+.pager [aria-current='page'] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  cursor: default;
+}
+.pager [aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: default;
+}
+.pager [aria-disabled='true']:hover {
+  background: transparent;
+}
+.pager .gap {
+  padding: 0 4px;
+  color: var(--muted);
 }

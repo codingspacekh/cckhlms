@@ -16,12 +16,16 @@ const sideways = (page: Page) =>
     [...document.querySelectorAll('.tw')].filter((t) => t.scrollWidth > t.clientWidth + 1).map((t) => t.getAttribute('aria-label')),
   );
 
+// A short window, so the Schedule page (its make-up form now in a dialog) still scrolls far enough.
+const SHORT = { width: 1280, height: 520 };
+
 test.describe('teacher', () => {
   test.use({ storageState: stateFile('teacher') });
 
   test('a link clicked part-way down a long page opens the next page at the top', async ({ page }) => {
     // Next.js alone kept the old position whenever part of the new page was on screen, which depended on how
     // far down you were: so try several, from the long Schedule page, through the sidebar and the page itself.
+    await page.setViewportSize(SHORT); // the Schedule page is long enough to scroll 450px
     const sections = page.getByRole('group', { name: `${c.className} sections` });
     for (const from of [150, 300, 450]) {
       for (const to of ['Students', 'Weeks']) {
@@ -51,6 +55,7 @@ test.describe('teacher', () => {
   }
 
   test('Back returns to where you were on the previous page', async ({ page }) => {
+    await page.setViewportSize(SHORT);
     await page.goto(`/teacher/classes/${c.classId}/schedule`);
     await page.evaluate(() => scrollTo(0, 450));
     await expect.poll(() => page.evaluate(() => scrollY)).toBe(450);

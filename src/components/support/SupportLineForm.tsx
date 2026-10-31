@@ -1,5 +1,4 @@
 'use client';
-import Link from 'next/link';
 import { useActionState, useId, useState } from 'react';
 import { DateField, TimeField } from '@/components/ui/DateTimeFields';
 import { Select } from '@/components/ui/Select';
@@ -9,12 +8,19 @@ import { saveSupportLineAction } from '@/modules/support/actions';
 import { SUPPORT_MESSAGE_MAX, SUPPORT_MINUTES } from '@/modules/support/rules';
 import type { Candidate, LineValues } from '@/modules/support/support-lines';
 
-type Props = { candidates: Candidate[]; picked: string[]; lastMeetingUrl: string | null; line?: LineValues | null };
+type Props = {
+  candidates: Candidate[];
+  picked: string[];
+  lastMeetingUrl: string | null;
+  line?: LineValues | null;
+  titleId?: string;
+  onCancel: () => void; // it opens in a dialog (owner, 2026-10-31)
+};
 
 // A new support line, or a change to one (FR-ADM-18, BR-29; M14c, prototype screen 6). The students ticked on Weekly
 // reports arrive in it; any other student in a class can be added, found by name or class. Their class teachers are
 // told too.
-export function SupportLineForm({ candidates, picked, lastMeetingUrl, line }: Props) {
+export function SupportLineForm({ candidates, picked, lastMeetingUrl, line, titleId, onCancel }: Props) {
   const [result, formAction, saving] = useActionState(saveSupportLineAction, null);
   const [ids, setIds] = useState(picked);
   const id = useId();
@@ -27,7 +33,7 @@ export function SupportLineForm({ candidates, picked, lastMeetingUrl, line }: Pr
 
   return (
     <form className="card stack" action={formAction} aria-label={title}>
-      <h2>{title}</h2>
+      <h2 id={titleId}>{title}</h2>
       {changing && <input type="hidden" name="lineId" value={line!.id!} />}
       {rows.map((r) => (
         <input key={r.enrolmentId} type="hidden" name="enrolmentIds" value={r.enrolmentId} />
@@ -136,9 +142,9 @@ export function SupportLineForm({ candidates, picked, lastMeetingUrl, line }: Pr
         </p>
       )}
       <div className="row end">
-        <Link className="btn ghost" href="/admin/support-lines">
+        <button type="button" className="btn ghost" onClick={onCancel}>
           Cancel
-        </Link>
+        </button>
         <button type="submit" className="btn primary" disabled={saving}>
           {changing ? 'Save changes' : 'Create and send'}
         </button>

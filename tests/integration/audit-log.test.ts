@@ -271,7 +271,7 @@ describe('reading the log (FR-SYS-02)', () => {
     expect(await ids('', '2027-01-09')).not.toContain(id);
   });
 
-  it(`shows ${PAGE_SIZE} at a time, with a link to older ones`, async () => {
+  it(`shows ${PAGE_SIZE} at a time, numbered, and how many there are`, async () => {
     for (let i = 0; i < PAGE_SIZE + 5; i++)
       await audit({
         actorId: admin.userId,
@@ -282,10 +282,12 @@ describe('reading the log (FR-SYS-02)', () => {
       });
     const first = await auditEntries(admin, filters({ group: 'settings' }));
     expect(first.rows).toHaveLength(PAGE_SIZE);
-    expect(first.next).toBe(first.rows.at(-1)!.id);
-    const second = await auditEntries(admin, filters({ group: 'settings', before: first.next }));
-    expect(second.rows).toHaveLength(6); // 5 more, and the one by a deleted person
+    expect([first.total, first.page]).toEqual([PAGE_SIZE + 6, 1]); // 5 more, and the one by a deleted person
+    const second = await auditEntries(admin, filters({ group: 'settings', page: 2 }));
+    expect(second.rows).toHaveLength(6);
+    expect(second.rows[0]!.id).toBeLessThan(first.rows.at(-1)!.id);
     expect(second.rows.at(-1)).toMatchObject({ by: null });
-    expect(second.next).toBeNull();
+    // A page past the end shows the last one.
+    expect(await auditEntries(admin, filters({ group: 'settings', page: 9 }))).toMatchObject({ page: 2, total: PAGE_SIZE + 6 });
   });
 });

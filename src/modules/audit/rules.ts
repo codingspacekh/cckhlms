@@ -94,7 +94,7 @@ export const actionsIn = (group: AuditGroup) =>
 export const PAGE_SIZE = 50;
 
 // From the address bar. With no group, everything except sign-ins is shown (they would bury the changes).
-export type AuditFilters = { group: AuditGroup | ''; person: string; from: string; to: string; before: number | null };
+export type AuditFilters = { group: AuditGroup | ''; person: string; from: string; to: string; page: number };
 type Params = Record<string, string | string[] | undefined>;
 
 const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && new Date(`${s}T00:00:00Z`).toISOString().startsWith(s);
@@ -107,14 +107,28 @@ export function parseAuditFilters(p: Params): AuditFilters {
   from = isDate(from) ? from : '';
   to = isDate(to) ? to : '';
   if (from && to && from > to) [from, to] = [to, from];
-  const before = Number(one(p.before));
+  const page = Number(one(p.page));
   return {
     group: group in AUDIT_GROUPS ? (group as AuditGroup) : '',
     person: one(p.person).trim().slice(0, 60),
     from,
     to,
-    before: Number.isSafeInteger(before) && before > 0 ? before : null,
+    page: Number.isSafeInteger(page) && page > 0 && page <= 100_000 ? page : 1,
   };
+}
+
+// Numbered pages (owner, 2026-10-31): the first, the last, and the ones either side of this one. A gap stands for
+// the pages left out, unless it would hide just one page; then that page is shown instead.
+export function pageNumbers(page: number, pages: number): (number | 'gap')[] {
+  const shown = [...new Set([1, page - 1, page, page + 1, pages])].filter((n) => n >= 1 && n <= pages).sort((a, b) => a - b);
+  const out: (number | 'gap')[] = [];
+  for (const n of shown) {
+    const last = out.at(-1);
+    if (typeof last === 'number' && n - last === 2) out.push(last + 1);
+    else if (typeof last === 'number' && n - last > 2) out.push('gap');
+    out.push(n);
+  }
+  return out;
 }
 
 // ── Details ──────────────────────────────────────────────────────────────────────────────────────────────────

@@ -26,7 +26,7 @@ const candidates = [
   { enrolmentId: 'e-nita', name: 'Nita Kong', className: 'Web Basics · Sun 10:00', teachers: ['Dara Kim'], why: 'Zoom kept dropping.' },
 ];
 const form = (over: Partial<Parameters<typeof SupportLineForm>[0]> = {}) =>
-  render(<SupportLineForm candidates={candidates} picked={['e-kosal', 'e-nita']} lastMeetingUrl={ZOOM} {...over} />);
+  render(<SupportLineForm candidates={candidates} picked={['e-kosal', 'e-nita']} lastMeetingUrl={ZOOM} onCancel={() => {}} {...over} />);
 const students = () => within(screen.getByRole('table', { name: 'Students in this support line' }));
 const told = () => screen.getByTestId('teachers-told').textContent;
 const finder = () => within(screen.getByRole('region', { name: 'Add students' }));
