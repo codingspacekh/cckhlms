@@ -96,14 +96,21 @@ export async function resetForSlipsAction(classId: string, studentIds: string[])
   return toResult(async () => ({ ok: true, data: (await resetForSlips(await currentActor(), classId, studentIds)).slips }));
 }
 
-// FR-AUTH-06 (M13): My account → Change password, for admins and teachers.
+// FR-AUTH-06 (M13, M16a): My account → Change password, for everyone.
 export async function changeOwnPasswordAction(_prev: FormResult | null, form: FormData): Promise<FormResult> {
   return toResult(async () => {
-    await changeOwnPassword(await currentActor(), {
+    const actor = await currentActor();
+    await changeOwnPassword(actor, {
       current: formText(form, 'current') ?? '',
       next: formText(form, 'next') ?? '',
       again: formText(form, 'again') ?? '',
     });
-    return { ok: true, message: 'Password changed. Other devices were signed out. Save the new one in your password manager.' };
+    const staff = actor?.role.split(',').some((r) => r === 'admin' || r === 'teacher');
+    return {
+      ok: true,
+      message: staff
+        ? 'Password changed. Other devices were signed out. Save the new one in your password manager.'
+        : 'Password changed. Use your new password next time you sign in.',
+    };
   });
 }

@@ -1,5 +1,5 @@
 'use client';
-// FR-AUTH-06 (M13): an admin or teacher changes their own password. The form empties after every try, so a
+// FR-AUTH-06 (M13, M16a): anyone changes their own password. The form empties after every try, so a
 // password is never sent back to the page; a mistake is shown under the field it is about.
 import { useActionState } from 'react';
 import { changeOwnPasswordAction } from '@/modules/identity/actions';
@@ -15,7 +15,7 @@ const FIELDS = [
   { name: 'again', label: 'New password again', autoComplete: 'new-password' },
 ] as const;
 
-export function ChangePasswordForm({ forgotHint }: { forgotHint?: string }) {
+export function ChangePasswordForm({ forgotHint, help: newHelp }: { forgotHint?: string; help?: string }) {
   const [result, formAction, saving] = useActionState(changeOwnPasswordAction, null);
   const errorFor = (name: string) => (result && !result.ok && (result.field ?? 'current') === name ? result.error : null);
   return (
@@ -45,7 +45,7 @@ export function ChangePasswordForm({ forgotHint }: { forgotHint?: string }) {
             />
             {help && (
               <span id={help} className="xs muted field-help">
-                {'help' in f && f.help}
+                {(f.name === 'next' && newHelp) || ('help' in f && f.help)}
               </span>
             )}
             {error && (

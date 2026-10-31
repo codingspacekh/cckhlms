@@ -124,7 +124,7 @@ export async function resetPassword(actor: Actor | null, userId: string) {
   return { username: target.username ?? '', name: target.name, password };
 }
 
-// FR-AUTH-06 (M13): an admin or teacher chooses their own password. Wrong current passwords count like wrong sign-ins
+// FR-AUTH-06 (M13, M16a): anyone signed in chooses their own password. Wrong current passwords count like wrong sign-ins
 // (FR-AUTH-11), so this can't be used to guess. The session it's done from stays; every other one ends.
 export async function changeOwnPassword(actor: Actor | null, input: { current: string; next: string; again: string }) {
   assertCan(actor, 'password.change_own');

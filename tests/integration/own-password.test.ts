@@ -1,9 +1,9 @@
-// FR-AUTH-06 (M13): admins and teachers change their own password. FR-AUTH-11: wrong current passwords count
+// FR-AUTH-06 (M13, M16a): everyone changes their own password. FR-AUTH-11: wrong current passwords count
 // like wrong sign-ins. NFR-11: audited.
 import { Pool } from 'pg';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { pool as appPool } from '@/db/client';
-import { changeOwnPassword } from '@/modules/identity/service';
+import { changeOwnPassword, resetPassword } from '@/modules/identity/service';
 import type { Actor } from '@/server/actor';
 import { auth } from '@/server/auth';
 import { ForbiddenError, ValidationError } from '@/server/errors';
@@ -50,7 +50,7 @@ beforeEach(async () => {
 });
 
 describe('changing my own password', () => {
-  it.each(['teacher', 'admin'])('a %s changes it: the new one works, this session stays, the others end', async (role) => {
+  it.each(['teacher', 'admin', 'student'])('a %s changes it: the new one works, this session stays, the others end', async (role) => {
     const me = await signedIn('sophea', role);
     await change(me, 'old-password-1', 'new-password-123');
     expect(await sessionIds(me.userId)).toEqual([me.sessionId]);
@@ -59,9 +59,17 @@ describe('changing my own password', () => {
     expect(await changes()).toEqual([{ actor_id: me.userId, entity_id: me.userId }]);
   });
 
-  it('refuses a student, and someone signed out', async () => {
-    const student = await signedIn('bopha', 'student');
-    await expect(change(student, 'old-password-1', 'new-password-123')).rejects.toBeInstanceOf(ForbiddenError);
+  it('M16a: a student who forgets the password they chose still gets a new one from Admin', async () => {
+    const bopha = await signedIn('bopha', 'student');
+    await change(bopha, 'old-password-1', 'my-own-password');
+    const admin = await signedIn('club.admin', 'admin');
+    const slip = await resetPassword(admin, bopha.userId);
+    expect(await signIn('bopha', 'my-own-password')).toBe(401);
+    expect(await signIn('bopha', slip.password)).toBe(200);
+  });
+
+  it('refuses someone signed out', async () => {
+    await signedIn('bopha', 'student');
     await expect(change(null, 'old-password-1', 'new-password-123')).rejects.toBeInstanceOf(ForbiddenError);
     expect(await signIn('bopha', 'old-password-1')).toBe(200);
   });

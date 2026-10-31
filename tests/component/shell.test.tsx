@@ -56,6 +56,7 @@ describe('Sidebar', () => {
   it.each([
     ['admin', '/admin/account'],
     ['teacher', '/teacher/account'],
+    ['student', '/student/account'], // M16a
   ] as const)('FR-AUTH-06: a signed-in %s’s name links to My account', (role, href) => {
     pathname = href;
     render(<Sidebar role={role} user={{ name: 'Sophea Chan', roleLabel: 'Teacher' }} />);
@@ -63,11 +64,6 @@ describe('Sidebar', () => {
     expect(me.getAttribute('href')).toBe(href);
     expect(me.getAttribute('aria-current')).toBe('page');
     expect(me.getAttribute('title')).toBe('My account');
-  });
-
-  it('FR-AUTH-06: a student’s name is not a link (students don’t change their own password)', () => {
-    render(<Sidebar role="student" user={{ name: 'Bopha Lim', roleLabel: 'Student' }} />);
-    expect(screen.queryByRole('link', { name: /Bopha Lim/ })).toBeNull();
   });
 
   it('shows who is signed in and a sign-out button', () => {
