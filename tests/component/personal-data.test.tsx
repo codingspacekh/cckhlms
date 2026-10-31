@@ -1,5 +1,5 @@
 // NFR-07: on the student's page, Admin downloads their data or deletes their personal data, after typing their
-// username; the People list then shows them as deleted, with nothing left to switch on or reset.
+// username; People's Archived list then shows them as deleted, with nothing left to restore or reset.
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
@@ -87,6 +87,10 @@ describe('the People list', () => {
             guardianPhone: null,
             phone: null,
             notes: null,
+            classes: [],
+            archivedAt: '2026-08-03',
+            deletable: false,
+            keptBecause: null,
           },
           {
             id: 's2',
@@ -99,20 +103,25 @@ describe('the People list', () => {
             guardianPhone: null,
             phone: null,
             notes: null,
+            classes: [],
+            archivedAt: '2026-08-03',
+            deletable: false,
+            keptBecause: null,
           },
         ]}
         role="student"
+        show="archived"
         selfId="a1"
         tabs={null}
         clubName="CCKH Coding Club"
         site="lms.cckh.dev"
       />,
     );
-    const [deleted, chenda] = screen.getAllByRole('row').slice(1);
-    expect(within(deleted!).getByText('Personal data deleted')).toBeTruthy();
-    expect(within(deleted!).queryByRole('button', { name: 'Reset password' })).toBeNull();
-    expect(within(deleted!).queryByRole('button', { name: 'Switch on' })).toBeNull();
-    expect(within(deleted!).getByRole('link', { name: 'Report for Deleted student' })).toBeTruthy();
-    expect(within(chenda!).getByRole('button', { name: 'Reset password' })).toBeTruthy();
+    const rows = screen.getAllByRole('row').slice(1);
+    expect(rows).toHaveLength(1); // Chenda is active, so she's on the Active list
+    const deleted = rows[0]!;
+    expect(within(deleted).getByText('Personal data deleted')).toBeTruthy();
+    expect(within(deleted).queryByRole('button')).toBeNull();
+    expect(within(deleted).getByRole('link', { name: 'Report for Deleted student' })).toBeTruthy();
   });
 });

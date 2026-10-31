@@ -61,9 +61,11 @@ export async function resetPasswordAction(userId: string): Promise<ActionResult>
 
 export async function setActiveAction(userId: string, active: boolean): Promise<ActionResult> {
   return toResult(async () => {
-    await setActive(await currentActor(), userId, active);
-    revalidatePath('/admin/people');
-    return { ok: true, message: active ? 'Account switched on.' : 'Account switched off and signed out.' };
+    const { leftClasses } = await setActive(await currentActor(), userId, active);
+    revalidatePath('/', 'layout'); // rosters and class pages lose a student who leaves
+    if (active) return { ok: true, message: 'Restored: they can sign in again. To put them in a class, use the class’s page.' };
+    const left = leftClasses.length ? ` They left ${leftClasses.join(', ')} from today.` : '';
+    return { ok: true, message: `Archived and signed out.${left}` };
   });
 }
 

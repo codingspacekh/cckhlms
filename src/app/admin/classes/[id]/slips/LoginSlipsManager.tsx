@@ -128,7 +128,7 @@ export function LoginSlipsManager({
                         Active
                       </Pill>
                     ) : (
-                      <Pill icon="x">Switched off</Pill>
+                      <Pill icon="x">Archived</Pill>
                     )}
                   </td>
                 </tr>

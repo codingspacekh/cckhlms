@@ -18,13 +18,16 @@ import {
   type Slip,
 } from '@/modules/identity/actions';
 import type { Person, Role } from '@/modules/identity/service';
+import { formatDay } from '@/modules/academics/schedule';
+import { eraseStudentAction } from '@/modules/privacy/actions';
 import { Select } from '@/components/ui/Select';
 
-// The accounts table takes the full width; adding a person, editing one (M10) and the one-time login slip open in a
-// dialog.
+// The accounts table takes the full width; adding a person, editing one (M10), archiving or deleting one (M16b) and
+// the one-time login slip open in a dialog. Active and Archived accounts are listed apart (BR-31).
 export function PeopleManager({
   people,
   role,
+  show = 'active',
   selfId,
   tabs,
   clubName,
@@ -32,6 +35,7 @@ export function PeopleManager({
 }: {
   people: Person[];
   role: Role;
+  show?: 'active' | 'archived';
   selfId: string;
   tabs: ReactNode;
   clubName: string;
@@ -39,8 +43,11 @@ export function PeopleManager({
 }) {
   const router = useRouter();
   const dialog = useRef<HTMLDialogElement>(null);
-  const [view, setView] = useState<'add' | 'slip' | 'edit' | null>(null);
+  const [view, setView] = useState<'add' | 'slip' | 'edit' | 'archive' | 'delete' | null>(null);
   const [editing, setEditing] = useState<Person | null>(null);
+  const active = people.filter((p) => p.active);
+  const archived = people.filter((p) => !p.active);
+  const listed = show === 'active' ? active : archived;
   const [formKey, setFormKey] = useState(0); // a fresh form each time the dialog opens
   const [slip, setSlip] = useState<Slip | null>(null);
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
@@ -56,6 +63,13 @@ export function PeopleManager({
     setStatus(null);
     setFormKey((k) => k + 1);
     setView('edit');
+    dialog.current?.showModal();
+  }
+  function openFor(v: 'archive' | 'delete', p: Person) {
+    setEditing(p);
+    setStatus(null);
+    setFormKey((k) => k + 1);
+    setView(v);
     dialog.current?.showModal();
   }
   function edited(r: ActionResult) {
@@ -97,6 +111,20 @@ export function PeopleManager({
       />
       {tabs}
       <section className="card flush" aria-label="Accounts">
+        <div className="list-bar">
+          <nav className="seg" aria-label="Show">
+            {(['active', 'archived'] as const).map((w) => (
+              <Link key={w} href={`/admin/people?role=${role}&show=${w}`} aria-current={w === show ? 'page' : undefined}>
+                {w === 'active' ? `Active (${active.length})` : `Archived (${archived.length})`}
+              </Link>
+            ))}
+          </nav>
+          <span className="xs muted">
+            {show === 'active'
+              ? 'Accounts that can sign in. Archived ones move to Archived.'
+              : 'They can’t sign in and are in no class. Their history is kept.'}
+          </span>
+        </div>
         {status && (
           <p className={`note ${status.ok ? '' : 'bad'} m16`} role={status.ok ? 'status' : 'alert'}>
             {status.text}
@@ -108,40 +136,40 @@ export function PeopleManager({
               <tr>
                 <th scope="col">Name</th>
                 <th scope="col">Username</th>
-                {role === 'student' && <th scope="col">Guardian phone</th>}
-                <th scope="col">Status</th>
+                {show === 'active' && role === 'student' && <th scope="col">Guardian phone</th>}
+                {show === 'active' && role !== 'admin' && <th scope="col">{role === 'student' ? 'Classes now' : 'Teaches now'}</th>}
+                {show === 'archived' && <th scope="col">Status</th>}
                 <th scope="col">
                   <span className="sr-only">Actions</span>
                 </th>
               </tr>
             </thead>
             <tbody>
-              {people.length === 0 && (
+              {listed.length === 0 && (
                 <tr>
                   <td colSpan={5} className="muted">
-                    No accounts yet. Add the first one with “Add a person”.
+                    {show === 'archived' ? 'Nothing archived.' : 'No accounts yet. Add the first one with “Add a person”.'}
                   </td>
                 </tr>
               )}
-              {people.map((p) => (
+              {listed.map((p) => (
                 <tr key={p.id}>
                   <td className="strong">{p.name}</td>
-                  <td className="mono">{p.username}</td>
-                  {role === 'student' && <td>{p.guardianPhone ?? '—'}</td>}
-                  <td>
-                    {p.erased ? (
-                      <Pill icon="x">Personal data deleted</Pill>
-                    ) : p.active ? (
-                      <Pill tone="good" icon="check">
-                        Active
-                      </Pill>
-                    ) : (
-                      <Pill icon="x">Switched off</Pill>
-                    )}
-                  </td>
+                  <td className="mono">{p.username || '—'}</td>
+                  {show === 'active' && role === 'student' && <td>{p.guardianPhone ?? '—'}</td>}
+                  {show === 'active' && role !== 'admin' && <td className="text small muted">{p.classes.join(', ') || '—'}</td>}
+                  {show === 'archived' && (
+                    <td>
+                      {p.erased ? (
+                        <Pill icon="x">Personal data deleted</Pill>
+                      ) : (
+                        <Pill icon="x">{p.archivedAt ? `Archived ${formatDay(p.archivedAt)}` : 'Archived'}</Pill>
+                      )}
+                    </td>
+                  )}
                   <td>
                     <div className="row end nowrap">
-                      {!p.erased && (
+                      {show === 'active' && (
                         <button type="button" className="btn sm" aria-label={`Edit ${p.name}`} onClick={() => openEdit(p)}>
                           Edit
                         </button>
@@ -151,20 +179,36 @@ export function PeopleManager({
                           Report
                         </Link>
                       )}
-                      {!p.erased && (
+                      {show === 'active' && (
                         <button type="button" className="btn sm" disabled={pending} onClick={() => act(() => resetPasswordAction(p.id))}>
                           Reset password
                         </button>
                       )}
-                      {p.id !== selfId && !p.erased && (
-                        <button
-                          type="button"
-                          className="btn sm ghost"
-                          disabled={pending}
-                          onClick={() => act(() => setActiveAction(p.id, !p.active))}
-                        >
-                          {p.active ? 'Switch off' : 'Switch on'}
+                      {show === 'active' && p.id !== selfId && (
+                        <button type="button" className="btn sm ghost" onClick={() => openFor('archive', p)}>
+                          Archive
                         </button>
+                      )}
+                      {show === 'archived' && !p.erased && (
+                        <>
+                          <button
+                            type="button"
+                            className="btn sm"
+                            aria-label={`Restore ${p.name}`}
+                            disabled={pending}
+                            onClick={() => act(() => setActiveAction(p.id, true))}
+                          >
+                            Restore
+                          </button>
+                          <button
+                            type="button"
+                            className="btn sm ghost"
+                            aria-label={`Delete ${p.name}`}
+                            onClick={() => openFor('delete', p)}
+                          >
+                            Delete…
+                          </button>
+                        </>
                       )}
                     </div>
                   </td>
@@ -177,6 +221,12 @@ export function PeopleManager({
 
       <dialog ref={dialog} className="dialog" aria-labelledby="people-dialog-title" onClose={() => setView(null)}>
         {view === 'slip' && slip && <LoginSlip slip={slip} clubName={clubName} site={site} onDone={() => dialog.current?.close()} />}
+        {view === 'archive' && editing && (
+          <ArchiveDialog key={formKey} person={editing} onDone={edited} onCancel={() => dialog.current?.close()} />
+        )}
+        {view === 'delete' && editing && (
+          <DeleteDialog key={formKey} person={editing} onDone={edited} onCancel={() => dialog.current?.close()} />
+        )}
         {view === 'edit' && editing && (
           <EditPersonForm key={formKey} person={editing} role={role} onDone={edited} onCancel={() => dialog.current?.close()} />
         )}
@@ -382,6 +432,149 @@ function EditPersonForm({
             {saving ? 'Saving…' : 'Save details'}
           </button>
         </div>
+      </div>
+    </form>
+  );
+}
+
+// BR-31: archiving says what will happen first, naming the classes a student leaves.
+function ArchiveDialog({ person: p, onDone, onCancel }: { person: Person; onDone: (r: ActionResult) => void; onCancel: () => void }) {
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const student = p.role.split(',').includes('student');
+  const archive = () =>
+    start(async () => {
+      const r = await setActiveAction(p.id, false);
+      if (r.ok) onDone(r);
+      else setError(r.error);
+    });
+  return (
+    <section className="stack" role="region" aria-labelledby="people-dialog-title">
+      <h2 id="people-dialog-title">Archive {p.name}?</h2>
+      <ul className="small">
+        <li>They’re signed out and can’t sign in.</li>
+        <li>They move from Active to Archived.</li>
+        {student && p.classes.length > 0 && (
+          <li>
+            They leave the classes they’re still in, from today: <strong>{p.classes.join(', ')}</strong>.
+          </li>
+        )}
+        {!student && p.classes.length > 0 && (
+          <li>
+            They still teach <strong>{p.classes.join(', ')}</strong>. Give those classes another teacher on the class page.
+          </li>
+        )}
+        <li>Their marks, attendance, reports and certificates stay.</li>
+      </ul>
+      <p className="small muted">You can restore the account later. Restoring doesn’t put anyone back in a class.</p>
+      {error && (
+        <p className="note bad" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="row end">
+        <button type="button" className="btn ghost" onClick={onCancel}>
+          Cancel
+        </button>
+        <button type="button" className="btn primary" disabled={pending} onClick={archive}>
+          Archive {p.name}
+        </button>
+      </div>
+    </section>
+  );
+}
+
+// BR-23, NFR-07: an archived account is deleted for good only when nothing depends on it; a used student's personal
+// data can be deleted instead (typing the username to confirm); a used teacher's or admin's account stays.
+function DeleteDialog({ person: p, onDone, onCancel }: { person: Person; onDone: (r: ActionResult) => void; onCancel: () => void }) {
+  const [typed, setTyped] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const run = (fn: () => Promise<ActionResult>) =>
+    start(async () => {
+      const r = await fn();
+      if (r.ok) onDone(r);
+      else setError(r.error);
+    });
+  const problem = error && (
+    <p className="note bad" role="alert">
+      {error}
+    </p>
+  );
+
+  if (p.deletable)
+    return (
+      <section className="stack" role="region" aria-labelledby="people-dialog-title">
+        <h2 id="people-dialog-title">Delete {p.name} for good?</h2>
+        <p className="small">
+          {p.name} was never in a class and has nothing in the LMS, so the account can be removed completely. This can’t be undone.
+        </p>
+        {problem}
+        <div className="row end">
+          <button type="button" className="btn ghost" onClick={onCancel}>
+            Cancel
+          </button>
+          <button type="button" className="btn primary" disabled={pending} onClick={() => run(() => deleteAccountAction(p.id))}>
+            Delete {p.name}
+          </button>
+        </div>
+      </section>
+    );
+
+  if (!p.role.split(',').includes('student'))
+    return (
+      <section className="stack" role="region" aria-labelledby="people-dialog-title">
+        <h2 id="people-dialog-title">{p.name}’s account stays</h2>
+        <p className="small">
+          {p.keptBecause}, so the account can’t be deleted: the club’s records must stay true. It stays archived, and can’t sign in.
+        </p>
+        <div className="row end">
+          <button type="button" className="btn primary" onClick={onCancel}>
+            Close
+          </button>
+        </div>
+      </section>
+    );
+
+  return (
+    <form
+      method="post"
+      className="stack"
+      aria-labelledby="people-dialog-title"
+      onSubmit={(e) => {
+        e.preventDefault();
+        run(() => eraseStudentAction(p.id, typed));
+      }}
+    >
+      <h2 id="people-dialog-title">Delete {p.name}?</h2>
+      <p className="note warn">{p.keptBecause}, so the account itself stays: their classes’ results must stay true.</p>
+      <p className="small">
+        You can delete their <strong>personal data</strong> instead: name, username, guardian contact, notes, and what they wrote (hand-ins,
+        Q&amp;A posts, Playground projects). Their scores and attendance stay under “Deleted student”, and their certificates are revoked.{' '}
+        <strong>This can’t be undone.</strong>
+      </p>
+      <label className="f">
+        <span>
+          Type <span className="mono">{p.username}</span> to confirm
+        </span>
+        <input
+          name="confirm"
+          type="text"
+          autoComplete="off"
+          autoCapitalize="none"
+          spellCheck={false}
+          value={typed}
+          onChange={(e) => setTyped(e.target.value)}
+        />
+      </label>
+      {problem}
+      <div className="row end">
+        <button type="button" className="btn ghost" onClick={onCancel}>
+          Cancel
+        </button>
+        <button type="submit" className="btn primary" disabled={pending || typed.trim().toLowerCase() !== p.username.toLowerCase()}>
+          Delete personal data
+        </button>
       </div>
     </form>
   );

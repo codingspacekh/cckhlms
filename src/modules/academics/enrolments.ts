@@ -46,7 +46,7 @@ async function checkPlace(c: Awaited<ReturnType<typeof openClass>>, studentId: s
     .limit(1);
   if (!student || !(student.role ?? '').split(',').includes('student'))
     throw new ValidationError('That account is not a student.', 'studentId');
-  if (student.banned) throw new ValidationError(`${student.name}'s account is switched off. Switch it on first.`, 'studentId');
+  if (student.banned) throw new ValidationError(`${student.name}'s account is archived. Restore it first.`, 'studentId');
   const [already] = await db
     .select({ id: enrolment.id })
     .from(enrolment)

@@ -78,18 +78,78 @@ test('Admin resets a password: the old one stops working, the new one works', as
   await fresh.ctx.close();
 });
 
-test('a switched-off account cannot sign in, and is told why', async ({ page, browser }) => {
+// M16b · BR-31: a student who leaves is archived: out of their class and the Active list, can't sign in; Restore.
+async function putInAClass(username: string) {
+  Object.assign(process.env, { DATABASE_URL: E2E.databaseUrl, BETTER_AUTH_URL: E2E.lms, BETTER_AUTH_SECRET: E2E.secret });
+  const { db } = await import('../../src/db/client');
+  const { user } = await import('../../src/db/schema');
+  const { eq } = await import('drizzle-orm');
+  const { createTerm } = await import('../../src/modules/academics/terms');
+  const { createCourse } = await import('../../src/modules/academics/courses');
+  const { createClass } = await import('../../src/modules/academics/classes');
+  const { enrolStudent } = await import('../../src/modules/academics/enrolments');
+  const id = async (u: string) => (await db.select({ id: user.id }).from(user).where(eq(user.username, u)))[0]!.id;
+  const admin = { userId: await id('admin'), username: 'admin', name: 'Club Admin', role: 'admin', sessionId: 's' };
+  const term = await createTerm(admin, { year: 2031, number: 3, startDate: '2031-07-05', endDate: '2031-09-28' });
+  const course = await createCourse(admin, { code: 'M16B', name: 'Archive Course', defaultLanguage: 'python' });
+  const c = await createClass(admin, {
+    courseId: course.id,
+    termId: term.id,
+    day: 'sat',
+    startTime: '09:00',
+    minutes: 90,
+    firstDate: '2031-07-05',
+    weeks: 12,
+    leadTeacherId: await id('sophea'),
+    confirmClashes: true,
+  });
+  if (c.status !== 'created') throw new Error('class not created');
+  await enrolStudent(admin, c.classId, await id(username), { enrolledOn: '2031-07-05' });
+}
+
+test('Admin archives a student who left, finds them under Archived, and restores them', async ({ page, browser }) => {
   const kid = await addPerson(page, 'Student', 'Chenda Ouk');
+  await putInAClass(kid.username);
+  await page.goto('/admin/people?role=student');
   const row = page.getByRole('row', { name: /Chenda Ouk/ });
-  await row.getByRole('button', { name: 'Switch off' }).click();
-  await expect(row.getByText('Switched off')).toBeVisible();
+  await expect(row).toContainText('Archive Course');
+
+  await row.getByRole('button', { name: 'Archive' }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('heading', { name: 'Archive Chenda Ouk?' })).toBeVisible();
+  await expect(dialog).toContainText('They leave the classes they’re still in, from today: Archive Course');
+  await expectAccessible(page);
+  await dialog.getByRole('button', { name: 'Archive Chenda Ouk' }).click();
+  await expect(page.getByRole('status')).toContainText('Archived and signed out. They left Archive Course');
+  await expect(row).toHaveCount(0);
 
   const attempt = await signInFresh(browser, kid.username, kid.password, '198.18.0.14');
-  await expect(attempt.page.locator('form').getByRole('alert')).toHaveText('This account is switched off. Ask the club admin.');
+  await expect(attempt.page.locator('form').getByRole('alert')).toHaveText('This account is archived. Ask the club admin.');
   await attempt.ctx.close();
 
-  await row.getByRole('button', { name: 'Switch on' }).click();
-  await expect(row.getByText('Active')).toBeVisible();
+  await page
+    .getByRole('navigation', { name: 'Show' })
+    .getByRole('link', { name: /^Archived/ })
+    .click();
+  await expect(page).toHaveURL(/show=archived/);
+  const archived = page.getByRole('row', { name: /Chenda Ouk/ });
+  await expect(archived).toContainText(/Archived \d+ \w+ \d{4}/);
+  await expectAccessible(page);
+  await archived.getByRole('button', { name: 'Delete Chenda Ouk' }).click();
+  await expect(page.getByRole('dialog')).toContainText('Chenda Ouk is in 1 class');
+  await expect(page.getByRole('dialog').getByRole('button', { name: 'Delete personal data' })).toBeDisabled();
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
+
+  await archived.getByRole('button', { name: 'Restore Chenda Ouk' }).click();
+  await expect(page.getByRole('status')).toContainText('Restored');
+  await expect(archived).toHaveCount(0);
+  await page.goto('/admin/people?role=student');
+  const back = page.getByRole('row', { name: /Chenda Ouk/ });
+  await expect(back).toBeVisible();
+  await expect(back).not.toContainText('Archive Course'); // Restore doesn't put them back in the class
+  const fresh = await signInFresh(browser, kid.username, kid.password, '198.18.0.15');
+  await expect(fresh.page).toHaveURL(/\/student$/);
+  await fresh.ctx.close();
 });
 
 test('Admin changes the club name and it appears in the top bar', async ({ page }) => {

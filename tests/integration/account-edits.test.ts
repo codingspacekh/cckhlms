@@ -115,9 +115,9 @@ describe('deleting an account (BR-23)', () => {
     expect(await signIn(extra.username, extra.password)).toBe(401);
   });
 
-  it('refuses an account with history and offers Switch off instead', async () => {
+  it('refuses an account with history and offers Archive instead', async () => {
     await enrolStudent(admin, classId, student.userId, { enrolledOn: '2027-01-09', now: new Date('2027-01-05T03:00:00Z') });
-    await expect(deleteAccount(admin, student.userId)).rejects.toThrow(/in 1 class.*Switch it off/);
+    await expect(deleteAccount(admin, student.userId)).rejects.toThrow(/in 1 class.*Archive it instead/);
     await expect(deleteAccount(admin, teacher.userId)).rejects.toThrow(/teaches 1 class/);
     expect(await person('student', student.userId)).toBeDefined();
   });

@@ -15,6 +15,7 @@ vi.mock('@/modules/identity/actions', () => ({
   updateAccountAction: (...a: unknown[]) => updateAccountAction(...a),
   deleteAccountAction: (...a: unknown[]) => deleteAccountAction(...a),
 }));
+vi.mock('@/modules/privacy/actions', () => ({ eraseStudentAction: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
 const { PeopleManager } = await import('@/app/admin/people/PeopleManager');
 
@@ -32,7 +33,19 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-const base = { role: 'student', active: true, erased: false, guardianName: null, guardianPhone: null, phone: null, notes: null };
+const base = {
+  role: 'student',
+  active: true,
+  erased: false,
+  guardianName: null,
+  guardianPhone: null,
+  phone: null,
+  notes: null,
+  classes: [],
+  archivedAt: null,
+  deletable: false,
+  keptBecause: null,
+};
 const bopha: Person = { ...base, id: 's1', name: 'Bopha Lim', username: 'bopha.l', guardianName: 'Mrs Lim', guardianPhone: '012 345 678' };
 const erased: Person = { ...base, id: 's2', name: 'Deleted student', username: '', active: false, erased: true };
 const sophea: Person = {
@@ -118,12 +131,12 @@ describe('deleting an unused account (BR-23)', () => {
   it('explains why an account in use is kept', async () => {
     deleteAccountAction.mockResolvedValue({
       ok: false,
-      error: "Bopha Lim is in 1 class, so the account can't be deleted. Switch it off instead.",
+      error: "Bopha Lim is in 1 class, so the account can't be deleted. Archive it instead.",
     });
     show([bopha]);
     fireEvent.click(screen.getByRole('button', { name: 'Edit Bopha Lim' }));
     fireEvent.click(within(form()).getByRole('button', { name: 'Delete account' }));
     fireEvent.click(within(form()).getByRole('button', { name: 'Yes, delete Bopha Lim' }));
-    expect((await within(form()).findByRole('alert')).textContent).toMatch(/Switch it off instead/);
+    expect((await within(form()).findByRole('alert')).textContent).toMatch(/Archive it instead/);
   });
 });

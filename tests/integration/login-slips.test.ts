@@ -9,7 +9,7 @@ import { createCourse } from '@/modules/academics/courses';
 import { enrolStudent, withdrawEnrolment } from '@/modules/academics/enrolments';
 import { createTerm } from '@/modules/academics/terms';
 import { resetForSlips, slipStudents } from '@/modules/identity/batches';
-import { createAccount, setActive } from '@/modules/identity/service';
+import { createAccount } from '@/modules/identity/service';
 import type { Actor } from '@/server/actor';
 import { auth } from '@/server/auth';
 import { ForbiddenError } from '@/server/errors';
@@ -65,7 +65,8 @@ beforeAll(async () => {
   }
   const dara = (await one(`select id from enrolment where student_id = $1`, [student['Dara Pen']!.id])).id;
   await withdrawEnrolment(admin, dara, { on: '2027-01-16' });
-  await setActive(admin, student['Kosal Meas']!.id, false);
+  // Switched off before M16, so still in the class: archiving now takes a student out of their classes (BR-31).
+  await pool.query('update "user" set banned = true where id = $1', [student['Kosal Meas']!.id]);
 });
 afterAll(async () => {
   await pool.end();
@@ -73,7 +74,7 @@ afterAll(async () => {
 });
 
 describe('choosing the students', () => {
-  it('lists the students in the class now, and says whose account is switched off', async () => {
+  it('lists the students in the class now, and says whose account is archived', async () => {
     const r = await slipStudents(admin, classId);
     expect(r.className).toBe('Python Level 1 · Sat 09:00');
     expect(r.students).toEqual([
@@ -97,7 +98,7 @@ describe('new passwords for the slips', () => {
     await expect(resetForSlips(admin, classId, [bopha, student['Mony Ly']!.id])).rejects.toThrow('Mony Ly is not in this class.');
     await expect(resetForSlips(admin, classId, [bopha, student['Dara Pen']!.id])).rejects.toThrow('Dara Pen is not in this class.');
     await expect(resetForSlips(admin, classId, [bopha, student['Kosal Meas']!.id])).rejects.toThrow(
-      "Kosal Meas's account is switched off. Switch it on first.",
+      "Kosal Meas's account is archived. Restore it first.",
     );
     await expect(resetForSlips(admin, classId, [])).rejects.toThrow('Choose at least one student.');
     expect(await hashes()).toEqual(before);
