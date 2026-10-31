@@ -870,7 +870,7 @@ Built in five steps, one PR each, each from `main`. Each is merged only after th
 >
 > Seen while merging, unrelated to M17 and each passed on a rerun: three flaky tests, the Run panel's input-focus component test, `lessons.spec` (the week 9 editor) and the gradebook integration test "typing a score creates a submission without files".
 
-### M18 — More course languages (3 days)
+### M18 — More course languages (3 days) — ✅ DONE 2026-11-01 (owner signed off; PRs #84, #87)
 **Why:** the owner asked on 2026-10-31 for the club's other courses, such as **Roblox** and **Scratch**: today a course can only be Python, Java or HTML/CSS/JS. These need no preview or Run. Students hand in a project file or a link, and the teacher opens it in Scratch or Roblox Studio. Prototype approved 2026-10-31 (https://claude.ai/artifact/PJvkmoLt9QWgHT1MMsXb5h), with the defaults it proposed and one note from the owner: the forms use the club's own checkboxes and Select drop-down.
 
 The defaults:
@@ -925,6 +925,20 @@ Built in two steps, one PR each. Each is merged only after the owner says so.
     - the teacher downloads the file and marks it.
 
 **Exit criteria:** on `lms.cckh.dev`, Admin adds Scratch and a Scratch course, a teacher sets Scratch homework, a student hands in an `.sb3` and a link, and the teacher downloads, opens and marks them; the owner signs off M18.
+
+> **Result** (PRs #84 and #87, merged on 2026-10-31 and live as c6fbe45. #87 replaced #85, which conflicted once #84 was squash-merged.) Signed off by the owner on 2026-11-01.
+> - **M18a, languages and courses (#84).**
+>   - Migration 0026 adds the `language` table and its built-in rows (python, java, web, paper), added before the foreign keys. `course.default_language` and `assessment.language` point at it, so a language in use can't be deleted.
+>   - The rules live in `language-rules.ts`: name, file types, https sites, at least one way to hand in, and the 20 MB cap. Courses → **Languages** has Add, Edit and Delete-if-unused, using the club's checkboxes and Select.
+>   - The course form groups "Code in the editor" and "Hand in a file or a link". Labels come from the language's name everywhere, and an unknown language is no longer treated as Python.
+> - **M18b, hand in a file or a link (#87).**
+>   - Migration 0027 adds `file_key`, `file_name`, `file_size`, `file_sha256` and `link_url` to `submission`.
+>   - `POST /api/work/[id]/hand-in` takes the upload: an Origin check, the 20 MB cap read as it streams, only the language's file types, https links only from its sites, and the M17 rules (at most 20 hand-ins; an unchanged one, same SHA-256 and link, is refused).
+>   - `GET /api/hand-ins/[id]/file` sends the file as an attachment to the student, the class's teachers and Admin only.
+>   - The student sees `HandInBox` (drop or choose a file, paste a link, Hand in, with each version listed). The marking page has **Download** and **Open** instead of the editor.
+>   - Export lists the file names and links; erase deletes the files.
+> - Tests: written first for each part (unit, integration, component, and Playwright + axe with the `hand-in` spec on a Scratch homework).
+> - Shipped with M18: **Enrol a student** finds a student by name or class, as on a support line (#86).
 
 ### R2 — Club-wide launch
 - All classes of the next term (e.g. Term 2 · 2027) are set up and run on `lms.cckh.dev`. Teachers get a short walkthrough, and students get login slips.
