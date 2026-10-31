@@ -44,6 +44,8 @@ export const ACTIONS = {
   'terms.manage': hasRole('admin'),
   'courses.manage': hasRole('admin'),
   'classes.manage': hasRole('admin'),
+  // M15b (BR-30): undo a promotion, while the new classes haven't started.
+  'promotion.undo': hasRole('admin'),
   'class.schedule': whileOpen(either(hasRole('admin'), teachesClass)),
   'class.view': either(hasRole('admin'), teachesClass),
   'enrolments.manage': hasRole('admin'),

@@ -21,6 +21,8 @@ const MATRIX: Record<Action, Record<Role, Rule>> = {
   'terms.manage': { admin: true, teacher: false, student: false },
   'courses.manage': { admin: true, teacher: false, student: false },
   'classes.manage': { admin: true, teacher: false, student: false },
+  // M15b: only Admin undoes a promotion (BR-30).
+  'promotion.undo': { admin: true, teacher: false, student: false },
   'class.schedule': { admin: true, teacher: 'own', student: false },
   'class.view': { admin: true, teacher: 'own', student: false },
   'enrolments.manage': { admin: true, teacher: false, student: false },

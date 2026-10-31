@@ -41,6 +41,7 @@ export const AUDIT_ACTIONS: Record<string, { label: string; group: AuditGroup }>
   'termreport.publish': { label: 'Published a term report', group: 'results' },
   'termreport.amend': { label: 'Changed a published term report', group: 'results' },
   'class.promote': { label: 'Promoted a class', group: 'promotion' },
+  'class.promote_undo': { label: 'Undid a promotion', group: 'promotion' },
   'certificate.issue': { label: 'Issued a certificate', group: 'certificates' },
   'certificate.reissue': { label: 'Reissued a certificate', group: 'certificates' },
   'certificate.revoke': { label: 'Revoked a certificate', group: 'certificates' },
@@ -216,6 +217,7 @@ export function detailLines(action: string, detail: unknown, names: Map<string, 
         `${resultOf(m.result) ?? 'No result'} → ${m.to ? (names.get(String(m.to)) ?? 'a class no longer in the LMS') : 'not moved'}`,
       );
   }
+  if (action === 'class.promote_undo') add('Undone', `${num(d.back)} back in the class, ${num(d.removed)} new enrolments removed`);
 
   if (Array.isArray(d.changed) && d.changed.length) add('Changed', cap(d.changed.map((f) => CHANGED[String(f)] ?? String(f)).join(', ')));
   if (typeof d.role === 'string') add('Role', cap(d.role));

@@ -11,19 +11,28 @@ import { scheduleLabel, todayIn } from '@/modules/academics/schedule';
 import { listTerms } from '@/modules/academics/terms';
 import { getClubSettings } from '@/modules/club/service';
 import { listPeople } from '@/modules/identity/service';
+import { promotionUndo } from '@/modules/promotion/promotion';
 import { syllabusCoverage } from '@/modules/teaching/reports';
 import { pageData, requireActor } from '@/server/guard';
 import { EditClass } from './EditClass';
 import { RosterManager } from './RosterManager';
 import { SessionsManager } from './SessionsManager';
+import { UndoPromotion } from './UndoPromotion';
 
 export const metadata: Metadata = { title: 'Class' };
 
-export default async function ClassPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ClassPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const actor = await requireActor('admin.area');
   const { id } = await params;
+  const { undone } = await searchParams;
   const c = await pageData(getClass(actor, id));
-  const [roster, people, termClasses, settings, coverage, courses, terms, fixed] = await Promise.all([
+  const [roster, people, termClasses, settings, coverage, courses, terms, fixed, undo] = await Promise.all([
     listRoster(actor, id),
     Promise.all([listPeople(actor, 'student'), listPeople(actor, 'teacher')]),
     listClasses(actor, { termId: c.termId }),
@@ -32,6 +41,7 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
     listCourses(actor),
     listTerms(actor),
     scheduleFixed(actor, id),
+    c.promotedAt ? promotionUndo(actor, id) : null,
   ]);
   const [students, teachers] = people;
   const inClass = new Set(roster.filter((r) => r.status === 'active').map((r) => r.studentId));
@@ -94,6 +104,12 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
         }
       />
       {archived && <ArchivedNote termName={c.termName} timeZone={settings.timeZone} promotion={c.promotion} />}
+      {undone && !c.promotedAt && (
+        <p className="note" role="status">
+          Promotion undone: every student is back in this class, which can be promoted again.
+        </p>
+      )}
+      {undo && <UndoPromotion classId={c.id} className={c.name} state={undo} />}
       <section className="card summary" aria-label="Class summary">
         <div>
           <span className="k">Schedule</span>

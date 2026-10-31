@@ -51,6 +51,7 @@ describe('the actions', () => {
       'termreport.amend',
       'termreport.publish',
       'class.promote',
+      'class.promote_undo',
       'certificate.issue',
       'certificate.reissue',
       'certificate.revoke',
@@ -178,6 +179,12 @@ describe('the details', () => {
       { label: 'Moved', value: '1 moved on, 1 not moved' },
       { label: 'Bopha Lim', value: 'Pass → Python Level 2 · Sat 09:00' },
       { label: 'A student no longer in the LMS', value: 'Fail → not moved' },
+    ]);
+  });
+
+  it('says what undoing a promotion did (M15b)', () => {
+    expect(detailLines('class.promote_undo', { back: 3, removed: 2, students: ['s1', 's2', 's9'] }, names)).toEqual([
+      { label: 'Undone', value: '3 back in the class, 2 new enrolments removed' },
     ]);
   });
 
