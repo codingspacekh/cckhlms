@@ -4,6 +4,7 @@ import { useActionState, useId, useState } from 'react';
 import { DateField, TimeField } from '@/components/ui/DateTimeFields';
 import { Select } from '@/components/ui/Select';
 import { TableScroll } from '@/components/ui/TableScroll';
+import { StudentFinder } from './StudentFinder';
 import { saveSupportLineAction } from '@/modules/support/actions';
 import { SUPPORT_MESSAGE_MAX, SUPPORT_MINUTES } from '@/modules/support/rules';
 import type { Candidate, LineValues } from '@/modules/support/support-lines';
@@ -11,7 +12,8 @@ import type { Candidate, LineValues } from '@/modules/support/support-lines';
 type Props = { candidates: Candidate[]; picked: string[]; lastMeetingUrl: string | null; line?: LineValues | null };
 
 // A new support line, or a change to one (FR-ADM-18, BR-29; M14c, prototype screen 6). The students ticked on Weekly
-// reports arrive in it; any other student in a class can be added. Their class teachers are told too.
+// reports arrive in it; any other student in a class can be added, found by name or class. Their class teachers are
+// told too.
 export function SupportLineForm({ candidates, picked, lastMeetingUrl, line }: Props) {
   const [result, formAction, saving] = useActionState(saveSupportLineAction, null);
   const [ids, setIds] = useState(picked);
@@ -53,7 +55,7 @@ export function SupportLineForm({ candidates, picked, lastMeetingUrl, line }: Pr
               {rows.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="muted">
-                    No students yet. Add one below.
+                    No students yet. Add them below.
                   </td>
                 </tr>
               ) : (
@@ -79,20 +81,7 @@ export function SupportLineForm({ candidates, picked, lastMeetingUrl, line }: Pr
             </tbody>
           </table>
         </TableScroll>
-        <div className="add-student">
-          <Select aria-label="Add a student" value="" onChange={(e) => e.target.value && setIds([...ids, e.target.value])}>
-            <option value="" disabled>
-              Add a student…
-            </option>
-            {candidates
-              .filter((c) => !ids.includes(c.enrolmentId))
-              .map((c) => (
-                <option key={c.enrolmentId} value={c.enrolmentId}>
-                  {`${c.name} · ${c.className.split(' · ')[0]}`}
-                </option>
-              ))}
-          </Select>
-        </div>
+        <StudentFinder candidates={candidates.filter((c) => !ids.includes(c.enrolmentId))} onAdd={(c) => setIds([...ids, c.enrolmentId])} />
       </div>
 
       <div className="f">
