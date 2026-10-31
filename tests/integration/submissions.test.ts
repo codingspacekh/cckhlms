@@ -97,7 +97,8 @@ describe('submitting', () => {
       [2, false],
       [1, false],
     ]);
-    expect(mine.versions[1]!.files).toEqual([{ path: 'main.py', content: '# start here' }]); // history kept (BR-04)
+    const v1Files = await pool.query(`select files from submission where assessment_id = $1 and version = 1`, [id]);
+    expect(v1Files.rows[0].files).toEqual([{ path: 'main.py', content: '# start here' }]); // history kept (BR-04)
     expect(mine.next).toEqual({ ok: true, late: false });
     const audit = await pool.query(`select action from audit_log where entity = 'submission' and actor_id = $1`, [bopha.userId]);
     expect(audit.rows.map((r) => r.action)).toEqual(['submission.submit', 'submission.submit']);
@@ -138,6 +139,28 @@ describe('submitting', () => {
     expect((await mySubmissions(bopha, id, { now: BEFORE })).versions.length).toBe(1);
   });
 
+  it('M17b, F04: an unchanged hand-in is refused', async () => {
+    const id = await work();
+    await saveDraft(bopha, id, [{ path: 'main.py', content: 'print(1)' }]);
+    await submitWork(bopha, id, { now: BEFORE });
+    await expect(submitWork(bopha, id, { now: BEFORE })).rejects.toThrow('Nothing has changed since your last hand-in.');
+    await saveDraft(bopha, id, [{ path: 'main.py', content: 'print(2)' }]);
+    expect(await submitWork(bopha, id, { now: BEFORE })).toEqual({ version: 2, late: false });
+  });
+
+  it('M17b, F04: at most 20 hand-ins for one piece of work, and the page says so before the 21st', async () => {
+    const id = await work();
+    for (let i = 1; i <= 20; i++) {
+      await saveDraft(bopha, id, [{ path: 'main.py', content: `print(${i})` }]);
+      await submitWork(bopha, id, { now: BEFORE });
+    }
+    await saveDraft(bopha, id, [{ path: 'main.py', content: 'print(21)' }]);
+    const full = { ok: false, reason: 'You’ve handed this in 20 times, the most for one piece of work.' };
+    await expect(submitWork(bopha, id, { now: BEFORE })).rejects.toThrow(full.reason);
+    expect((await mySubmissions(bopha, id, { now: BEFORE })).next).toEqual(full);
+    expect((await mySubmissions(bopha, id, { now: BEFORE })).versions).toHaveLength(20);
+  });
+
   it('only students in the class, only published code work', async () => {
     const id = await work();
     await expect(submitWork(rithy, id, { now: BEFORE })).rejects.toBeInstanceOf(ForbiddenError);
@@ -151,6 +174,7 @@ describe('the teacher’s list (FR-TCH-10)', () => {
   it('shows each student as submitted, late, missing or joined after it was due, with counts', async () => {
     const id = await work({ title: 'Times tables' });
     await submitWork(bopha, id, { now: BEFORE });
+    await saveDraft(bopha, id, [{ path: 'main.py', content: 'print(7 * 8)' }]);
     await submitWork(bopha, id, { now: BEFORE });
     const before = await submissionList(sophea, id, { now: BEFORE });
     expect(before.rows.map((r) => [r.name, r.status, r.versions])).toEqual([

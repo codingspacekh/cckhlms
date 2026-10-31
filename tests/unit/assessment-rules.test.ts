@@ -124,6 +124,12 @@ describe('submitting (BR-03, BR-04)', () => {
   it('work with no due date can always be submitted', () => {
     expect(canSubmit({ due: null, now: after, allowLate: false, submitted: true })).toEqual({ ok: true, late: false });
   });
+  it('M17b, F04: at most 20 hand-ins, even before the due time or after a return', () => {
+    const full = { ok: false, reason: 'You’ve handed this in 20 times, the most for one piece of work.' };
+    expect(canSubmit({ due, now: before, allowLate: true, submitted: true, handIns: 19 })).toEqual({ ok: true, late: false });
+    expect(canSubmit({ due, now: before, allowLate: true, submitted: true, handIns: 20 })).toEqual(full);
+    expect(canSubmit({ due, now: after, allowLate: true, submitted: true, mark: 'returned', handIns: 20 })).toEqual(full);
+  });
   it('once it’s marked it can’t be changed, even before the due time', () => {
     const marked = { ok: false, reason: 'Your teacher has marked this, so it can’t be changed.' };
     expect(canSubmit({ due, now: before, allowLate: true, submitted: true, mark: 'graded' })).toEqual(marked);
