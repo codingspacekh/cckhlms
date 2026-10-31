@@ -32,6 +32,14 @@ test.describe('Admin', () => {
     await expect(students.getByRole('rowheader')).toHaveText(['Leakena Som', 'Rotanak Ry']);
     await expect(students).toContainText('Missed the loops lesson.');
     await expect(form.getByTestId('teachers-told')).toHaveText('Sophea Chan');
+    // Removed by mistake, then found again by typing part of the name: Enter adds the only match.
+    await students.getByRole('button', { name: 'Remove Rotanak Ry' }).click();
+    const finder = form.getByRole('region', { name: 'Add students' });
+    await finder.getByLabel('Find a student').fill('rotan');
+    await expect(finder.getByRole('button', { name: /^Add / })).toHaveCount(1);
+    await expectAccessible(page);
+    await finder.getByLabel('Find a student').press('Enter');
+    await expect(students.getByRole('rowheader')).toHaveText(['Leakena Som', 'Rotanak Ry']);
     await form.getByLabel('Support line Zoom link').fill(ZOOM);
     await form.getByLabel('Day').fill(tomorrow);
     await form.getByLabel('Start time').fill('18:00');
