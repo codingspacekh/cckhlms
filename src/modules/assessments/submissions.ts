@@ -12,19 +12,19 @@ import { weeksOf } from '@/modules/teaching/weeks';
 import type { Actor } from '@/server/actor';
 import { audit } from '@/server/audit';
 import { assertCan, isUniqueViolation, ValidationError } from '@/server/errors';
-import { codeWork, starterOf, validFiles } from './projects';
+import { codeWork, handedInWork, starterOf, validFiles } from './projects';
 import { submissionMeta } from './submission-columns';
 import { afterPenalty, canSubmit, markOf, resolveDue, workStatus, type DueMode, type Mark, type WorkStatus } from './rules';
 
 type Opts = { now?: Date };
 
-async function dueOf(a: { classId: string; sessionId: string; dueMode: string; dueAt: Date | null }) {
+export async function dueOf(a: { classId: string; sessionId: string; dueMode: string; dueAt: Date | null }) {
   const tz = (await getClubSettings()).timeZone;
   return { due: resolveDue({ sessionId: a.sessionId, dueMode: a.dueMode as DueMode, dueAt: a.dueAt }, await weeksOf(a.classId), tz), tz };
 }
 
 // A student's versions of one piece of work, newest first, without their files.
-async function versionsOf(assessmentId: string, studentId: string) {
+export async function versionsOf(assessmentId: string, studentId: string) {
   return db
     .select(submissionMeta)
     .from(submission)
@@ -104,8 +104,15 @@ export async function submitWork(actor: Actor | null, assessmentId: string, opts
   return { version, late: allowed.late };
 }
 
+// A project file or link handed in for work in a language Admin added (M18b); href downloads the file.
+export type HandedInFile = { name: string; size: number; href: string };
+export const handedInFile = (r: { id: string; fileName: string | null; fileSize: number | null }): HandedInFile | null =>
+  r.fileName ? { name: r.fileName, size: r.fileSize ?? 0, href: `/api/hand-ins/${r.id}/file` } : null;
+
 export type MyVersion = {
   version: number;
+  file: HandedInFile | null;
+  link: string | null;
   submittedAt: Date;
   late: boolean;
   score: number | null;
@@ -124,7 +131,7 @@ export type MySubmissions = {
 // What a student has handed in for one piece of work, newest first, with their marks and feedback
 // (FR-STU-06), and whether they can submit now. Only ever their own (BR-11).
 export async function mySubmissions(actor: Actor | null, assessmentId: string, opts: Opts = {}): Promise<MySubmissions> {
-  const a = await codeWork(assessmentId);
+  const a = await handedInWork(assessmentId);
   assertCan(actor, 'work.submit', await classAccess(a.classId, 'read'));
   const [{ due }, rows] = await Promise.all([dueOf(a), versionsOf(assessmentId, actor.userId)]);
   const latest = rows[0] ?? null;
@@ -142,6 +149,8 @@ export async function mySubmissions(actor: Actor | null, assessmentId: string, o
     }),
     versions: rows.map((r) => ({
       version: r.version,
+      file: handedInFile(r),
+      link: r.linkUrl,
       submittedAt: r.submittedAt,
       late: r.late,
       score: r.score,
@@ -165,7 +174,7 @@ export type SubmissionRow = {
 
 // Every student in the class now, with their status on this work (FR-TCH-10).
 export async function submissionList(actor: Actor | null, assessmentId: string, opts: Opts = {}) {
-  const a = await codeWork(assessmentId);
+  const a = await handedInWork(assessmentId);
   assertCan(actor, 'assessment.write', await classAccess(a.classId, 'read'));
   const now = opts.now ?? new Date();
   const [{ due, tz }, students, subs] = await Promise.all([

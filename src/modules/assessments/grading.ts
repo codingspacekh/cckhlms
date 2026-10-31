@@ -11,9 +11,10 @@ import { weeksOf } from '@/modules/teaching/weeks';
 import type { Actor } from '@/server/actor';
 import { audit } from '@/server/audit';
 import { assertCan, ValidationError } from '@/server/errors';
-import { codeWork } from './projects';
+import { handedInWork } from './projects';
 import { checkScore, markOf, type Mark, type WorkLanguage } from './rules';
 import { submissionMeta } from './submission-columns';
+import { handedInFile, type HandedInFile } from './submissions';
 
 export type GradingVersion = {
   version: number;
@@ -38,7 +39,8 @@ export type GradingView = {
   };
   student: { id: string; name: string; username: string };
   versions: GradingVersion[]; // newest first, without their files
-  shown: { version: number; files: ProjectFile[] } | null; // the version on screen (the latest unless asked), with its files
+  // The version on screen (the latest unless asked), with its files, or its project file and link (M18b).
+  shown: { version: number; files: ProjectFile[]; file: HandedInFile | null; link: string | null } | null;
   mark: Mark | null;
   // The students before and after this one in the class list, to move through the class quickly.
   prev: { id: string; name: string } | null;
@@ -46,7 +48,7 @@ export type GradingView = {
 };
 
 async function teacherOf(actor: Actor | null, assessmentId: string, purpose: 'change' | 'read' = 'change') {
-  const a = await codeWork(assessmentId);
+  const a = await handedInWork(assessmentId);
   assertCan(actor, 'work.grade', await classAccess(a.classId, purpose));
   return { a, actor };
 }
@@ -115,7 +117,7 @@ export async function gradingView(
       returnedAt: v.returnedAt,
       byTeacher: v.byTeacher,
     })),
-    shown: on ? { version: on.version, files: shownFiles?.files ?? [] } : null,
+    shown: on ? { version: on.version, files: shownFiles?.files ?? [], file: handedInFile(on), link: on.linkUrl } : null,
     mark: markOf(versions[0] ?? null),
     prev: pick(roster[i - 1]),
     next: pick(roster[i + 1]),

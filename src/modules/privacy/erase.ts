@@ -1,10 +1,10 @@
 // NFR-07: delete a student's personal data on request, by anonymising them (owner's decision, 2026-10-21). In one
 // transaction: their name, username, guardian contact, password and sessions go; so do their drafts, Playground
-// projects, notification state and the text they wrote (hand-ins, Q&A posts, the reasons they gave when reporting a
+// projects, notification state and the text they wrote (hand-ins, with project files and links (M18b), Q&A posts, the reasons they gave when reporting a
 // post) and what teachers wrote about them (feedback, report comments, attendance notes). Their scores, attendance,
 // results and excusals stay under "Deleted student", so a finished class's numbers and the audit log stay true. A
 // class they're still in withdraws them, and their certificates are revoked.
-import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import { db } from '@/db/client';
 import {
   account,
@@ -30,6 +30,7 @@ import { getClubSettings } from '@/modules/club/service';
 import type { Actor } from '@/server/actor';
 import { audit } from '@/server/audit';
 import { assertCan, ValidationError } from '@/server/errors';
+import { storage } from '@/server/storage';
 import { isOnlyStudent, studentRow } from './export';
 import { confirmsErase, DELETED_NAME, erasedEmail, scrubAuditDetail } from './rules';
 
@@ -43,6 +44,13 @@ export async function eraseStudent(actor: Actor | null, studentId: string, confi
   if (!confirmsErase(confirm, u.username)) throw new ValidationError('Type the student’s username to confirm.', 'confirm');
   const now = opts.now ?? new Date();
   const today = todayIn((await getClubSettings()).timeZone, now);
+  // Project files she handed in for an added language (M18b) are on the uploads volume: removed once the rows are.
+  const files = (
+    await db
+      .select({ key: submission.fileKey })
+      .from(submission)
+      .where(and(eq(submission.studentId, studentId), isNotNull(submission.fileKey)))
+  ).map((r) => r.key!);
 
   await db.transaction(async (tx) => {
     await tx
@@ -70,7 +78,10 @@ export async function eraseStudent(actor: Actor | null, studentId: string, confi
     await tx.delete(notificationSeen).where(eq(notificationSeen.userId, studentId));
 
     const theirs = tx.select({ id: enrolment.id }).from(enrolment).where(eq(enrolment.studentId, studentId));
-    await tx.update(submission).set({ files: [], feedbackMd: '' }).where(eq(submission.studentId, studentId));
+    await tx
+      .update(submission)
+      .set({ files: [], feedbackMd: '', fileKey: null, fileName: null, fileSize: null, fileSha256: null, linkUrl: null })
+      .where(eq(submission.studentId, studentId));
     await tx.update(studentReport).set({ comment: '', supportNote: '', reason: null }).where(inArray(studentReport.enrolmentId, theirs));
     await tx.update(attendance).set({ note: null }).where(inArray(attendance.enrolmentId, theirs));
     await tx.update(classReportStudent).set({ comment: '', note: '' }).where(inArray(classReportStudent.enrolmentId, theirs));
@@ -100,4 +111,5 @@ export async function eraseStudent(actor: Actor | null, studentId: string, confi
     }
     await audit({ actorId: actor.userId, action: 'student.erase', entity: 'user', entityId: studentId }, tx);
   });
+  for (const key of files) await storage.remove(key);
 }

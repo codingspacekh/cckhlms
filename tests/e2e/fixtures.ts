@@ -652,3 +652,68 @@ export async function flaggedStudents(): Promise<{ termId: string; week: number;
   }
   return { termId: c.termId, week: 3, names };
 }
+
+// M18b: a Scratch class on Sundays (Scratch added by Admin as a language: .sb3 files or scratch.mit.edu links), with
+// the e2e student, and homework in week 1 due at week 2's class, for the hand-in spec.
+export async function scratchHomework(): Promise<{ classId: string; workId: string; title: string }> {
+  const main = await teachingClass();
+  const { db } = await import('../../src/db/client');
+  const { assessment, klass, language, user } = await import('../../src/db/schema');
+  const { and, eq } = await import('drizzle-orm');
+  const { createLanguage } = await import('../../src/modules/academics/languages');
+  const { createCourse } = await import('../../src/modules/academics/courses');
+  const { createClass } = await import('../../src/modules/academics/classes');
+  const { enrolStudent } = await import('../../src/modules/academics/enrolments');
+  const { saveAssessment } = await import('../../src/modules/assessments/service');
+  const { weeksOf } = await import('../../src/modules/teaching/weeks');
+  const title = 'Maze game';
+  const [existing] = await db.select({ id: klass.id }).from(klass).where(eq(klass.room, 'E2E-SCRATCH'));
+  if (existing) {
+    const [w] = await db
+      .select({ id: assessment.id })
+      .from(assessment)
+      .where(and(eq(assessment.classId, existing.id), eq(assessment.title, title)));
+    return { classId: existing.id, workId: w!.id, title };
+  }
+  const idOf = async (username: string) => (await db.select({ id: user.id }).from(user).where(eq(user.username, username)))[0]!.id;
+  const admin = { userId: await idOf(USERS.admin.username), username: 'admin', name: 'Admin', role: 'admin', sessionId: 'e2e' };
+  const teacherId = await idOf(USERS.teacher.username);
+  const teacher = { userId: teacherId, username: USERS.teacher.username, name: USERS.teacher.name, role: 'teacher', sessionId: 'e2e' };
+  const [found] = await db.select({ id: language.id }).from(language).where(eq(language.name, 'Scratch'));
+  const scratch =
+    found?.id ??
+    (await createLanguage(admin, { name: 'Scratch', byFile: 'on', fileTypes: '.sb3', byLink: 'on', linkSites: 'scratch.mit.edu' })).id;
+  const course = await createCourse(admin, { code: 'SC1', name: 'Scratch Level 1', defaultLanguage: scratch });
+  const [k] = await db.select({ termId: klass.termId, firstDate: klass.firstDate }).from(klass).where(eq(klass.id, main.classId));
+  const sunday = new Date(new Date(`${k!.firstDate}T00:00:00Z`).getTime() + 86_400_000).toISOString().slice(0, 10);
+  const r = await createClass(admin, {
+    courseId: course.id,
+    termId: k!.termId,
+    day: 'sun',
+    startTime: '07:00',
+    minutes: 90,
+    firstDate: sunday,
+    weeks: 10,
+    room: 'E2E-SCRATCH',
+    leadTeacherId: teacherId,
+    confirmClashes: true,
+  });
+  if (r.status !== 'created') throw new Error('Scratch class not created');
+  await enrolStudent(admin, r.classId, await idOf(USERS.student.username), { enrolledOn: sunday, confirmClashes: true });
+  // Due at the class after next Sunday's, whatever today is: the first week that hasn't started yet.
+  const weeks = await weeksOf(r.classId);
+  const today = new Date().toISOString().slice(0, 10);
+  const week = weeks.find((s) => s.date > today)!;
+  const { id } = await saveAssessment(teacher, week.id, {
+    kind: 'homework',
+    title,
+    instructionsMd: 'Add a second level and a timer to your maze game.',
+    language: scratch,
+    maxScore: 10,
+    dueMode: 'next_session',
+    allowLate: true,
+    latePenaltyPct: 10,
+    intent: 'publish',
+  });
+  return { classId: r.classId, workId: id, title };
+}

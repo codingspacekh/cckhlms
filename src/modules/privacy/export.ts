@@ -143,6 +143,8 @@ export async function exportStudentData(actor: Actor | null, studentId: string, 
         returnedAt: submission.returnedAt,
         enteredByTeacher: submission.byTeacher,
         files: submission.files,
+        fileName: submission.fileName, // a project file handed in for an added language (M18b), and its link
+        link: submission.linkUrl,
       })
       .from(submission)
       .innerJoin(assessment, eq(assessment.id, submission.assessmentId))

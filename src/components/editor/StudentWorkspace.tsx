@@ -1,5 +1,6 @@
 'use client';
 import { useState, useTransition } from 'react';
+import { MarkCards } from '@/components/assessments/MarkCards';
 import { Pill } from '@/components/ui/Pill';
 import type { ProjectFile } from '@/lib/project/files';
 import type { Mark } from '@/modules/assessments/rules';
@@ -74,29 +75,13 @@ export function StudentWorkspace({
   const latest = submit.versions[0];
   return (
     <>
-      {latest && submit.mark === 'graded' && (
-        <section className="card stack" aria-labelledby="mark-title">
-          <div className="spread">
-            <h2 id="mark-title">Your mark</h2>
-            <span className="score tnum" data-testid="score">
-              {latest.score} / {submit.maxScore}
-            </span>
-          </div>
-          {latest.late && latest.counts !== latest.score && (
-            <p className="small muted">
-              Handed in late, so {submit.latePenaltyPct}% comes off: it counts as {latest.counts}.
-            </p>
-          )}
-          {latest.feedbackHtml && <div className="md" dangerouslySetInnerHTML={{ __html: latest.feedbackHtml }} />}
-        </section>
-      )}
-      {latest && submit.mark === 'returned' && (
-        <section className="card stack warn-card" aria-labelledby="returned-title">
-          <h2 id="returned-title">Returned for a redo</h2>
-          <p className="small">Your teacher returned version {latest.version}. Change your project and submit it again.</p>
-          <div className="md" dangerouslySetInnerHTML={{ __html: latest.feedbackHtml }} />
-        </section>
-      )}
+      <MarkCards
+        latest={latest}
+        mark={submit.mark}
+        maxScore={submit.maxScore}
+        latePenaltyPct={submit.latePenaltyPct}
+        redo="Change your project and submit it again."
+      />
       <section className="stack" aria-labelledby="project-title">
         <div className="spread">
           <h2 id="project-title">Your project</h2>

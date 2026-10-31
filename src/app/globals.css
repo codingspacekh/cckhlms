@@ -4281,3 +4281,66 @@ td .flag {
   margin: 0;
   padding-left: 1.2em;
 }
+
+/* M18b: handing in a project file or a link (HandInBox, the marking page). */
+.drop-zone {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 20px 16px;
+  border: 2px dashed var(--line);
+  border-radius: 12px;
+  text-align: center;
+}
+.drop-zone.over {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.drop-zone:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.file-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.file-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  background: var(--green-soft);
+  color: var(--green-text);
+  font: 600 0.75rem var(--f-mono);
+}
+.file-icon.link {
+  background: var(--pink-soft);
+  color: var(--pink-text);
+}
+.or-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+}
+.or-line::before,
+.or-line::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--line);
+}
+button.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
