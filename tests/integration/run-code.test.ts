@@ -1,5 +1,6 @@
 // M11 · FR-CODE-09/10, BR-25: the checks before a run, and the runner client, against a stand-in runner that records
 // what it is sent (the real runner is tested by infra/tests/runner-image.sh).
+import { createHash } from 'node:crypto';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -15,7 +16,7 @@ const ok = { status: 'ok', stdout: 'hi\n', stderr: '', exitCode: 0, ms: 120, tru
 let server: Server;
 let url = '';
 let reply: { status: number; body: unknown } = { status: 200, body: ok };
-const seen: { auth?: string; body: { language: string; files: { path: string }[]; stdin: string } }[] = [];
+const seen: { auth?: string; owner?: string; body: { language: string; files: { path: string }[]; stdin: string } }[] = [];
 let t = 1_000_000;
 const runner = () => httpRunner(url, 'test-token');
 const py = (over: Partial<{ language: string; files: { path: string; content: string }[]; stdin: string }> = {}) => ({
@@ -32,7 +33,11 @@ beforeAll(async () => {
     let data = '';
     req.on('data', (c) => (data += c));
     req.on('end', () => {
-      seen.push({ auth: req.headers.authorization, body: JSON.parse(data || '{}') });
+      seen.push({
+        auth: req.headers.authorization,
+        owner: req.headers['x-run-owner'] as string | undefined,
+        body: JSON.parse(data || '{}'),
+      });
       res.writeHead(reply.status, { 'content-type': 'application/json' });
       res.end(JSON.stringify(reply.body));
     });
@@ -90,6 +95,17 @@ describe('runCode', () => {
     await expect(go(student, py(), t + 2100)).rejects.toThrow(/20 runs a minute/);
     expect((await go(teacher, py(), t + 2200)).status).toBe('ok'); // someone else
     expect((await go(student, py(), t + 61_000)).status).toBe('ok'); // a minute later
+  });
+
+  it('names the person to the runner by a hash of their id, never the id itself (M17a, F10)', async () => {
+    await go(student, py());
+    expect(seen[0]!.owner).toBe(createHash('sha256').update('s1').digest('hex'));
+    expect(JSON.stringify(seen[0]!.body)).not.toContain('s1');
+  });
+
+  it('says when the person already has a program running (M17a, F10)', async () => {
+    reply = { status: 429, body: { error: 'already running' } };
+    expect((await go(student, py())).status).toBe('already_running');
   });
 
   it('says the runner is busy, or not there, instead of failing', async () => {
