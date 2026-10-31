@@ -9,6 +9,7 @@ import {
   AUDIT_GROUPS,
   auditLabel,
   detailLines,
+  pageNumbers,
   parseAuditFilters,
   SENSITIVE_GROUPS,
 } from '@/modules/audit/rules';
@@ -71,23 +72,25 @@ describe('the actions', () => {
 
 describe('the filters', () => {
   it('reads the group, person, dates and page from the address', () => {
-    expect(parseAuditFilters({ group: 'certificates', person: '  Nita ', from: '2027-01-09', to: '2027-01-31', before: '120' })).toEqual({
+    expect(parseAuditFilters({ group: 'certificates', person: '  Nita ', from: '2027-01-09', to: '2027-01-31', page: '3' })).toEqual({
       group: 'certificates',
       person: 'Nita',
       from: '2027-01-09',
       to: '2027-01-31',
-      before: 120,
+      page: 3,
     });
   });
 
   it('ignores what it does not understand, and puts the dates in order', () => {
-    expect(parseAuditFilters({ group: 'nope', person: ['a', 'b'], from: '2027-02-30', to: 'soon', before: '-3' })).toEqual({
+    expect(parseAuditFilters({ group: 'nope', person: ['a', 'b'], from: '2027-02-30', to: 'soon', page: '-3' })).toEqual({
       group: '',
       person: '',
       from: '',
       to: '',
-      before: null,
+      page: 1,
     });
+    expect(parseAuditFilters({ page: '2.5' }).page).toBe(1);
+    expect(parseAuditFilters({ page: '1e9' }).page).toBe(1);
     expect(parseAuditFilters({ from: '2027-03-01', to: '2027-01-01' })).toMatchObject({ from: '2027-01-01', to: '2027-03-01' });
     expect(parseAuditFilters({ person: 'x'.repeat(200) }).person).toHaveLength(60);
   });
@@ -208,5 +211,25 @@ describe('the details', () => {
       { label: 'On', value: 'Sat 6 Feb 2027' },
     ]);
     expect(detailLines('auth.sign_in', null, names)).toEqual([]);
+  });
+});
+
+// Numbered pages (owner, 2026-10-31): the first, the last, and the ones either side of this one; a gap stands for
+// the pages left out.
+describe('the page numbers', () => {
+  it('lists every page when there are only a few', () => {
+    expect(pageNumbers(1, 1)).toEqual([1]);
+    expect(pageNumbers(3, 5)).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it('keeps the first, the last and the neighbours of this page, with gaps between', () => {
+    expect(pageNumbers(1, 12)).toEqual([1, 2, 'gap', 12]);
+    expect(pageNumbers(6, 12)).toEqual([1, 'gap', 5, 6, 7, 'gap', 12]);
+    expect(pageNumbers(12, 12)).toEqual([1, 'gap', 11, 12]);
+  });
+
+  it('shows a lone page rather than a gap for it', () => {
+    expect(pageNumbers(4, 12)).toEqual([1, 2, 3, 4, 5, 'gap', 12]);
+    expect(pageNumbers(9, 12)).toEqual([1, 'gap', 8, 9, 10, 11, 12]);
   });
 });

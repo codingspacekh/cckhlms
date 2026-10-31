@@ -32,8 +32,8 @@ let slip = { username: '', password: '' };
 
 test('Admin checks a CSV, fixes it, imports it into a class and prints the slips', async ({ page }) => {
   await page.goto('/admin/people');
-  await page.getByRole('link', { name: 'Import students' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Import students' })).toBeVisible();
+  await page.getByRole('button', { name: 'Import students' }).click();
+  await expect(page.getByRole('dialog', { name: 'Import students' })).toBeVisible();
   await expectAccessible(page);
 
   await page.getByLabel('CSV file').setInputFiles({ name: 'students.csv', mimeType: 'text/csv', buffer: Buffer.from(`${CSV},,,012\n`) });
@@ -79,7 +79,7 @@ test('Admin checks a CSV, fixes it, imports it into a class and prints the slips
   await page.setViewportSize({ width: 1280, height: 720 });
 
   await page.getByRole('button', { name: 'Done' }).click();
-  await expect(page).toHaveURL(/\/admin\/people\?role=student$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'People' })).toBeVisible();
   await expect(page.getByRole('row', { name: /Ratana Chhim/ })).toBeVisible();
 });
 

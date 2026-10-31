@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { sessionWhen } from '@/components/academics/nextSessionText';
 import { JoinZoom } from '@/components/academics/Where';
-import { TeacherSupportCard } from '@/components/support/SupportLineCards';
+import { TeacherSupportLines } from '@/components/support/SupportLineCards';
 import { Icon } from '@/components/ui/Icon';
 import { pastClasses } from '@/modules/academics/enrolments';
 import { whereLabel } from '@/modules/academics/meeting';
@@ -12,18 +12,12 @@ import { classWhen, firstName, greeting } from '@/modules/reporting/home-rules';
 import { teacherHome } from '@/modules/reporting/teacher-home';
 import { teacherSupportLines } from '@/modules/support/support-lines';
 import { requireActor } from '@/server/guard';
+import { Avatar } from '@/components/account/Avatar';
 
 export const metadata: Metadata = { title: 'Today' };
 
 const short = (className: string) => className.split(' · ')[0]!;
-const initials = (name: string) =>
-  name
-    .split(/\s+/)
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-// The logo's three colours, in turn, for each class and each student's initials.
+// The logo's three colours, in turn, for each class.
 const TONES = ['green', 'blue', 'pink'] as const;
 const DAY = (date: string) => formatDate(date).slice(0, 3).toUpperCase();
 
@@ -50,9 +44,7 @@ export default async function TeacherToday() {
       {home.classes.length === 0 && <p className="card muted">Your classes will appear here once the club admin assigns you to one.</p>}
 
       <div className="home-grid">
-        {support.map((l) => (
-          <TeacherSupportCard key={l.id} line={l} today={home.today} />
-        ))}
+        <TeacherSupportLines lines={support} today={home.today} />
         {f && (
           <section className="next-up wide" aria-labelledby="today-title">
             <div className="spread">
@@ -86,7 +78,6 @@ export default async function TeacherToday() {
                 {f.session.week && (
                   <>
                     <Link className="btn lg light" href={`${base}/weeks/${f.session.week}/attendance`}>
-                      <Icon name="check" />
                       Take attendance
                     </Link>
                     <Link className="btn lg outline" href={`${base}/weeks/${f.session.week}/work`}>
@@ -157,11 +148,9 @@ export default async function TeacherToday() {
           <section className="card stack full" aria-labelledby="mark-title">
             <h2 id="mark-title">New work to mark</h2>
             <ul className="plain marking">
-              {home.toMark.map((t, i) => (
+              {home.toMark.map((t) => (
                 <li key={`${t.workId}-${t.studentId}`}>
-                  <span className={`face ${TONES[i % TONES.length]}`} aria-hidden="true">
-                    {initials(t.name)}
-                  </span>
+                  <Avatar userId={t.studentId} image={t.image} className="face" />
                   <span className="who">
                     <strong>{t.name}</strong>
                     <span className="sub">
@@ -180,7 +169,7 @@ export default async function TeacherToday() {
         {home.classes.length > 0 && (
           <section className="card stack full" aria-labelledby="classes-title">
             <h2 id="classes-title">My classes</h2>
-            <div className="class-list">
+            <div className="class-list rows">
               {home.classes.map((c) => (
                 <article key={c.id} className="class-item" aria-labelledby={`class-${c.id}`}>
                   <span className={`date-tile ${tone.get(c.id)}`} aria-hidden="true">
@@ -193,18 +182,28 @@ export default async function TeacherToday() {
                       <Icon name="check" />
                     )}
                   </span>
-                  <span className="who">
-                    <h3 id={`class-${c.id}`}>{c.name}</h3>
-                    <span className="sub">
-                      {c.nextSession
-                        ? `Next: ${sessionWhen(c.nextSession, c.minutes)}${c.nextSession.week ? ` · Week ${c.nextSession.week}` : ''}`
-                        : 'No more sessions this term'}
-                    </span>
-                    <span className="sub">
-                      {whereLabel(c) ? `${whereLabel(c)} · ` : ''}
-                      {c.students} student{c.students === 1 ? '' : 's'}
-                    </span>
-                  </span>
+                  <h3 id={`class-${c.id}`} className="who">
+                    {c.name}
+                  </h3>
+                  <dl className="class-facts">
+                    <div>
+                      <dt>Next session</dt>
+                      <dd className="tnum">
+                        {c.nextSession ? sessionWhen(c.nextSession, c.minutes) : 'No more sessions this term'}
+                        {c.nextSession?.week && <span className="sub">Week {c.nextSession.week}</span>}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Where</dt>
+                      <dd>{whereLabel(c) || '—'}</dd>
+                    </div>
+                    <div>
+                      <dt>Students</dt>
+                      <dd className="tnum">
+                        {c.students} student{c.students === 1 ? '' : 's'}
+                      </dd>
+                    </div>
+                  </dl>
                   <Link className="btn sm" href={`/teacher/classes/${c.id}`}>
                     Open class
                   </Link>

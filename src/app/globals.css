@@ -25,8 +25,9 @@
   --side-2: #1f3a78;
   --side-ink: #d5ddf0;
   --side-muted: #9fb0d8;
-  --side-active: #ffffff;
-  --side-active-ink: #152a5c;
+  /* the page you're on: a soft lift of the sidebar, not a white block (owner, 2026-10-31) */
+  --side-active: #334671;
+  --side-active-ink: #ffffff;
   /* the dark blue "next class" card on the teacher's Today */
   --hero: #152a5c;
   --hero-2: #1f3a78;
@@ -103,8 +104,8 @@
     --side-2: #1a2850;
     --side-ink: #c9d3ea;
     --side-muted: #8c9bc0;
-    --side-active: #e4ecfa;
-    --side-active-ink: #152a5c;
+    --side-active: #262e45;
+    --side-active-ink: #ffffff;
     --hero: #1a2850;
     --hero-2: #24366a;
     --hero-ink: #ffffff;
@@ -165,8 +166,8 @@
   --side-2: #1a2850;
   --side-ink: #c9d3ea;
   --side-muted: #8c9bc0;
-  --side-active: #e4ecfa;
-  --side-active-ink: #152a5c;
+  --side-active: #262e45;
+  --side-active-ink: #ffffff;
   --hero: #1a2850;
   --hero-2: #24366a;
   --hero-ink: #ffffff;
@@ -456,6 +457,30 @@ svg.i {
   font-weight: 700;
   font-size: 0.95rem;
   flex: none;
+}
+/* A profile picture fills its badge; without one the badge is the person's gradient (owner, 2026-10-31). */
+.av,
+.face {
+  overflow: hidden;
+}
+.av img,
+.face img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.av.xl {
+  width: 96px;
+  height: 96px;
+  border-radius: 24px;
+  flex: none;
+}
+.profile-picture {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
 }
 .wrap {
   min-width: 0;
@@ -1379,6 +1404,31 @@ td.pick {
 .narrow-form {
   max-width: 560px;
 }
+/* Settings: one row per setting, what it is on the left and its field on the right; stacked on a phone. */
+.setting-rows {
+  display: flex;
+  flex-direction: column;
+}
+.setting-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 8px 32px;
+  align-items: center;
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+}
+.setting-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.setting-row p {
+  margin: 2px 0 0;
+}
+@media (max-width: 720px) {
+  .setting-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .g2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -1589,6 +1639,23 @@ tbody th {
 }
 .dialog.wide {
   width: min(680px, calc(100vw - 32px));
+}
+/* The new class dialog: the form and its preview of every session side by side. */
+.dialog.xwide {
+  width: min(1120px, calc(100vw - 32px));
+}
+.dialog.xwide > .spread,
+.dialog.flat > .spread {
+  margin-bottom: 16px;
+}
+/* Inside the dialog the form and the preview are its two halves, not cards of their own (and the import's file and
+   preview, in .flat). */
+.dialog.xwide .card,
+.dialog.flat .card {
+  border: 0;
+  padding: 0;
+  box-shadow: none;
+  background: transparent;
 }
 .dialog::backdrop {
   background: rgb(21 42 92 / 0.5);
@@ -3087,14 +3154,6 @@ td.text {
   font-size: 0.9rem;
   line-height: 1.5;
 }
-.btn.run {
-  background: var(--green);
-  border-color: var(--green);
-  color: var(--on-green);
-}
-.btn.run:hover {
-  filter: brightness(0.95);
-}
 .good-text {
   color: var(--good-text);
 }
@@ -3269,7 +3328,7 @@ table.gradebook .sticky-col {
 .lead {
   font-size: 1.2rem;
   color: var(--ink);
-  max-width: 40ch;
+  max-width: 56ch;
 }
 .hello {
   background: var(--accent-soft);
@@ -3333,6 +3392,36 @@ table.gradebook .sticky-col {
   max-width: 200px;
   height: auto;
 }
+/* A student's My week: the puzzle and the latest project on the left, what to do on the right (owner, 2026-10-31). */
+.home-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  grid-template-areas: 'main side';
+  gap: 24px;
+  align-items: start;
+}
+.home-main,
+.home-side {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+.home-main {
+  grid-area: main;
+}
+.home-side {
+  grid-area: side;
+}
+.home-side:empty {
+  display: none;
+}
+@media (max-width: 1100px) {
+  .home-cols {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'side' 'main';
+  }
+}
 .home-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3370,6 +3459,14 @@ table.gradebook .sticky-col {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
   gap: 6px 4px;
+}
+.puzzle.balanced {
+  grid-template-columns: repeat(var(--cols), minmax(0, 76px));
+}
+@media (max-width: 640px) {
+  .puzzle.balanced {
+    grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
+  }
 }
 .piece {
   display: flex;
@@ -4352,4 +4449,149 @@ button.link {
   font: inherit;
   text-decoration: underline;
   cursor: pointer;
+}
+
+/* Numbered pages under a table (audit log; owner, 2026-10-31): "Showing 51–100 of 230 entries", then Previous,
+   the page numbers and Next. This page is a quiet filled square; the others are ghost buttons. */
+.list-bar.foot {
+  border-bottom: 0;
+  border-top: 1px solid var(--line);
+}
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.pager .num {
+  min-width: 36px;
+  padding: 0 8px;
+}
+.pager [aria-current='page'] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  cursor: default;
+}
+.pager [aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: default;
+}
+.pager [aria-disabled='true']:hover {
+  background: transparent;
+}
+.pager .gap {
+  padding: 0 4px;
+  color: var(--muted);
+}
+
+/* A teacher's support lines on Today (owner, 2026-11-01): one compact card, a row per line: when | their students |
+   Join on Zoom. The accent edge marks it as an invitation, like the student's card. */
+.support-card {
+  border-left: 6px solid var(--accent);
+}
+.sl-row {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 16px;
+  padding: 14px 20px;
+}
+.sl-row + .sl-row {
+  border-top: 1px solid var(--line);
+}
+.sl-when,
+.sl-who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sl-when strong {
+  color: var(--heading);
+}
+.sl-who li .small {
+  white-space: normal;
+}
+@media (max-width: 640px) {
+  .sl-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .sl-row .btn {
+    justify-self: start;
+  }
+}
+
+/* My classes on a teacher's Today (owner, 2026-11-01): a full-width row per class, its facts in columns
+   (date | class | next session | where | students | Open class) instead of cramped cards; on a phone the facts go
+   under the name. */
+.class-list.rows {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+.class-list.rows .class-item {
+  display: grid;
+  grid-template-columns: 60px minmax(150px, 1fr) minmax(0, 3fr) auto;
+  gap: 20px;
+  padding: 12px 18px 12px 12px;
+}
+.class-list.rows .class-item h3 {
+  margin: 0;
+}
+.class-facts {
+  display: grid;
+  grid-template-columns: minmax(max-content, 1.6fr) minmax(0, 1fr) minmax(max-content, 0.7fr);
+  gap: 16px;
+  margin: 0;
+}
+.class-facts dt {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.class-facts dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+  color: var(--ink);
+}
+.class-facts dd .sub {
+  display: block;
+  font-weight: 400;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+@media (max-width: 900px) {
+  .class-list.rows .class-item {
+    grid-template-columns: 60px minmax(0, 1fr) auto;
+    grid-template-areas: 'tile name open' 'facts facts facts';
+    row-gap: 12px;
+  }
+  .class-list.rows .date-tile {
+    grid-area: tile;
+  }
+  .class-list.rows .class-item h3 {
+    grid-area: name;
+  }
+  .class-list.rows .class-item .btn {
+    grid-area: open;
+  }
+  .class-facts {
+    grid-area: facts;
+  }
+}
+@media (max-width: 480px) {
+  .class-list.rows .class-item {
+    grid-template-columns: 60px minmax(0, 1fr);
+    grid-template-areas: 'tile name' 'facts facts' 'open open';
+  }
+  .class-list.rows .class-item .btn {
+    justify-self: start;
+  }
+  .class-facts {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .class-facts > :first-child {
+    grid-column: 1 / -1;
+  }
 }

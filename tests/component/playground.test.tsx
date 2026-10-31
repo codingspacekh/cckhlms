@@ -47,21 +47,26 @@ const projects = [
 ];
 
 describe('PlaygroundList', () => {
-  it('lists the projects, each a link, with a form to start another', () => {
+  it('lists the projects, each a link; New project opens the form in a dialog (owner, 2026-10-31)', () => {
     render(<PlaygroundList projects={projects} limit={10} />);
     const table = screen.getByRole('table', { name: 'My projects' });
     const row = within(table).getByRole('row', { name: /Guessing game/ });
     expect(within(row).getByRole('link', { name: 'Guessing game' }).getAttribute('href')).toBe('/student/playground/p1');
     expect(row.textContent).toContain('Python');
     expect(row.textContent).toContain('Sat 16 Jan 2027, 10:05');
-    const form = screen.getByRole('form', { name: 'New project' });
+    expect(screen.queryByRole('form', { name: 'New project' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'New project' }));
+    const form = within(screen.getByRole('dialog', { name: 'New project' })).getByRole('form', { name: 'New project' });
     expect(optionsOf(within(form).getByLabelText('Language')).map((o) => o.label)).toEqual(['Python', 'Java', 'HTML/CSS/JS']);
     expect(screen.getByText('2 of 10 projects.')).toBeTruthy();
+    fireEvent.click(within(form).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog', { name: 'New project' })).toBeNull();
   });
 
   it('starts a project, and says why it couldn’t', async () => {
     createProjectAction.mockResolvedValue({ ok: false, error: 'You already have a project called Quiz.', field: 'name' });
     render(<PlaygroundList projects={projects} limit={10} />);
+    fireEvent.click(screen.getByRole('button', { name: 'New project' }));
     const form = screen.getByRole('form', { name: 'New project' });
     fireEvent.change(within(form).getByLabelText('Name'), { target: { value: 'Quiz' } });
     pickOption(within(form).getByLabelText('Language'), 'web');
@@ -74,7 +79,7 @@ describe('PlaygroundList', () => {
 
   it('can’t start another at the limit, and says what to do', () => {
     render(<PlaygroundList projects={projects} limit={2} />);
-    expect((screen.getByRole('button', { name: 'Start project' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'New project' }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByText('You have 2 projects, the most you can keep. Delete one to start another.')).toBeTruthy();
   });
 
@@ -92,7 +97,9 @@ describe('PlaygroundList', () => {
 
   it('says how to begin when there are none', () => {
     render(<PlaygroundList projects={[]} limit={10} />);
-    expect(screen.getByText('No projects yet. Start one above: it’s yours to try things out, and nobody marks it.')).toBeTruthy();
+    expect(
+      screen.getByText('No projects yet. Start one with New project: it’s yours to try things out, and nobody marks it.'),
+    ).toBeTruthy();
   });
 });
 

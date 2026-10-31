@@ -23,6 +23,7 @@ test.describe('student', () => {
     await expect(page.getByRole('table', { name: 'My projects' })).toContainText('No projects yet.');
     await expectAccessible(page);
 
+    await page.getByRole('button', { name: 'New project' }).click();
     const form = page.getByRole('form', { name: 'New project' });
     await form.getByLabel('Name').fill('My web page');
     await choose(form.getByLabel('Language'), { label: 'HTML/CSS/JS' });
@@ -80,6 +81,7 @@ test.describe('someone else', () => {
   test('another student gets "not found" for a project that isn’t theirs', async ({ browser }) => {
     const owner = await (await browser.newContext({ storageState: stateFile('student') })).newPage();
     await owner.goto('/student/playground');
+    await owner.getByRole('button', { name: 'New project' }).click();
     const form = owner.getByRole('form', { name: 'New project' });
     await form.getByLabel('Name').fill('Secret plans');
     await form.getByRole('button', { name: 'Start project' }).click();

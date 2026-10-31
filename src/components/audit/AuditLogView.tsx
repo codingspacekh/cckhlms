@@ -1,28 +1,31 @@
 // FR-SYS-02: the audit log, newest first. The filters are a plain GET form, so the address bar holds them and the
-// page works without JavaScript; "Older entries" carries them on.
+// page works without JavaScript; the numbered pages (owner, 2026-10-31) carry them on.
 import Link from 'next/link';
 import { TableScroll } from '@/components/ui/TableScroll';
 import type { AuditView } from '@/modules/audit/audit-log';
-import { AUDIT_GROUPS, EVERYDAY_GROUPS, SENSITIVE_GROUPS, type AuditFilters } from '@/modules/audit/rules';
+import { AUDIT_GROUPS, EVERYDAY_GROUPS, pageNumbers, PAGE_SIZE, SENSITIVE_GROUPS, type AuditFilters } from '@/modules/audit/rules';
 import { DateField } from '@/components/ui/DateTimeFields';
 import { Select } from '@/components/ui/Select';
 
 export type AuditRowView = Omit<AuditView, 'at'> & { when: string }; // in the club's time zone
 
 const BASE = '/admin/audit';
-function href(f: AuditFilters, before: number | null) {
+function href(f: AuditFilters, page: number) {
   const q = new URLSearchParams();
   if (f.group) q.set('group', f.group);
   if (f.person) q.set('person', f.person);
   if (f.from) q.set('from', f.from);
   if (f.to) q.set('to', f.to);
-  if (before) q.set('before', String(before));
+  if (page > 1) q.set('page', String(page));
   const s = q.toString();
   return s ? `${BASE}?${s}` : BASE;
 }
 
-export function AuditLogView({ rows, next, filters }: { rows: AuditRowView[]; next: number | null; filters: AuditFilters }) {
+export function AuditLogView({ rows, total, filters }: { rows: AuditRowView[]; total: number; filters: AuditFilters }) {
   const filtered = !!(filters.group || filters.person || filters.from || filters.to);
+  const page = filters.page;
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const first = (page - 1) * PAGE_SIZE + 1;
   return (
     <>
       <form className="card audit-filters" method="get" action={BASE} role="search" aria-label="Filter the audit log">
@@ -79,7 +82,7 @@ export function AuditLogView({ rows, next, filters }: { rows: AuditRowView[]; ne
               {rows.length === 0 && (
                 <tr>
                   <td colSpan={4} className="muted">
-                    {filtered || filters.before ? 'Nothing matches these filters.' : 'Nothing has been recorded yet.'}
+                    {filtered ? 'Nothing matches these filters.' : 'Nothing has been recorded yet.'}
                   </td>
                 </tr>
               )}
@@ -118,21 +121,51 @@ export function AuditLogView({ rows, next, filters }: { rows: AuditRowView[]; ne
             </tbody>
           </table>
         </TableScroll>
+        {total > 0 && (
+          <div className="list-bar foot">
+            <span className="small muted tnum">
+              Showing {first}–{Math.min(page * PAGE_SIZE, total)} of {total} {total === 1 ? 'entry' : 'entries'}
+            </span>
+            {pages > 1 && (
+              <nav className="pager" aria-label="Pages">
+                {page > 1 ? (
+                  <Link className="btn sm ghost" href={href(filters, page - 1)}>
+                    Previous
+                  </Link>
+                ) : (
+                  <span className="btn sm ghost" aria-disabled="true">
+                    Previous
+                  </span>
+                )}
+                {pageNumbers(page, pages).map((n, i) =>
+                  n === 'gap' ? (
+                    <span key={`gap${i}`} className="gap" aria-hidden="true">
+                      …
+                    </span>
+                  ) : n === page ? (
+                    <span key={n} className="btn sm num" aria-current="page">
+                      {n}
+                    </span>
+                  ) : (
+                    <Link key={n} className="btn sm ghost num" href={href(filters, n)} aria-label={`Page ${n}`}>
+                      {n}
+                    </Link>
+                  ),
+                )}
+                {page < pages ? (
+                  <Link className="btn sm ghost" href={href(filters, page + 1)}>
+                    Next
+                  </Link>
+                ) : (
+                  <span className="btn sm ghost" aria-disabled="true">
+                    Next
+                  </span>
+                )}
+              </nav>
+            )}
+          </div>
+        )}
       </section>
-      {(next || filters.before) && (
-        <nav className="row" aria-label="More entries">
-          {filters.before && (
-            <Link className="btn sm" href={href(filters, null)}>
-              Newest entries
-            </Link>
-          )}
-          {next && (
-            <Link className="btn sm" href={href(filters, next)}>
-              Older entries
-            </Link>
-          )}
-        </nav>
-      )}
     </>
   );
 }

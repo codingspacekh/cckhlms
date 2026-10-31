@@ -24,6 +24,7 @@ const PIXEL = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQ
 test('a folder with pictures, and a big photo, show in the preview and are saved', async ({ page }) => {
   const problems = await watchProblems(page);
   await page.goto('/student/playground');
+  await page.getByRole('button', { name: 'New project' }).click();
   const form = page.getByRole('form', { name: 'New project' });
   await form.getByLabel('Name').fill('Pet page');
   await choose(form.getByLabel('Language'), { label: 'HTML/CSS/JS' });

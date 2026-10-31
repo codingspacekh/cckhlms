@@ -1,5 +1,4 @@
 import { JoinZoom } from '@/components/academics/Where';
-import { TableScroll } from '@/components/ui/TableScroll';
 import { addDays } from '@/modules/academics/schedule';
 import { firstName } from '@/modules/reporting/home-rules';
 import { supportWhen } from '@/modules/support/rules';
@@ -32,45 +31,50 @@ export function StudentSupportCard({ line, today }: { line: StudentSupportLine; 
   );
 }
 
-// A teacher's card on Today (BR-29; prototype screen 8): only their own students are named.
-export function TeacherSupportCard({ line, today }: { line: TeacherSupportLine; today: string }) {
-  const n = line.students.length;
+// A teacher's support lines on Today (BR-29; prototype screen 8; owner, 2026-11-01): one compact card with a row per
+// line: when, their own students (class and latest weekly note), and Join on Zoom. Only their own students are named.
+export function TeacherSupportLines({ lines, today }: { lines: TeacherSupportLine[]; today: string }) {
+  if (lines.length === 0) return null;
   return (
-    <section className="card stack invite wide" aria-labelledby={`sl-${line.id}`}>
-      <span className="tag">Support line · set up by Admin</span>
-      <h2 id={`sl-${line.id}`}>
-        {n} of your {n === 1 ? 'students has' : 'students have'} a support line
-      </h2>
-      <p className="when tnum">{longWhen(line, today)}</p>
-      <TableScroll label="Your students in this support line, table">
-        <table className="list" aria-label="Your students in this support line">
-          <thead>
-            <tr>
-              <th scope="col">Student</th>
-              <th scope="col">Class</th>
-              <th scope="col">Latest note</th>
-            </tr>
-          </thead>
-          <tbody>
-            {line.students.map((s) => (
-              <tr key={`${s.name}-${s.className}`}>
-                <th scope="row">{s.name}</th>
-                <td>{s.className.split(' · ')[0]}</td>
-                <td className="text-cell small">{s.note ?? <span className="muted">—</span>}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </TableScroll>
-      {line.others > 0 && (
-        <p className="small muted">
-          And {line.others} {line.others === 1 ? 'student' : 'students'} from other classes.
-        </p>
-      )}
-      <div className="row">
-        <JoinZoom href={line.meetingUrl} />
-        {line.message && <span className="small muted">Message to students: “{line.message}”</span>}
+    <section className="card flush full support-card" aria-labelledby="support-title">
+      <div className="chead">
+        <h2 id="support-title">Support lines</h2>
+        <span className="xs muted">Set up by Admin · your students in each</span>
       </div>
+      <ul className="plain sl-rows">
+        {lines.map((l) => {
+          const when = longWhen(l, today);
+          const [day, time] = when.split(' · ');
+          return (
+            <li key={l.id} className="sl-row" aria-label={`${when} support line`}>
+              <div className="sl-when">
+                <strong>{day}</strong>
+                <span className="small muted tnum">{time}</span>
+              </div>
+              <div className="sl-who">
+                <ul className="plain">
+                  {l.students.map((st) => (
+                    <li key={`${st.name}-${st.className}`}>
+                      <strong>{st.name}</strong>{' '}
+                      <span className="small muted">
+                        {st.className.split(' · ')[0]}
+                        {st.note && ` · ${st.note}`}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                {l.others > 0 && (
+                  <span className="xs muted">
+                    and {l.others} {l.others === 1 ? 'student' : 'students'} from other classes
+                  </span>
+                )}
+                {l.message && <span className="xs muted">Message to students: “{l.message}”</span>}
+              </div>
+              <JoinZoom href={l.meetingUrl} size="sm" />
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }

@@ -76,7 +76,6 @@ export default async function StudentHome() {
                     <>
                       <Link className={`btn lg${next.meetingUrl ? '' : ' primary'}`} href={weekPage}>
                         Open Week {s.week} lesson
-                        <Icon name="arrow" />
                       </Link>
                       {teacher && (
                         <Link className="btn lg" href={`${weekPage}#qa-title`}>
@@ -102,107 +101,110 @@ export default async function StudentHome() {
         </span>
       </section>
 
-      <div className="home-grid">
-        {support.map((l) => (
-          <StudentSupportCard key={l.id} line={l} today={home.today} />
-        ))}
-        {home.classes.map((c) => (
-          <section key={c.id} className="card stack wide" aria-labelledby={`puzzle-${c.id}`}>
-            <div className="spread">
-              <h2 id={`puzzle-${c.id}`}>{home.classes.length > 1 ? `My term puzzle · ${c.name.split(' · ')[0]}` : 'My term puzzle'}</h2>
-              <span className="pill green tnum">
-                {c.puzzle.earned} of {c.puzzle.total} pieces
-              </span>
-            </div>
-            <p className="muted">Come to class and finish that week&apos;s work, and its piece clicks in.</p>
-            <TermPuzzle pieces={c.puzzle.pieces} label={`Weeks of ${c.name.split(' · ')[0]}`} />
-          </section>
-        ))}
-
-        <section className="card stack" aria-labelledby="todo-title">
-          <h2 id="todo-title">To do</h2>
-          {home.todo.length === 0 && home.marks.length === 0 ? (
-            <p className="muted">Nothing to do right now. Work your teacher sets appears here.</p>
-          ) : (
-            <ul className="plain todo">
-              {home.todo.map((t) => (
-                <li key={t.id} className={t.state}>
-                  <span className="todo-icon" aria-hidden="true">
-                    <Icon name={t.state === 'missing' ? 'alert' : 'pencil'} />
-                  </span>
-                  <span className="todo-text">
-                    <Link className="strong" href={`/student/classes/${t.classId}/work/${t.id}`}>
-                      {t.title}
-                    </Link>
-                    <span className="sub">{TODO_NOTE[t.state](t)}</span>
-                  </span>
-                </li>
-              ))}
-              {home.marks.map((m) => (
-                <li key={m.id} className="done">
-                  <span className="todo-icon" aria-hidden="true">
-                    <Icon name="check" />
-                  </span>
-                  <span className="todo-text">
-                    <Link className="strong" href={`/student/classes/${m.classId}/work/${m.id}`}>
-                      {m.title}
-                    </Link>
-                    <span className="sub tnum">
-                      Marked · {m.score} out of {m.maxScore}
-                    </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <section className="card latest wide" aria-labelledby="project-title">
-          <div className="stack">
-            <h2 id="project-title">My latest project</h2>
-            {home.project ? (
-              <>
-                <p className="big strong">{home.project.name}</p>
-                <p className="muted">Saved {formatDate(toClubTime(home.project.savedAt, timeZone).date)} in the Playground</p>
-                <div className="row">
-                  <Link className="btn primary" href={`/student/playground/${home.project.id}`}>
-                    <Icon name="play" />
-                    Keep coding
-                  </Link>
-                  <Link className="btn" href="/student/playground">
-                    All my projects
-                  </Link>
-                </div>
-              </>
+      {/* Owner, 2026-10-31: two columns that each stack on their own, so nothing is left in a gap. What to do (and a
+          support line) comes first on a phone, then the puzzle and the latest project. */}
+      <div className="home-cols">
+        <div className="home-side">
+          {support.map((l) => (
+            <StudentSupportCard key={l.id} line={l} today={home.today} />
+          ))}
+          <section className="card stack" aria-labelledby="todo-title">
+            <h2 id="todo-title">To do</h2>
+            {home.todo.length === 0 && home.marks.length === 0 ? (
+              <p className="muted">Nothing to do right now. Work your teacher sets appears here.</p>
             ) : (
-              <>
-                <p className="muted">Make anything you like in the Playground: a game, a story, a web page.</p>
-                <div>
-                  <Link className="btn primary" href="/student/playground">
-                    <Icon name="code" />
-                    Open the Playground
-                  </Link>
-                </div>
-              </>
+              <ul className="plain todo">
+                {home.todo.map((t) => (
+                  <li key={t.id} className={t.state}>
+                    <span className="todo-icon" aria-hidden="true">
+                      <Icon name={t.state === 'missing' ? 'alert' : 'pencil'} />
+                    </span>
+                    <span className="todo-text">
+                      <Link className="strong" href={`/student/classes/${t.classId}/work/${t.id}`}>
+                        {t.title}
+                      </Link>
+                      <span className="sub">{TODO_NOTE[t.state](t)}</span>
+                    </span>
+                  </li>
+                ))}
+                {home.marks.map((m) => (
+                  <li key={m.id} className="done">
+                    <span className="todo-icon" aria-hidden="true">
+                      <Icon name="check" />
+                    </span>
+                    <span className="todo-text">
+                      <Link className="strong" href={`/student/classes/${m.classId}/work/${m.id}`}>
+                        {m.title}
+                      </Link>
+                      <span className="sub tnum">
+                        Marked · {m.score} out of {m.maxScore}
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
             )}
-          </div>
-          {home.project && home.project.lines.some((l) => l.trim()) && (
-            <figure className="code-peek">
-              <figcaption>{home.project.path}</figcaption>
-              <pre>{home.project.lines.join('\n')}</pre>
-            </figure>
-          )}
-        </section>
-
-        {home.feedback && (
-          <section className="card stack word" aria-labelledby="word-title">
-            <h2 id="word-title">{home.feedback.teacher ? `From Teacher ${firstName(home.feedback.teacher)}` : 'From your teacher'}</h2>
-            <blockquote>“{home.feedback.text.length > 220 ? `${home.feedback.text.slice(0, 217)}…` : home.feedback.text}”</blockquote>
-            <p className="small">
-              On <Link href={`/student/classes/${home.feedback.classId}/work/${home.feedback.workId}`}>{home.feedback.title}</Link>
-            </p>
           </section>
-        )}
+
+          {home.feedback && (
+            <section className="card stack word" aria-labelledby="word-title">
+              <h2 id="word-title">{home.feedback.teacher ? `From Teacher ${firstName(home.feedback.teacher)}` : 'From your teacher'}</h2>
+              <blockquote>“{home.feedback.text.length > 220 ? `${home.feedback.text.slice(0, 217)}…` : home.feedback.text}”</blockquote>
+              <p className="small">
+                On <Link href={`/student/classes/${home.feedback.classId}/work/${home.feedback.workId}`}>{home.feedback.title}</Link>
+              </p>
+            </section>
+          )}
+        </div>
+        <div className="home-main">
+          {home.classes.map((c) => (
+            <section key={c.id} className="card stack" aria-labelledby={`puzzle-${c.id}`}>
+              <div className="spread">
+                <h2 id={`puzzle-${c.id}`}>{home.classes.length > 1 ? `My term puzzle · ${c.name.split(' · ')[0]}` : 'My term puzzle'}</h2>
+                <span className="pill green tnum">
+                  {c.puzzle.earned} of {c.puzzle.total} pieces
+                </span>
+              </div>
+              <p className="muted">Come to class and finish that week&apos;s work, and its piece clicks in.</p>
+              <TermPuzzle pieces={c.puzzle.pieces} label={`Weeks of ${c.name.split(' · ')[0]}`} />
+            </section>
+          ))}
+
+          <section className="card latest" aria-labelledby="project-title">
+            <div className="stack">
+              <h2 id="project-title">My latest project</h2>
+              {home.project ? (
+                <>
+                  <p className="big strong">{home.project.name}</p>
+                  <p className="muted">Saved {formatDate(toClubTime(home.project.savedAt, timeZone).date)} in the Playground</p>
+                  <div className="row">
+                    <Link className="btn primary" href={`/student/playground/${home.project.id}`}>
+                      Keep coding
+                    </Link>
+                    <Link className="btn" href="/student/playground">
+                      All my projects
+                    </Link>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="muted">Make anything you like in the Playground: a game, a story, a web page.</p>
+                  <div>
+                    <Link className="btn primary" href="/student/playground">
+                      Open the Playground
+                    </Link>
+                  </div>
+                </>
+              )}
+            </div>
+            {home.project && home.project.lines.some((l) => l.trim()) && (
+              <figure className="code-peek">
+                <figcaption>{home.project.path}</figcaption>
+                <pre>{home.project.lines.join('\n')}</pre>
+              </figure>
+            )}
+          </section>
+        </div>
       </div>
 
       <p className="small muted">

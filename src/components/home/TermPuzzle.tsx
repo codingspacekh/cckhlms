@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { PIECE_LABEL, type PieceState } from '@/modules/reporting/puzzle-rules';
 
 // The term puzzle (FR-STU-11, BR-21): one piece per weekly session, shaped like the pieces in the club's logo.
@@ -8,8 +9,10 @@ const TONES = ['blue', 'green', 'pink'] as const;
 
 export function TermPuzzle({ pieces, label }: { pieces: { week: number; state: PieceState }[]; label: string }) {
   let earned = 0;
+  // Rows of even length: 12 weeks are two rows of 6, not 9 and 3 (owner, 2026-10-31). At most 9 in a row.
+  const cols = Math.ceil(pieces.length / Math.ceil(pieces.length / 9));
   return (
-    <ol className="puzzle" aria-label={label}>
+    <ol className="puzzle balanced" aria-label={label} style={{ '--cols': cols } as CSSProperties}>
       {pieces.map((p) => {
         const tone = p.state === 'earned' ? TONES[earned++ % TONES.length] : null;
         return (

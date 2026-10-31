@@ -178,8 +178,9 @@ for (const [who, area] of [
   });
 }
 
-// The crawl sees pages, not dialogs: the M10 edit dialogs are opened here and checked the same way.
-test('the edit dialogs (M10): axe in light and dark, and they fit a phone', async ({ browser }) => {
+// The crawl sees pages, not dialogs: the M10 edit dialogs, and the "add" ones (owner, 2026-10-31), are opened here
+// and checked the same way.
+test('the edit and add dialogs: axe in light and dark, and they fit a phone', async ({ browser }) => {
   const { ctx, page } = await signedIn(browser, 'admin');
   const dialogs: [url: string, open: (p: Page) => Promise<void>][] = [
     [
@@ -199,6 +200,10 @@ test('the edit dialogs (M10): axe in light and dark, and they fit a phone', asyn
           .click(),
     ],
     [`/admin/classes/${(await teachingClass()).classId}`, (p) => p.getByRole('button', { name: 'Edit class' }).click()],
+    [`/admin/classes/${(await teachingClass()).classId}`, (p) => p.getByRole('button', { name: 'Add make-up session' }).click()],
+    ['/admin/classes', (p) => p.getByRole('button', { name: 'New class' }).click()],
+    ['/admin/people', (p) => p.getByRole('button', { name: 'Import students' }).click()],
+    ['/admin/support-lines', (p) => p.getByRole('button', { name: 'New support line' }).click()],
   ];
   const problems: string[] = [];
   for (const [url, open] of dialogs)

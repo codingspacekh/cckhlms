@@ -30,7 +30,7 @@ test.describe('admin', () => {
     await c.getByRole('button', { name: 'Add course' }).click();
     await expect(page.getByRole('row', { name: /PY2/ })).toBeVisible();
 
-    await page.goto('/admin/classes/new');
+    await page.goto('/admin/classes?new=1');
     const f = page.getByRole('form', { name: 'New class' });
     await choose(f.getByLabel('Course'), { label: 'PY2 · Python Level 2' });
     await choose(f.getByLabel('Term'), { label: 'Term 2 · 2028' });
@@ -119,7 +119,7 @@ test.describe('teacher', () => {
     await page.goto('/teacher');
     const card = page.getByRole('article', { name: 'Python Level 2 · Sat 09:00' });
     await expect(card).toContainText('1 student');
-    await expect(card).toContainText('Next: Sat 15 Apr 2028 · 09:00–10:30 · Week 1');
+    await expect(card.getByRole('definition').first()).toHaveText('Sat 15 Apr 2028 · 09:00–10:30Week 1');
     await card.getByRole('link', { name: 'Open class' }).click();
     // the class's sections are in the sidebar
     const sections = page.getByRole('group', { name: 'Python Level 2 · Sat 09:00 sections' });

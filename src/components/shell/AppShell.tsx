@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import { and, desc, gte, lte } from 'drizzle-orm';
+import { and, desc, eq, gte, lte } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { clubSettings, term } from '@/db/schema';
+import { clubSettings, term, user } from '@/db/schema';
 import { termWeek, todayIn } from '@/modules/academics/schedule';
 import { Bell } from './Bell';
 import type { ClassLink, Role } from './nav';
@@ -13,6 +13,7 @@ const ROLE_LABEL: Record<Role, string> = { admin: 'Admin', teacher: 'Teacher', s
 
 type Props = {
   role: Role;
+  userId: string;
   name: string;
   crumb: string;
   classes?: ClassLink[];
@@ -20,8 +21,11 @@ type Props = {
   children: ReactNode;
 };
 
-export async function AppShell({ role, name, crumb, classes, notifications, children }: Props) {
-  const [settings] = await db.select({ timeZone: clubSettings.timeZone, clubName: clubSettings.clubName }).from(clubSettings).limit(1);
+export async function AppShell({ role, userId, name, crumb, classes, notifications, children }: Props) {
+  const [[settings], [me]] = await Promise.all([
+    db.select({ timeZone: clubSettings.timeZone, clubName: clubSettings.clubName }).from(clubSettings).limit(1),
+    db.select({ image: user.image }).from(user).where(eq(user.id, userId)).limit(1),
+  ]);
   const timeZone = settings?.timeZone ?? 'Asia/Phnom_Penh';
   const today = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone }).format(
     new Date(),
@@ -41,7 +45,7 @@ export async function AppShell({ role, name, crumb, classes, notifications, chil
       <a className="skip" href="#main">
         Skip to content
       </a>
-      <Sidebar role={role} user={{ name, roleLabel: ROLE_LABEL[role] }} classes={classes} />
+      <Sidebar role={role} user={{ id: userId, image: me?.image ?? null, name, roleLabel: ROLE_LABEL[role] }} classes={classes} />
       <div className="wrap">
         <header className="top">
           <div className="crumb">

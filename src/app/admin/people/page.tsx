@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getClubSettings } from '@/modules/club/service';
+import { importTargets } from '@/modules/identity/batches';
 import { listPeople, type Role } from '@/modules/identity/service';
 import { LMS_ORIGIN } from '@/server/auth';
 import { requireActor } from '@/server/guard';
@@ -13,11 +14,11 @@ const TABS: { role: Role; label: string }[] = [
   { role: 'admin', label: 'Admins' },
 ];
 
-export default async function PeoplePage({ searchParams }: { searchParams: Promise<{ role?: string; show?: string }> }) {
+export default async function PeoplePage({ searchParams }: { searchParams: Promise<{ role?: string; show?: string; import?: string }> }) {
   const actor = await requireActor('accounts.manage');
-  const { role: requested, show } = await searchParams;
+  const { role: requested, show, import: startImport } = await searchParams;
   const role: Role = TABS.some((t) => t.role === requested) ? (requested as Role) : 'student';
-  const [people, { clubName }] = await Promise.all([listPeople(actor, role), getClubSettings()]);
+  const [people, { clubName }, targets] = await Promise.all([listPeople(actor, role), getClubSettings(), importTargets(actor)]);
   const tabs = (
     <nav className="tabs" aria-label="Kind of account">
       {TABS.map((t) => (
@@ -36,6 +37,8 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
       tabs={tabs}
       clubName={clubName}
       site={new URL(LMS_ORIGIN).host}
+      importTargets={targets}
+      startImport={startImport === '1'}
     />
   );
 }

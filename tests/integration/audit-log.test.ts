@@ -15,6 +15,7 @@ import { submitWork } from '@/modules/assessments/submissions';
 import { auditEntries } from '@/modules/audit/audit-log';
 import { actionsIn, PAGE_SIZE, parseAuditFilters, SENSITIVE_GROUPS, type AuditFilters } from '@/modules/audit/rules';
 import { issueCertificate, reissueCertificate, revokeCertificate } from '@/modules/certificates/certificates';
+import { setAvatar } from '@/modules/identity/avatar';
 import {
   changeOwnPassword,
   createAccount,
@@ -74,6 +75,7 @@ beforeAll(async () => {
   await setActive(admin, kosal.userId, true);
   await signOutEverywhere(admin, kosal.userId);
   await changeOwnPassword(admin, { current: 'admin-password-123', next: 'admin-password-456', again: 'admin-password-456' });
+  await setAvatar(admin, new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1])); // a profile picture (owner, 2026-10-31)
 
   // A class, its work and marks.
   const t1 = await createTerm(admin, { year: 2027, number: 1, startDate: '2027-01-09', endDate: '2027-04-04' });
@@ -269,7 +271,7 @@ describe('reading the log (FR-SYS-02)', () => {
     expect(await ids('', '2027-01-09')).not.toContain(id);
   });
 
-  it(`shows ${PAGE_SIZE} at a time, with a link to older ones`, async () => {
+  it(`shows ${PAGE_SIZE} at a time, numbered, and how many there are`, async () => {
     for (let i = 0; i < PAGE_SIZE + 5; i++)
       await audit({
         actorId: admin.userId,
@@ -280,10 +282,12 @@ describe('reading the log (FR-SYS-02)', () => {
       });
     const first = await auditEntries(admin, filters({ group: 'settings' }));
     expect(first.rows).toHaveLength(PAGE_SIZE);
-    expect(first.next).toBe(first.rows.at(-1)!.id);
-    const second = await auditEntries(admin, filters({ group: 'settings', before: first.next }));
-    expect(second.rows).toHaveLength(6); // 5 more, and the one by a deleted person
+    expect([first.total, first.page]).toEqual([PAGE_SIZE + 6, 1]); // 5 more, and the one by a deleted person
+    const second = await auditEntries(admin, filters({ group: 'settings', page: 2 }));
+    expect(second.rows).toHaveLength(6);
+    expect(second.rows[0]!.id).toBeLessThan(first.rows.at(-1)!.id);
     expect(second.rows.at(-1)).toMatchObject({ by: null });
-    expect(second.next).toBeNull();
+    // A page past the end shows the last one.
+    expect(await auditEntries(admin, filters({ group: 'settings', page: 9 }))).toMatchObject({ page: 2, total: PAGE_SIZE + 6 });
   });
 });

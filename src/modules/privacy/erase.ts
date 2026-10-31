@@ -31,6 +31,7 @@ import type { Actor } from '@/server/actor';
 import { audit } from '@/server/audit';
 import { assertCan, ValidationError } from '@/server/errors';
 import { storage } from '@/server/storage';
+import { avatarKeyOf } from '@/modules/identity/avatar';
 import { isOnlyStudent, studentRow } from './export';
 import { confirmsErase, DELETED_NAME, erasedEmail, scrubAuditDetail } from './rules';
 
@@ -51,6 +52,8 @@ export async function eraseStudent(actor: Actor | null, studentId: string, confi
       .from(submission)
       .where(and(eq(submission.studentId, studentId), isNotNull(submission.fileKey)))
   ).map((r) => r.key!);
+  const picture = await avatarKeyOf(studentId); // her profile picture (user.image is cleared below)
+  if (picture) files.push(picture);
 
   await db.transaction(async (tx) => {
     await tx

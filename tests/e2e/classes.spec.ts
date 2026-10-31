@@ -28,7 +28,7 @@ test.beforeAll(async ({ browser }) => {
 });
 
 test('Admin creates a weekend class, seeing its weekly sessions before saving', async ({ page }) => {
-  await page.goto('/admin/classes/new');
+  await page.goto('/admin/classes?new=1');
   await expectAccessible(page);
   const form = page.getByRole('form', { name: 'New class' });
   await choose(form.getByLabel('Course'), { label: 'JV1 · Java Level 1' });
@@ -54,7 +54,7 @@ test('Admin creates a weekend class, seeing its weekly sessions before saving', 
 });
 
 test('a first date on the wrong day is refused with a clear message', async ({ page }) => {
-  await page.goto('/admin/classes/new');
+  await page.goto('/admin/classes?new=1');
   const form = page.getByRole('form', { name: 'New class' });
   await choose(form.getByLabel('Course'), { label: 'JV1 · Java Level 1' });
   await choose(form.getByLabel('Term'), { label: 'Term 1 · 2028' });

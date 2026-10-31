@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { SupportLineForm } from '@/components/support/SupportLineForm';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Pill } from '@/components/ui/Pill';
 import { TableScroll } from '@/components/ui/TableScroll';
 import { listSupportLines, supportLineForm, type SupportLineRow } from '@/modules/support/support-lines';
 import { requireActor } from '@/server/guard';
 import { CancelLine } from './CancelLine';
+import { NewSupportLine } from './NewSupportLine';
 
 export const metadata: Metadata = { title: 'Support lines' };
 
@@ -20,9 +20,9 @@ const STATUS: Record<SupportLineRow['status'], ReactNode> = {
 };
 const count = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;
 
-// Support lines (FR-ADM-18, BR-29; M14c): an extra online session for students who need help. The students ticked on
-// Weekly reports arrive in the form (?students=…); a line can be changed (?change=id) or copied for another day
-// (?copy=id) until it starts.
+// Support lines (FR-ADM-18, BR-29; M14c): an extra online session for students who need help. New support line opens
+// the form in a dialog; the students ticked on Weekly reports arrive in it (?students=…), and a line can be changed
+// (?change=id) until it starts or copied for another day (?copy=id), each opening the dialog straight away.
 export default async function SupportLinesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const actor = await requireActor('supportlines.manage');
   const q = await searchParams;
@@ -33,7 +33,17 @@ export default async function SupportLinesPage({ searchParams }: { searchParams:
   const saved = done ? lines.find((l) => l.id === done) : undefined;
   return (
     <>
-      <PageHeader eyebrow={<Link href="/admin/weekly-reports">Weekly reports</Link>} title="Support lines" />
+      <PageHeader
+        eyebrow={<Link href="/admin/weekly-reports">Weekly reports</Link>}
+        title="Support lines"
+        actions={
+          <NewSupportLine
+            key={[change, copy, ...all(q.students), done].join(',')}
+            startOpen={!!(change || copy || all(q.students).length)}
+            {...form}
+          />
+        }
+      />
       <p className="small muted">
         An extra online session for students who need help, on any day agreed with their guardians. Its students see it on My week and their
         class teachers on Today, with a notification. Nothing is sent outside the app.
@@ -44,7 +54,6 @@ export default async function SupportLinesPage({ searchParams }: { searchParams:
           {count(saved.teachers.length, 'teacher')} ({saved.teachers.join(', ')}) can see it now on their home page and in notifications.
         </p>
       )}
-      <SupportLineForm key={change ?? copy ?? all(q.students).join(',')} {...form} />
       <section className="card flush" aria-labelledby="lines-title">
         <div className="chead">
           <h2 id="lines-title">Support lines</h2>

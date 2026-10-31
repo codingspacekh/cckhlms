@@ -26,6 +26,8 @@ import { todayIn } from '@/modules/academics/schedule';
 import { getClubSettings } from '@/modules/club/service';
 import type { Actor } from '@/server/actor';
 import { audit } from '@/server/audit';
+import { avatarKeyOf } from './avatar';
+import { storage } from '@/server/storage';
 import { auth } from '@/server/auth';
 import { assertCan, ValidationError } from '@/server/errors';
 import { reserveSignIn, settleSignIn } from '@/server/sign-in-limit';
@@ -402,6 +404,7 @@ export async function deleteAccount(actor: Actor | null, userId: string): Promis
   const target = await findUser(userId);
   const kept = await accountUse(userId, target.name);
   if (kept) throw new ValidationError(`${kept}, so the account can't be deleted.${target.banned ? '' : ' Archive it instead.'}`);
+  const picture = await avatarKeyOf(userId);
   await db.transaction(async (tx) => {
     // Their sessions, password login and profile go with them (cascade); the audit entry keeps the username only.
     await tx.delete(user).where(eq(user.id, userId));
@@ -416,4 +419,5 @@ export async function deleteAccount(actor: Actor | null, userId: string): Promis
       tx,
     );
   });
+  if (picture) await storage.remove(picture);
 }

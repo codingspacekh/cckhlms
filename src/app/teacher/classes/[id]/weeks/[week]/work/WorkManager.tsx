@@ -1,7 +1,6 @@
 'use client';
 import Link from 'next/link';
 import { startTransition, useActionState, useRef, useState, useTransition, type FormEvent } from 'react';
-import { Icon } from '@/components/ui/Icon';
 import { Pill } from '@/components/ui/Pill';
 import { TableScroll } from '@/components/ui/TableScroll';
 import { deleteAssessmentAction, saveAssessmentAction } from '@/modules/assessments/actions';
@@ -56,7 +55,7 @@ export function WorkManager({ classId, sessionId, choices, items, languages, def
           <p className="small muted">Work set in this week. Students see it once it’s published.</p>
         </div>
         <button type="button" className="btn primary" onClick={() => open(null)}>
-          <Icon name="plus" /> Set new work
+          Set new work
         </button>
       </div>
       {done && (

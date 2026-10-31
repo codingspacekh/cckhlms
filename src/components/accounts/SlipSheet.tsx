@@ -1,5 +1,4 @@
 'use client';
-import { Icon } from '@/components/ui/Icon';
 
 export type SlipData = { name: string; username: string; password: string };
 
@@ -56,7 +55,7 @@ export function SlipSheet({
         </p>
         <div className="row">
           <button type="button" className="btn primary" onClick={() => window.print()}>
-            <Icon name="printer" /> Print slips
+            Print slips
           </button>
           <button type="button" className="btn ghost" onClick={onDone}>
             Done

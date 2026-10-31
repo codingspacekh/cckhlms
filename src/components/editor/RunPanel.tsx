@@ -3,7 +3,6 @@
 // program's input first (owner's choice: no interactive terminal); the lines Python's input() read show in green,
 // errors in pink, and an error in one of the project's files links to its line. Nothing about a run is saved.
 import { useEffect, useRef, useState } from 'react';
-import { Icon } from '@/components/ui/Icon';
 import type { ProjectFile } from '@/lib/project/files';
 import { errorPlace, outputParts } from '@/lib/run-output';
 import { runCodeAction } from '@/modules/running/actions';
@@ -139,8 +138,8 @@ export function RunPanel({ language, files, onGoTo }: Props) {
           </>
         ) : (
           <>
-            <button type="button" className="btn run" onClick={run}>
-              <Icon name="play" /> Run
+            <button type="button" className="btn primary" onClick={run}>
+              Run
             </button>
             {end && (
               <span className={`small strong ${end.tone}`} role="status">

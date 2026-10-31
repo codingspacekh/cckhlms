@@ -1,7 +1,9 @@
-// FR-AUTH-06 (M13, M16a): My account for everyone: who they are, and Change password.
+// FR-AUTH-06 (M13, M16a): My account for everyone: who they are, their profile picture (owner, 2026-10-31), and Change
+// password, which opens in a dialog (owner, 2026-11-01).
 import { PageHeader } from '@/components/ui/PageHeader';
 import type { Actor } from '@/server/actor';
-import { ChangePasswordForm } from './ChangePasswordForm';
+import { ChangePassword } from './ChangePassword';
+import { ProfilePicture } from './ProfilePicture';
 
 const FORGOT = {
   admin: 'Forgot your current password? Another admin can reset it on People. If no admin can sign in, see runbook §3.2.',
@@ -10,7 +12,7 @@ const FORGOT = {
 };
 const ROLE = { admin: 'Admin', teacher: 'Teacher', student: 'Student' };
 
-export function MyAccount({ actor, role }: { actor: Actor; role: 'admin' | 'teacher' | 'student' }) {
+export function MyAccount({ actor, role, image = null }: { actor: Actor; role: 'admin' | 'teacher' | 'student'; image?: string | null }) {
   const student = role === 'student';
   return (
     <>
@@ -34,18 +36,22 @@ export function MyAccount({ actor, role }: { actor: Actor; role: 'admin' | 'teac
           </dl>
           <p className="small muted">To change your name or username, ask {student ? 'the club admin' : 'an admin'}.</p>
         </section>
+        <section className="card stack" aria-labelledby="picture-title">
+          <h2 id="picture-title">Profile picture</h2>
+          <ProfilePicture userId={actor.userId} image={image} />
+        </section>
         <section className="card stack" aria-labelledby="password-title">
           <div>
-            <h2 id="password-title">Change password</h2>
+            <h2 id="password-title">Password</h2>
             <p className="small muted">
-              You stay signed in here. Any other computer or phone signed in as you is signed out.
+              Changing it keeps you signed in here. Any other computer or phone signed in as you is signed out.
               {student && ' The password on your login slip stops working.'}
             </p>
           </div>
-          <ChangePasswordForm
-            forgotHint={FORGOT[role]}
+          <ChangePassword
             help={student ? 'At least 12 characters. Three words with dashes are easy to remember, like on your login slip.' : undefined}
           />
+          <p className="xs muted">{FORGOT[role]}</p>
         </section>
       </div>
     </>

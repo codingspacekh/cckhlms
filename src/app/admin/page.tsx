@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { TermWeeks } from '@/components/home/TermWeeks';
 import { AdminDashboardView } from '@/components/reporting/AdminDashboardView';
-import { Icon } from '@/components/ui/Icon';
 import { formatDate, formatDayMonth, formatDay } from '@/modules/academics/schedule';
 import { adminDashboard } from '@/modules/reporting/dashboard';
 import { requireActor } from '@/server/guard';
@@ -28,7 +27,6 @@ export default async function AdminDashboard() {
           </p>
           <div className="row">
             <Link className="btn primary" href="/admin/people">
-              <Icon name="plus" />
               Add a person
             </Link>
             <Link className="btn" href={t ? '/admin/classes' : '/admin/terms'}>

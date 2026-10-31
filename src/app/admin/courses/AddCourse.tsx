@@ -1,6 +1,5 @@
 'use client';
 import { useRef, useState } from 'react';
-import { Icon } from '@/components/ui/Icon';
 import type { LanguageChoice } from '@/modules/academics/languages';
 import { CourseForm } from './CourseForm';
 
@@ -25,7 +24,7 @@ export function AddCourse({ languages }: { languages: LanguageChoice[] }) {
           dialog.current?.showModal();
         }}
       >
-        <Icon name="plus" /> Add a course
+        Add a course
       </button>
       <dialog ref={dialog} className="dialog wide" aria-labelledby="course-form-title">
         {formKey > 0 && (

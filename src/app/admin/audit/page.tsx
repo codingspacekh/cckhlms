@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: 'Audit log' };
 export default async function AuditPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const actor = await requireActor('audit.view');
   const filters = parseAuditFilters(await searchParams);
-  const [{ rows, next }, { timeZone }] = await Promise.all([auditEntries(actor, filters), getClubSettings()]);
+  const [{ rows, total, page }, { timeZone }] = await Promise.all([auditEntries(actor, filters), getClubSettings()]);
   return (
     <>
       <PageHeader eyebrow="Club" title="Audit log" />
@@ -26,8 +26,8 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
           const t = toClubTime(at, timeZone);
           return { ...r, when: `${formatDate(t.date)}, ${t.time}` };
         })}
-        next={next}
-        filters={filters}
+        total={total}
+        filters={{ ...filters, page }}
       />
     </>
   );

@@ -1,18 +1,17 @@
 // FR-AUTH-08: importing students from a CSV. Choosing the file checks it; errors list their lines; with no errors,
-// Admin sees what will be created, may enrol everyone in a class, and gets the login slips.
+// Admin sees what will be created, may enrol everyone in a class, and the login slips are handed on to print (the
+// People page shows them; see people-import.test.tsx).
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { optionsOf, pickOption } from './select-helpers';
 
 const checkImportAction = vi.fn();
 const importStudentsAction = vi.fn();
-const push = vi.fn();
 vi.mock('@/modules/identity/actions', () => ({
   checkImportAction: (...a: unknown[]) => checkImportAction(...a),
   importStudentsAction: (...a: unknown[]) => importStudentsAction(...a),
 }));
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
-const { ImportStudents } = await import('@/app/admin/people/import/ImportStudents');
+const { ImportStudents } = await import('@/app/admin/people/ImportStudents');
 
 afterEach(() => {
   cleanup();
@@ -23,7 +22,8 @@ const targets = [
   { id: 'c1', name: 'Python Level 1 · Sat 09:00', termName: 'Term 1 · 2027', placesLeft: null },
   { id: 'c2', name: 'Web Level 1 · Sun 09:00', termName: 'Term 1 · 2027', placesLeft: 0 },
 ];
-const props = { targets, clubName: 'CCKH Coding Club', site: 'lms.cckh.dev' };
+const onCreated = vi.fn();
+const props = { targets, onCreated };
 const CSV = 'name,username\nBopha Lim,\nChenda Ouk,chenda\n';
 const choose = (text = CSV, name = 'students.csv') =>
   fireEvent.change(screen.getByLabelText('CSV file'), { target: { files: [new File([text], name, { type: 'text/csv' })] } });
@@ -70,7 +70,7 @@ describe('ImportStudents', () => {
     expect(screen.queryByRole('button', { name: /^Create/ })).toBeNull();
   });
 
-  it('shows what will be created, then creates it and shows the slips', async () => {
+  it('shows what will be created, then creates it and hands on the slips', async () => {
     checkImportAction.mockResolvedValue(good);
     importStudentsAction.mockResolvedValue({
       ok: true,
@@ -90,16 +90,15 @@ describe('ImportStudents', () => {
 
     pickOption(screen.getByLabelText('Enrol them in'), 'c1');
     fireEvent.click(screen.getByRole('button', { name: 'Create 2 accounts' }));
-    const sheet = await screen.findByRole('region', { name: 'Login slips' });
+    await waitFor(() => expect(onCreated).toHaveBeenCalled());
     expect(importStudentsAction).toHaveBeenCalledWith(CSV, 'c1');
-    expect(sheet.textContent).toContain('2 accounts created and enrolled in Python Level 1 · Sat 09:00');
-    expect(
-      within(sheet)
-        .getAllByTestId('slip-password')
-        .map((s) => s.textContent),
-    ).toEqual(['apple-moon-42', 'kite-lion-17']);
-    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
-    expect(push).toHaveBeenCalledWith('/admin/people?role=student');
+    expect(onCreated).toHaveBeenCalledWith({
+      slips: [
+        { name: 'Bopha Lim', username: 'bopha.l', password: 'apple-moon-42' },
+        { name: 'Chenda Ouk', username: 'chenda', password: 'kite-lion-17' },
+      ],
+      enrolled: 'Python Level 1 · Sat 09:00',
+    });
   });
 
   it('shows a problem from the import, keeping the file', async () => {
