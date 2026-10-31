@@ -4192,8 +4192,50 @@ table.gradebook .sticky-col {
   color: var(--ink-2);
   min-width: 220px;
 }
-.add-student {
-  max-width: 420px;
+/* Add students to a support line: search and class filter above a short list grouped by class. */
+.finder {
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  padding: 14px 16px;
+}
+.finder-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 12px;
+}
+@media (max-width: 640px) {
+  .finder-bar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.finder-list {
+  max-height: 320px;
+  overflow-y: auto;
+}
+.finder-group + .finder-group {
+  margin-top: 10px;
+}
+.finder-class {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 0;
+}
+.finder-group ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.finder-group li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.finder-group li:last-child {
+  border-bottom: 0;
 }
 /* An invitation on My week or Today: a support line. */
 .invite {
