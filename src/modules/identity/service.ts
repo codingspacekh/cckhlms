@@ -28,7 +28,7 @@ import type { Actor } from '@/server/actor';
 import { audit } from '@/server/audit';
 import { auth } from '@/server/auth';
 import { assertCan, ValidationError } from '@/server/errors';
-import { recordSignIn, signInRefusal } from '@/server/sign-in-limit';
+import { reserveSignIn, settleSignIn } from '@/server/sign-in-limit';
 import { accountEditSchema, accountInputSchema, generatePassword, suggestUsername, type AccountEdit, type AccountInput } from './rules';
 
 export type Role = 'student' | 'teacher' | 'admin';
@@ -141,11 +141,11 @@ export async function changeOwnPassword(actor: Actor | null, input: { current: s
   if (next.length > 128) throw new ValidationError('The new password can be at most 128 characters.', 'next');
   if (next === current) throw new ValidationError('Choose a password different from the current one.', 'next');
   if (again !== next) throw new ValidationError('The two new passwords don’t match.', 'again');
-  if (await signInRefusal(actor.username, null)) throw new ValidationError('Too many wrong tries. Wait a minute and try again.', 'current');
+  if (await reserveSignIn(actor.username, null)) throw new ValidationError('Too many wrong tries. Wait a minute and try again.', 'current');
   const ctx = await auth.$context;
   const login = (await ctx.internalAdapter.findAccounts(actor.userId)).find((a) => a.providerId === 'credential');
   const right = !!login?.password && (await ctx.password.verify({ hash: login.password, password: current }));
-  await recordSignIn(actor.username, null, right);
+  await settleSignIn(actor.username, null, right ? 'ok' : 'failed');
   if (!right) throw new ValidationError('That isn’t your current password.', 'current');
   await ctx.internalAdapter.updatePassword(actor.userId, await ctx.password.hash(next));
   await db.delete(session).where(and(eq(session.userId, actor.userId), ne(session.id, actor.sessionId)));

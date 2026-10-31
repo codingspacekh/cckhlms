@@ -25,9 +25,10 @@ import {
   type Kind,
   type WorkLanguage,
 } from './rules';
+import { submissionMeta, type SubmissionMeta } from './submission-columns';
 
 type Opts = { now?: Date };
-type Latest = typeof submission.$inferSelect;
+type Latest = SubmissionMeta;
 type AssessmentRow = typeof assessment.$inferSelect;
 type Sessions = Awaited<ReturnType<typeof weeksOf>>;
 
@@ -125,7 +126,7 @@ export async function loadGradebook(classId: string, opts: Opts & { studentId?: 
     ids.length && studentIds.length
       ? await Promise.all([
           db
-            .select()
+            .select(submissionMeta)
             .from(submission)
             .where(and(inArray(submission.assessmentId, ids), inArray(submission.studentId, studentIds)))
             .orderBy(desc(submission.version)),
@@ -174,7 +175,7 @@ async function target(actor: Actor | null, assessmentId: string, studentId: stri
   assertCan(actor, 'work.grade', access);
   if (!(access.classStudentIds ?? []).includes(studentId)) throw new ValidationError('That student isn’t in this class.');
   const [latest] = await db
-    .select()
+    .select(submissionMeta)
     .from(submission)
     .where(and(eq(submission.assessmentId, assessmentId), eq(submission.studentId, studentId)))
     .orderBy(desc(submission.version))
@@ -292,7 +293,7 @@ export async function myMark(
   assertCan(actor, 'work.submit', await classAccess(a.classId, 'read'));
   const [[latest], [excused]] = await Promise.all([
     db
-      .select()
+      .select(submissionMeta)
       .from(submission)
       .where(and(eq(submission.assessmentId, assessmentId), eq(submission.studentId, actor.userId)))
       .orderBy(desc(submission.version))

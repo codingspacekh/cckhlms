@@ -74,12 +74,17 @@ done
 docker exec it-app sh -c 'touch /app/uploads/.w && rm /app/uploads/.w' || { echo "FAIL: uploads not writable"; exit 1; }
 if docker exec it-app sh -c 'touch /app/server.js' 2>/dev/null; then echo "FAIL: the image is writable"; exit 1; fi
 if docker logs it-app 2>&1 | grep -q 'EROFS'; then echo "FAIL: the app tried to write to the read-only image"; docker logs it-app | grep EROFS | head; exit 1; fi
-# If one server process dies, the container stops, so Docker restarts it whole (infra/app/cluster.mjs).
-docker exec it-app sh -c 'kill $(ps | awk "/next-server/ {print \$1; exit}")'
+# M17b (F01): if one server process dies (here killed as a heap abort would end it), the primary starts another and
+# the site keeps answering; it doesn't stop the container and every other server process.
+docker exec it-app sh -c 'kill -9 $(ps | awk "/next-server/ {print \$1; exit}")'
 i=0
-while [ "$(docker inspect -f '{{.State.Running}}' it-app)" = true ] && [ $i -lt 20 ]; do i=$((i + 1)); sleep 1; done
-[ "$(docker inspect -f '{{.State.Running}}' it-app)" = false ] || { echo "FAIL: the container kept running with a server process gone"; exit 1; }
-echo "PASS: app image (version $SHA, migrations + first admin as a non-superuser role, non-root user '$user', HSTS on, secure session cookie, read-only, no capabilities, 2 server processes, stops if one dies)"
+until [ "$(docker exec it-app ps | grep -c 'next-server' || true)" = 2 ] || [ $i -ge 30 ]; do i=$((i + 1)); sleep 1; done
+[ "$(docker inspect -f '{{.State.Running}}' it-app)" = true ] || { echo "FAIL: the container stopped when one server process died"; docker logs it-app | tail -20; exit 1; }
+[ "$(docker exec it-app ps | grep -c 'next-server' || true)" = 2 ] || { echo "FAIL: the dead server process wasn't replaced"; docker exec it-app ps; exit 1; }
+health=$(docker exec it-app wget -qO- http://127.0.0.1:3000/api/health 2>/dev/null || true)
+case "$health" in *'"ok":true'*) ;; *) echo "FAIL: not healthy after a server process was replaced: $health"; exit 1 ;; esac
+docker logs it-app 2>&1 | grep -q 'starting a new one' || { echo "FAIL: the replacement isn't logged"; exit 1; }
+echo "PASS: app image (version $SHA, migrations + first admin as a non-superuser role, non-root user '$user', HSTS on, secure session cookie, read-only, no capabilities, 2 server processes, a dead one is replaced)"
 
 # The preview image, locked down the same way, serves the frame with its CSP.
 docker build -q -t "cckhlms-preview:$SHA" -f infra/preview/Dockerfile . >/dev/null

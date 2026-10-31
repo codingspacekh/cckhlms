@@ -103,6 +103,9 @@ export function zipNameFor(title: string, username?: string): string {
   return username ? `${slug}-${username}` : slug;
 }
 
+// At most this many hand-ins of one piece of work per student (M17b, F04): each keeps a full copy of the project.
+export const MAX_HAND_INS = 20;
+
 // BR-03/BR-04: until the due time a student can submit and resubmit (the latest counts). After it, a first
 // submission is late if late work is accepted; work already handed in stays as it is.
 export function canSubmit(a: {
@@ -112,8 +115,11 @@ export function canSubmit(a: {
   submitted: boolean;
   mark?: Mark | null; // the latest version's
   lastLate?: boolean;
+  handIns?: number; // the student's hand-ins so far (marks entered in the gradebook aren't hand-ins)
 }): { ok: true; late: boolean } | { ok: false; reason: string } {
   if (a.mark === 'graded') return { ok: false, reason: 'Your teacher has marked this, so it can’t be changed.' };
+  if ((a.handIns ?? 0) >= MAX_HAND_INS)
+    return { ok: false, reason: `You’ve handed this in ${MAX_HAND_INS} times, the most for one piece of work.` };
   // Returned for a redo (FR-TCH-12): the student may hand it in again, even after the due time.
   if (a.mark === 'returned') return { ok: true, late: !!a.lastLate };
   if (!a.due || a.now.getTime() <= a.due.getTime()) return { ok: true, late: false };

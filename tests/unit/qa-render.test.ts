@@ -58,3 +58,22 @@ describe('renderPost', () => {
     expect(html).not.toContain('href="javascript:');
   });
 });
+
+describe('renderPost: bounded colouring (M17b, F07)', () => {
+  it('colours at most 2,000 characters of code in one post; the rest shows as plain lines', () => {
+    const block = Array.from({ length: 60 }, (_, i) => `print(${i})  # line ${String(i).padStart(4, '0')}`).join('\n');
+    expect(block.length).toBeGreaterThan(1200);
+    const html = renderPost('```python\n' + block + '\n```\n\n```python\n' + block + '\n```');
+    const [first, second] = html.split('<div class="code-block">').slice(1);
+    expect(first).toMatch(/<span class="tok-/);
+    expect(second).not.toMatch(/<span class="tok-/);
+    expect(second!.match(/<span class="line">/g)).toHaveLength(60); // still one numbered line each
+    expect(second).toContain('print(59)');
+  });
+
+  it('an html block of repeated unclosed tags, at the 8,000-character limit, renders quickly', () => {
+    const started = performance.now();
+    renderPost('```html\n' + '<a'.repeat(3993) + '\n```');
+    expect(performance.now() - started).toBeLessThan(150);
+  });
+});

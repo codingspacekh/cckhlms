@@ -153,7 +153,7 @@ Languages: **Python 3**, **Java** (multi-file, packages), **Web (HTML/CSS/JS)**.
 | BR-01 | A student can only see classes they are enrolled in, and only published lessons/assessments. |
 | BR-02 | A teacher can only manage classes they are assigned to. Admin can manage all. |
 | BR-03 | A submission after the due date is marked **Late**; if late is not allowed, submission is blocked. |
-| BR-04 | Only the latest submission before grading is graded; earlier versions are kept as history. |
+| BR-04 | Only the latest submission before grading is graded; earlier versions are kept as history. A student can hand in one piece of work at most 20 times, and a hand-in identical to the last one is refused (M17b). |
 | BR-05 | A certificate can only be issued to a student whose term result for that class is **Pass** (Admin can override with a reason, logged). |
 | BR-06 | Each certificate has a unique, non-guessable verification code. Re-issuing revokes the old one. |
 | BR-07 | Promotion only moves students; it never deletes the old class or its data. |

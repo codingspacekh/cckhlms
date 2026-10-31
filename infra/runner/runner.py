@@ -1,18 +1,19 @@
 """The code runner (ADR-0004, BR-25). POST /run {language, files: [{path, content}], stdin} runs a student's Python or
 Java program and replies {status, stdout, stderr, exitCode, ms, truncated, mainClass}. Status is ok, error,
 compile_error, timeout, output_limit or needs_input (it wanted more lines than the Input box had); 503 means every
-slot stayed busy, 400 a request it won't run.
+slot stayed busy, 429 that the same person already has a program running, 400 a request it won't run.
 
 It listens on a Unix socket that belongs to the app's group (production: the container has no network at all), or on
 RUNNER_LISTEN=host:port with RUNNER_TOKEN (development and CI). Each run gets a slot: its own Linux user and folder,
-limits on time, CPU, memory, processes and file size, and a minimal environment. The program's processes are killed
-and its folder removed when it ends. Nothing is logged about what a program contains or prints."""
+limits on time, CPU, memory, processes and file size, and a minimal environment. When it ends, the program's processes
+are killed and its slot is emptied and checked before anyone else gets it (M17a). Each request names its person with
+X-Run-Owner (a SHA-256 of their id, never the id itself), and a person gets one run at a time, so nobody can hold every
+slot. Nothing is logged about what a program contains or prints."""
 import json
 import os
 import queue
 import re
 import resource
-import shutil
 import signal
 import socket
 import socketserver
@@ -88,8 +89,61 @@ for f in json.load(sys.stdin):
         out.write(f["content"])
 '''
 
+# Run as the slot's user after every run: give its folder (and every real folder in it) back to its owner, empty it,
+# and remove what it left in the shared /tmp and /dev/shm. Exits 3 when the folder isn't empty afterwards.
+RESET = r'''
+import os, stat, sys
+base, me = sys.argv[1], os.getuid()
+
+def empty(top):
+    for root, dirs, files in os.walk(top):
+        for d in dirs:
+            p = os.path.join(root, d)
+            if not os.path.islink(p):
+                try:
+                    os.chmod(p, stat.S_IRWXU)
+                except OSError:
+                    pass
+    for root, dirs, files in os.walk(top, topdown=False):
+        for name in files + dirs:
+            p = os.path.join(root, name)
+            try:
+                os.rmdir(p) if os.path.isdir(p) and not os.path.islink(p) else os.unlink(p)
+            except OSError:
+                pass
+
+os.chmod(base, stat.S_IRWXU)
+empty(base)
+for shared in ('/tmp', '/dev/shm'):
+    try:
+        names = os.listdir(shared)
+    except OSError:
+        continue
+    for name in names:
+        p = os.path.join(shared, name)
+        try:
+            st = os.lstat(p)
+        except OSError:
+            continue
+        if st.st_uid != me:
+            continue
+        try:
+            if stat.S_ISDIR(st.st_mode):
+                os.chmod(p, stat.S_IRWXU)
+                empty(p)
+                os.rmdir(p)
+            else:
+                os.unlink(p)
+        except OSError:
+            pass
+sys.exit(3 if os.listdir(base) else 0)
+'''
+
 SAFE_SEGMENT = re.compile(r'^[A-Za-z0-9_][A-Za-z0-9_.\- ]*$')
+OWNER = re.compile(r'^[0-9a-f]{64}$')
 slots = queue.Queue()
+running = set()  # the owners with a run going or waiting for a slot
+running_lock = threading.Lock()
 
 
 class Refused(Exception):
@@ -192,12 +246,17 @@ def kill_group(proc):
         pass
 
 
-def finish(uid, job):
-    """Kills whatever the run left behind (anything its user still runs) and removes its folder."""
+def finish(slot):
+    """Kills whatever the run left behind (anything its user still runs) and empties its slot. True when it's clean."""
+    uid = FIRST_UID + slot
     kill_all = ['python3', '-I', '-c', 'import os, signal\ntry:\n    os.kill(-1, signal.SIGKILL)\nexcept ProcessLookupError:\n    pass']
-    subprocess.run(kill_all, user=uid, group=uid, extra_groups=[], env={}, timeout=10, check=False)
-    subprocess.run(['python3', '-I', '-c', 'import shutil, sys\nshutil.rmtree(sys.argv[1], ignore_errors=True)', job],
-                   user=uid, group=uid, extra_groups=[], env={}, timeout=10, check=False)
+    try:
+        subprocess.run(kill_all, user=uid, group=uid, extra_groups=[], env={}, timeout=10, check=False)
+        reset = subprocess.run(['python3', '-I', '-c', RESET, f'{WORK}/{slot}'], user=uid, group=uid, extra_groups=[],
+                               env={}, timeout=10, check=False)
+    except subprocess.TimeoutExpired:
+        return False
+    return reset.returncode == 0
 
 
 def main_class(files):
@@ -218,40 +277,37 @@ def run(slot, language, files, stdin):
     subprocess.run(['python3', '-I', '-c', STAGE, job], input=json.dumps(files).encode(), user=uid, group=uid,
                    extra_groups=[], env={}, timeout=10, check=True)
     result = {'stdout': '', 'stderr': '', 'exitCode': None, 'truncated': False, 'mainClass': None}
-    try:
-        if language == 'python':
-            entry = 'main.py' if any(f['path'] == 'main.py' for f in files) else next(
-                (f['path'] for f in sorted(files, key=lambda f: f['path']) if f['path'].endswith('.py')), None)
-            if entry is None:
-                return {**result, 'status': 'error', 'stderr': 'There is no Python file to run. Add main.py.',
-                        'ms': 0}
-            code, out, err, timed_out, too_long = as_user(
-                uid, ['python3', '-I', '-u', '-c', PYTHON_BOOT, entry], job, stdin, RUN_SECONDS, CPU_SECONDS, 64, PYTHON_MEMORY)
-        else:
-            main = main_class(files)
-            if main is None:
-                return {**result, 'status': 'compile_error', 'ms': 0,
-                        'stderr': 'No class has a main method. Add public static void main(String[] args) to Main.java.'}
-            sources = [f['path'] for f in files if f['path'].endswith('.java')]
-            code, out, err, timed_out, too_long = as_user(
-                uid, ['javac', *('-J' + o for o in JVM), '-J-Xmx256m', '-encoding', 'UTF-8', '-Xmaxerrs', '20',
-                      '-d', '.classes', *sources], job, '', COMPILE_SECONDS, COMPILE_SECONDS, 192)
-            if timed_out or code != 0:
-                return {**result, 'status': 'timeout' if timed_out else 'compile_error', 'stdout': out, 'stderr': err,
-                        'exitCode': code, 'ms': ms(started), 'mainClass': main}
-            code, out, err, timed_out, too_long = as_user(
-                uid, ['java', *JVM, '-Xmx256m', '-Xss1m', '-cp', '.classes', main], job, stdin, RUN_SECONDS, CPU_SECONDS, 192)
-            result['mainClass'] = main
-        needs_input = (language == 'python' and code == NEEDS_INPUT) or (
-            language == 'java' and code != 0 and 'java.util.NoSuchElementException' in err and 'java.util.Scanner' in err)
-        if needs_input:
-            err = ''
-        status = ('output_limit' if too_long else 'timeout' if timed_out else 'needs_input' if needs_input
-                  else 'ok' if code == 0 else 'error')
-        return {**result, 'status': status, 'stdout': out, 'stderr': err, 'exitCode': code, 'truncated': too_long,
-                'ms': ms(started)}
-    finally:
-        finish(uid, job)
+    if language == 'python':
+        entry = 'main.py' if any(f['path'] == 'main.py' for f in files) else next(
+            (f['path'] for f in sorted(files, key=lambda f: f['path']) if f['path'].endswith('.py')), None)
+        if entry is None:
+            return {**result, 'status': 'error', 'stderr': 'There is no Python file to run. Add main.py.',
+                    'ms': 0}
+        code, out, err, timed_out, too_long = as_user(
+            uid, ['python3', '-I', '-u', '-c', PYTHON_BOOT, entry], job, stdin, RUN_SECONDS, CPU_SECONDS, 64, PYTHON_MEMORY)
+    else:
+        main = main_class(files)
+        if main is None:
+            return {**result, 'status': 'compile_error', 'ms': 0,
+                    'stderr': 'No class has a main method. Add public static void main(String[] args) to Main.java.'}
+        sources = [f['path'] for f in files if f['path'].endswith('.java')]
+        code, out, err, timed_out, too_long = as_user(
+            uid, ['javac', *('-J' + o for o in JVM), '-J-Xmx256m', '-encoding', 'UTF-8', '-Xmaxerrs', '20',
+                  '-d', '.classes', *sources], job, '', COMPILE_SECONDS, COMPILE_SECONDS, 192)
+        if timed_out or code != 0:
+            return {**result, 'status': 'timeout' if timed_out else 'compile_error', 'stdout': out, 'stderr': err,
+                    'exitCode': code, 'ms': ms(started), 'mainClass': main}
+        code, out, err, timed_out, too_long = as_user(
+            uid, ['java', *JVM, '-Xmx256m', '-Xss1m', '-cp', '.classes', main], job, stdin, RUN_SECONDS, CPU_SECONDS, 192)
+        result['mainClass'] = main
+    needs_input = (language == 'python' and code == NEEDS_INPUT) or (
+        language == 'java' and code != 0 and 'java.util.NoSuchElementException' in err and 'java.util.Scanner' in err)
+    if needs_input:
+        err = ''
+    status = ('output_limit' if too_long else 'timeout' if timed_out else 'needs_input' if needs_input
+              else 'ok' if code == 0 else 'error')
+    return {**result, 'status': status, 'stdout': out, 'stderr': err, 'exitCode': code, 'truncated': too_long,
+            'ms': ms(started)}
 
 
 def ms(started):
@@ -293,18 +349,45 @@ class Handler(BaseHTTPRequestHandler):
             language, files, stdin = check_request(json.loads(self.rfile.read(size)))
         except (Refused, ValueError) as e:
             return self.reply(400, {'error': str(e) if isinstance(e, Refused) else 'Not a valid request.'})
+        owner = self.headers.get('x-run-owner', '')
+        if not OWNER.match(owner):
+            return self.reply(400, {'error': 'Not a valid request.'})
+        with running_lock:
+            if owner in running:
+                return self.reply(429, {'error': 'already running'})
+            running.add(owner)
+        try:
+            self.run_in_slot(language, files, stdin)
+        finally:
+            with running_lock:
+                running.discard(owner)
+
+    def run_in_slot(self, language, files, stdin):
         try:
             slot = slots.get(timeout=QUEUE_WAIT)
         except queue.Empty:
             return self.reply(503, {'error': 'busy'})
         try:
-            self.reply(200, run(slot, language, files, stdin))
+            result = run(slot, language, files, stdin)
         except Exception as e:  # a bug here, not in the student's program
-            sys.stdout.write('run failed: %s\n' % type(e).__name__)
-            sys.stdout.flush()
-            self.reply(500, {'error': 'The runner had a problem.'})
-        finally:
+            log('run failed: %s' % type(e).__name__)
+            result = None
+        clean = finish(slot)
+        if clean:
             slots.put(slot)
+        try:
+            self.reply(200, result) if result else self.reply(500, {'error': 'The runner had a problem.'})
+        finally:
+            if not clean:
+                # Never seen, but never hand a dirty slot on: restart: unless-stopped brings the runner back with a
+                # fresh /work, which is quicker than anyone noticing.
+                log(f'slot {slot} could not be emptied: stopping so the runner restarts')
+                os._exit(70)
+
+
+def log(line):
+    sys.stdout.write(line + '\n')
+    sys.stdout.flush()
 
 
 class UnixServer(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):

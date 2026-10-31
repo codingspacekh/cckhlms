@@ -110,15 +110,16 @@ export async function lessonQuestions(
     state: p.visibility as Visibility,
     reports: openReports.get(p.id) ?? [],
   });
+  // Only what this viewer may see is rendered (M17b, F05): a removed post costs nothing on a student's page.
+  const seen = (p: { visibility: string; authorId: string }) => shownTo(p.visibility as Visibility, p.authorId === actor.userId, moderator);
   const questions = qs
+    .filter(({ q }) => seen(q))
     .map(({ q, author }) => ({
       ...view(q, author),
       code: q.codeSnippet,
       acceptedReplyId: q.acceptedReplyId,
-      replies: rs.filter((x) => x.r.questionId === q.id).map(({ r, author: a }) => view(r, a)),
-    }))
-    .filter((q) => shownTo(q.state, q.mine, moderator))
-    .map((q) => ({ ...q, replies: q.replies.filter((r) => shownTo(r.state, r.mine, moderator)) }));
+      replies: rs.filter((x) => x.r.questionId === q.id && seen(x.r)).map(({ r, author: a }) => view(r, a)),
+    }));
   const toReview = moderator
     ? questions.filter((q) => q.state === 'under_review').length +
       questions.flatMap((q) => q.replies).filter((r) => r.state === 'under_review').length
